@@ -1,0 +1,168 @@
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+local RunService = game:GetService("RunService")
+
+local ScreenGui = Instance.new("ScreenGui", game.CoreGui)
+
+-- Nút bật menu
+local toggleButton = Instance.new("TextButton", ScreenGui)
+toggleButton.Size = UDim2.new(0, 120, 0, 40)
+toggleButton.Position = UDim2.new(0, 20, 0, 50)
+toggleButton.Text = "Teleport Menu"
+toggleButton.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
+toggleButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+toggleButton.Font = Enum.Font.SourceSansBold
+toggleButton.TextSize = 16
+
+-- Frame menu
+local Frame = Instance.new("Frame", ScreenGui)
+Frame.Position = UDim2.new(0, 20, 0, 100)
+Frame.Size = UDim2.new(0, 220, 0, 320)
+Frame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+Frame.BorderSizePixel = 0
+Frame.Visible = false
+
+local Title = Instance.new("TextLabel", Frame)
+Title.Size = UDim2.new(1, 0, 0, 30)
+Title.Text = "Teleport Menu (Kéo để di chuyển)"
+Title.TextColor3 = Color3.fromRGB(255, 255, 255)
+Title.BackgroundTransparency = 1
+Title.Font = Enum.Font.SourceSansBold
+Title.TextSize = 14
+
+-- Khung cuộn danh sách người chơi
+local ScrollFrame = Instance.new("ScrollingFrame", Frame)
+ScrollFrame.Position = UDim2.new(0, 0, 0, 30)
+ScrollFrame.Size = UDim2.new(1, 0, 0, 180) -- Hiển thị tối đa khoảng 6 người
+ScrollFrame.CanvasSize = UDim2.new(0, 0, 0, 0)
+ScrollFrame.ScrollBarThickness = 6
+ScrollFrame.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+
+local UIListLayout = Instance.new("UIListLayout", ScrollFrame)
+UIListLayout.Padding = UDim.new(0, 2)
+
+local playerButtons = {}
+local selectedTarget = nil
+local autoTeleport = false
+
+-- Nút Refresh
+local refreshButton = Instance.new("TextButton", Frame)
+refreshButton.Size = UDim2.new(1, 0, 0, 25)
+refreshButton.Position = UDim2.new(0, 0, 1, -55)
+refreshButton.Text = "Refresh Names"
+refreshButton.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+refreshButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+refreshButton.Font = Enum.Font.SourceSans
+refreshButton.TextSize = 14
+
+-- Nút Auto
+local autoButton = Instance.new("TextButton", Frame)
+autoButton.Size = UDim2.new(1, 0, 0, 25)
+autoButton.Position = UDim2.new(0, 0, 1, -30)
+autoButton.Text = "Auto"
+autoButton.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
+autoButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+autoButton.Font = Enum.Font.SourceSans
+autoButton.TextSize = 14
+
+-- Mở menu
+toggleButton.MouseButton1Click:Connect(function()
+    Frame.Visible = not Frame.Visible
+end)
+
+-- Di chuyển menu
+local dragging = false
+local startPos, startInputPos
+
+Title.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        dragging = true
+        startPos = Frame.Position
+        startInputPos = input.Position
+        input.Changed:Connect(function()
+            if input.UserInputState == Enum.UserInputState.End then
+                dragging = false
+            end
+        end)
+    end
+end)
+
+Title.InputChanged:Connect(function(input)
+    if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+        local delta = input.Position - startInputPos
+        Frame.Position = startPos + UDim2.new(0, delta.X, 0, delta.Y)
+    end
+end)
+
+-- Tạo danh sách người chơi với khung cuộn
+local function createPlayerList()
+    for _, btn in ipairs(playerButtons) do
+        btn:Destroy()
+    end
+    playerButtons = {}
+
+    local totalHeight = 0
+    for _, player in ipairs(Players:GetPlayers()) do
+        if player ~= LocalPlayer then
+            local button = Instance.new("TextButton", ScrollFrame)
+            button.Size = UDim2.new(1, 0, 0, 25)
+            button.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
+            button.TextColor3 = Color3.fromRGB(255, 255, 255)
+            button.Font = Enum.Font.SourceSans
+            button.TextSize = 14
+            button.Text = player.Name
+
+            button.MouseButton1Click:Connect(function()
+                selectedTarget = player
+                for _, btn in ipairs(playerButtons) do
+                    btn.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
+                end
+                button.BackgroundColor3 = Color3.fromRGB(0, 170, 0)
+            end)
+
+            table.insert(playerButtons, button)
+            totalHeight = totalHeight + 27
+        end
+    end
+
+    -- Khoảng trống lớn ở dưới
+    totalHeight = totalHeight + 50
+    ScrollFrame.CanvasSize = UDim2.new(0, 0, 0, totalHeight)
+end
+
+-- Nút Refresh
+refreshButton.MouseButton1Click:Connect(function()
+    createPlayerList()
+end)
+
+-- Nút Auto
+autoButton.MouseButton1Click:Connect(function()
+    autoTeleport = not autoTeleport
+    if autoTeleport then
+        autoButton.Text = "ditmemay"
+        autoButton.BackgroundColor3 = Color3.fromRGB(0, 170, 0)
+    else
+        autoButton.Text = "Auto"
+        autoButton.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
+    end
+end)
+
+-- Hàm Teleport
+local function teleportToTarget()
+    if selectedTarget and selectedTarget.Character and selectedTarget.Character:FindFirstChild("HumanoidRootPart") and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+        LocalPlayer.Character.HumanoidRootPart.CFrame = selectedTarget.Character.HumanoidRootPart.CFrame + Vector3.new(0, 3, 0)
+    end
+end
+
+-- Auto Teleport liên tục
+task.spawn(function()
+    while true do
+        if autoTeleport then
+            teleportToTarget()
+        end
+        task.wait(0.5)
+    end
+end)
+
+-- Khởi tạo
+createPlayerList()
