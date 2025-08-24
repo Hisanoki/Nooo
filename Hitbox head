@@ -1,0 +1,265 @@
+-- PLAYER HEAD HITBOX SCRIPT - FIXED + REMOVE ON DEATH
+
+-- SERVICES
+local Players = game:GetService("Players")
+local Debris = game:GetService("Debris")
+local LocalPlayer = Players.LocalPlayer
+
+-- CONFIG
+local DEFAULT_HITBOX_SIZE = 4
+local ESP_COLOR = Color3.fromRGB(255, 150, 150)
+local ESP_TRANSPARENCY = 0.7
+local ESP_PADDING = Vector3.new(0.2, 0.2, 0.2)
+
+-- STATE
+local processedPlayers = {}
+local autoHitboxEnabled = false
+local globalConnections = {}
+
+-- COUNT TABLE ITEMS
+local function tableCount(t)
+	local n = 0
+	for _ in pairs(t) do n = n + 1 end
+	return n
+end
+
+-- UI SETUP
+local gui = Instance.new("ScreenGui")
+gui.Name = "Player_Hitbox_GUI"
+gui.ResetOnSpawn = false
+gui.Parent = game.CoreGui
+
+local function createButton(parent, text, pos, color, size)
+	local btn = Instance.new("TextButton")
+	btn.Size = size or UDim2.new(0, 220, 0, 30)
+	btn.Position = pos
+	btn.Text = text
+	btn.BackgroundColor3 = color
+	btn.TextColor3 = Color3.new(1,1,1)
+	btn.Font = Enum.Font.GothamBold
+	btn.TextSize = 14
+	btn.Parent = parent
+	return btn
+end
+
+local toggleMenu = createButton(gui, "Show Menu", UDim2.new(0,10,0,10), Color3.fromRGB(50,50,50), UDim2.new(0,100,0,35))
+
+local frame = Instance.new("Frame")
+frame.Size = UDim2.new(0,250,0,200)
+frame.Position = UDim2.new(0,10,0,60)
+frame.BackgroundColor3 = Color3.fromRGB(25,25,25)
+frame.Active = true
+frame.Draggable = true
+frame.Parent = gui
+frame.Visible = false
+
+local title = Instance.new("TextLabel", frame)
+title.Size = UDim2.new(1,0,0,30)
+title.BackgroundColor3 = Color3.fromRGB(35,35,35)
+title.Text = "Player Head Hitbox Manager"
+title.TextColor3 = Color3.new(1,1,1)
+title.Font = Enum.Font.GothamBold
+title.TextSize = 14
+
+local sizeInput = Instance.new("TextBox", frame)
+sizeInput.Size = UDim2.new(0,220,0,30)
+sizeInput.Position = UDim2.new(0,15,0,40)
+sizeInput.PlaceholderText = "Size (e.g. 4)"
+sizeInput.Text = tostring(DEFAULT_HITBOX_SIZE)
+sizeInput.BackgroundColor3 = Color3.fromRGB(60,60,60)
+sizeInput.TextColor3 = Color3.new(1,1,1)
+sizeInput.Font = Enum.Font.Gotham
+sizeInput.TextSize = 14
+sizeInput.Parent = frame
+
+local autoToggle = createButton(frame, "Auto Hitbox: OFF", UDim2.new(0,15,0,80), Color3.fromRGB(100,0,0))
+local removeAllBtn = createButton(frame, "Remove All Hitboxes", UDim2.new(0,15,0,120), Color3.fromRGB(100,0,0))
+
+local statusLabel = Instance.new("TextLabel", frame)
+statusLabel.Size = UDim2.new(1,-10,0,20)
+statusLabel.Position = UDim2.new(0,5,0,160)
+statusLabel.BackgroundTransparency = 1
+statusLabel.Text = "Processing: 0 Players"
+statusLabel.TextColor3 = Color3.new(0,1,0)
+statusLabel.Font = Enum.Font.Gotham
+statusLabel.TextSize = 12
+statusLabel.TextXAlignment = Enum.TextXAlignment.Left
+statusLabel.Parent = frame
+
+-- ADD ESP BOX
+local function addESPCharm(part)
+	if not part or not part:IsA("BasePart") then return end
+	if part:FindFirstChild("ESPCharm") then return end
+
+	local box = Instance.new("BoxHandleAdornment")
+	box.Name = "ESPCharm"
+	box.Adornee = part
+	box.Size = part.Size + ESP_PADDING
+	box.AlwaysOnTop = true
+	box.ZIndex = 10
+	box.Transparency = ESP_TRANSPARENCY
+	box.Color3 = ESP_COLOR
+	box.Parent = part
+
+	part:GetPropertyChangedSignal("Size"):Connect(function()
+		if box and box.Parent then
+			box.Size = part.Size + ESP_PADDING
+		end
+	end)
+end
+
+-- REMOVE HITBOX + ESP
+local function removeHeadHitbox(character)
+	if not character then return end
+
+	local entry = processedPlayers[character]
+	if entry and entry.connections then
+		for _, conn in ipairs(entry.connections) do
+			pcall(function() conn:Disconnect() end)
+		end
+	end
+
+	local head = character:FindFirstChild("Head")
+	if head and head:IsA("BasePart") then
+		if head:FindFirstChild("OriginalSize") then
+			local orig = head.OriginalSize
+			if orig and orig.Value then
+				head.Size = orig.Value
+			end
+			orig:Destroy()
+		end
+		head.Massless = false
+		head.CanCollide = true
+		head.Transparency = 0
+		head.Material = Enum.Material.Plastic
+		if head:FindFirstChild("ESPCharm") then
+			head.ESPCharm:Destroy()
+		end
+	end
+
+	processedPlayers[character] = nil
+	statusLabel.Text = "Processing: " .. tostring(tableCount(processedPlayers)) .. " Players"
+end
+
+-- APPLY HITBOX
+local function applyHeadHitbox(character, size)
+	if not character or processedPlayers[character] then return end
+
+	local owner = Players:GetPlayerFromCharacter(character)
+	if not owner or owner == LocalPlayer then return end
+
+	local head = character:FindFirstChild("Head")
+	if not head or not head:IsA("BasePart") then return end
+
+	if not head:FindFirstChild("OriginalSize") then
+		local original = Instance.new("Vector3Value")
+		original.Name = "OriginalSize"
+		original.Value = head.Size
+		original.Parent = head
+	end
+
+	head.Massless = true
+	head.Size = Vector3.new(size, size, size)
+	head.CanCollide = false
+	head.Transparency = 0.5
+	head.Material = Enum.Material.ForceField
+	pcall(function() head.Color = Color3.fromRGB(255,100,100) end)
+
+	if head:FindFirstChild("Mesh") then head.Mesh:Destroy() end
+	addESPCharm(head)
+
+	local conns = {}
+	local humanoid = character:FindFirstChildOfClass("Humanoid")
+	if humanoid then
+		table.insert(conns, humanoid.Died:Connect(function()
+			removeHeadHitbox(character)
+		end))
+	end
+
+	table.insert(conns, character.AncestryChanged:Connect(function(_, parent)
+		if not parent then removeHeadHitbox(character) end
+	end))
+
+	processedPlayers[character] = { connections = conns, player = owner }
+	statusLabel.Text = "Processing: " .. tostring(tableCount(processedPlayers)) .. " Players"
+end
+
+-- SCAN EXISTING PLAYERS
+local function scanAndApply()
+	local size = tonumber(sizeInput.Text) or DEFAULT_HITBOX_SIZE
+	for _, player in ipairs(Players:GetPlayers()) do
+		if player ~= LocalPlayer and player.Character and player.Character.Parent then
+			applyHeadHitbox(player.Character, size)
+		end
+	end
+end
+
+-- TRY APPLY CHARACTER
+local function tryApplyCharacter(char)
+	task.delay(0.2, function()
+		if not char or not char.Parent then return end
+		local owner = Players:GetPlayerFromCharacter(char)
+		if not owner or owner == LocalPlayer then return end
+		local size = tonumber(sizeInput.Text) or DEFAULT_HITBOX_SIZE
+		applyHeadHitbox(char, size)
+	end)
+end
+
+-- AUTO TOGGLE
+autoToggle.MouseButton1Click:Connect(function()
+	autoHitboxEnabled = not autoHitboxEnabled
+	autoToggle.Text = autoHitboxEnabled and "Auto Hitbox: ON" or "Auto Hitbox: OFF"
+	autoToggle.BackgroundColor3 = autoHitboxEnabled and Color3.fromRGB(0,100,0) or Color3.fromRGB(100,0,0)
+
+	for _, c in ipairs(globalConnections) do pcall(function() c:Disconnect() end) end
+	globalConnections = {}
+
+	if autoHitboxEnabled then
+		scanAndApply()
+
+		table.insert(globalConnections, Players.PlayerAdded:Connect(function(player)
+			table.insert(globalConnections, player.CharacterAdded:Connect(function(char)
+				task.wait(0.8)
+				tryApplyCharacter(char)
+			end))
+		end))
+
+		for _, pl in ipairs(Players:GetPlayers()) do
+			if pl ~= LocalPlayer then tryApplyCharacter(pl.Character) end
+			table.insert(globalConnections, pl.CharacterAdded:Connect(function(char)
+				task.wait(0.8)
+				tryApplyCharacter(char)
+			end))
+		end
+
+		table.insert(globalConnections, Players.PlayerRemoving:Connect(function(player)
+			if player and player.Character then
+				removeHeadHitbox(player.Character)
+			end
+		end))
+	end
+end)
+
+-- UI toggle
+toggleMenu.MouseButton1Click:Connect(function()
+	frame.Visible = not frame.Visible
+	toggleMenu.Text = frame.Visible and "Hide Menu" or "Show Menu"
+end)
+
+-- Remove all
+removeAllBtn.MouseButton1Click:Connect(function()
+	for char, _ in pairs(processedPlayers) do
+		removeHeadHitbox(char)
+	end
+	processedPlayers = {}
+	statusLabel.Text = "Processing: 0 Players"
+end)
+
+if LocalPlayer then
+	LocalPlayer.CharacterAdded:Connect(function()
+		task.wait(2)
+		if autoHitboxEnabled then scanAndApply() end
+	end)
+end
+
+statusLabel.Text = "Processing: 0 Players"
