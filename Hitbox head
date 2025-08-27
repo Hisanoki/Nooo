@@ -1,5 +1,3 @@
--- PLAYER HEAD HITBOX SCRIPT - FIXED + REMOVE ON DEATH
-
 -- SERVICES
 local Players = game:GetService("Players")
 local Debris = game:GetService("Debris")
@@ -29,62 +27,167 @@ gui.Name = "Player_Hitbox_GUI"
 gui.ResetOnSpawn = false
 gui.Parent = game.CoreGui
 
+-- Create a stylish blue-themed GUI
+local mainFrame = Instance.new("Frame")
+mainFrame.Size = UDim2.new(0, 280, 0, 50)
+mainFrame.Position = UDim2.new(0.5, -140, 0, 10)
+mainFrame.BackgroundColor3 = Color3.fromRGB(30, 64, 124)
+mainFrame.BorderSizePixel = 0
+mainFrame.Active = true
+mainFrame.Draggable = true
+mainFrame.Parent = gui
+
+-- Add rounded corners
+local corner = Instance.new("UICorner")
+corner.CornerRadius = UDim.new(0, 8)
+corner.Parent = mainFrame
+
+-- Add a subtle gradient
+local gradient = Instance.new("UIGradient")
+gradient.Rotation = 90
+gradient.Color = ColorSequence.new{
+    ColorSequenceKeypoint.new(0, Color3.fromRGB(30, 64, 124)),
+    ColorSequenceKeypoint.new(1, Color3.fromRGB(20, 42, 82))
+}
+gradient.Parent = mainFrame
+
+-- Add a title bar
+local titleBar = Instance.new("Frame")
+titleBar.Size = UDim2.new(1, 0, 0, 24)
+titleBar.BackgroundTransparency = 1
+titleBar.Parent = mainFrame
+
+local titleText = Instance.new("TextLabel")
+titleText.Size = UDim2.new(1, 0, 1, 0)
+titleText.BackgroundTransparency = 1
+titleText.Text = "Hitbox Manager"
+titleText.TextColor3 = Color3.fromRGB(220, 220, 220)
+titleText.Font = Enum.Font.GothamBold
+titleText.TextSize = 14
+titleText.Parent = titleBar
+
+-- Create toggle button with blue theme
+local toggleButton = Instance.new("TextButton")
+toggleButton.Size = UDim2.new(0, 120, 0, 30)
+toggleButton.Position = UDim2.new(0.5, -60, 0, 30)
+toggleButton.Text = "Show Options"
+toggleButton.BackgroundColor3 = Color3.fromRGB(40, 90, 180)
+toggleButton.TextColor3 = Color3.new(1, 1, 1)
+toggleButton.Font = Enum.Font.GothamBold
+toggleButton.TextSize = 14
+toggleButton.Parent = mainFrame
+
+-- Add rounded corners to button
+local buttonCorner = Instance.new("UICorner")
+buttonCorner.CornerRadius = UDim.new(0, 6)
+buttonCorner.Parent = toggleButton
+
+-- Add button hover effect
+toggleButton.MouseEnter:Connect(function()
+    toggleButton.BackgroundColor3 = Color3.fromRGB(50, 110, 210)
+end)
+
+toggleButton.MouseLeave:Connect(function()
+    toggleButton.BackgroundColor3 = Color3.fromRGB(40, 90, 180)
+end)
+
+-- Options frame (initially hidden)
+local optionsFrame = Instance.new("Frame")
+optionsFrame.Size = UDim2.new(0, 250, 0, 200)
+optionsFrame.Position = UDim2.new(0.5, -125, 0, 60)
+optionsFrame.BackgroundColor3 = Color3.fromRGB(25, 54, 104)
+optionsFrame.BorderSizePixel = 0
+optionsFrame.Active = true
+optionsFrame.Draggable = false
+optionsFrame.Parent = mainFrame
+optionsFrame.Visible = false
+
+-- Add rounded corners to options frame
+local optionsCorner = Instance.new("UICorner")
+optionsCorner.CornerRadius = UDim.new(0, 8)
+optionsCorner.Parent = optionsFrame
+
+-- Add gradient to options frame
+local optionsGradient = Instance.new("UIGradient")
+optionsGradient.Rotation = 90
+optionsGradient.Color = ColorSequence.new{
+    ColorSequenceKeypoint.new(0, Color3.fromRGB(25, 54, 104)),
+    ColorSequenceKeypoint.new(1, Color3.fromRGB(15, 35, 70))
+}
+optionsGradient.Parent = optionsFrame
+
+local title = Instance.new("TextLabel", optionsFrame)
+title.Size = UDim2.new(1, 0, 0, 30)
+title.BackgroundColor3 = Color3.fromRGB(35, 75, 145)
+title.Text = "Player Head Hitbox Manager"
+title.TextColor3 = Color3.new(1, 1, 1)
+title.Font = Enum.Font.GothamBold
+title.TextSize = 14
+title.BorderSizePixel = 0
+
+local sizeInput = Instance.new("TextBox", optionsFrame)
+sizeInput.Size = UDim2.new(0, 220, 0, 30)
+sizeInput.Position = UDim2.new(0, 15, 0, 40)
+sizeInput.PlaceholderText = "Size (e.g. 4)"
+sizeInput.Text = tostring(DEFAULT_HITBOX_SIZE)
+sizeInput.BackgroundColor3 = Color3.fromRGB(40, 85, 160)
+sizeInput.TextColor3 = Color3.new(1, 1, 1)
+sizeInput.Font = Enum.Font.Gotham
+sizeInput.TextSize = 14
+sizeInput.Parent = optionsFrame
+
+-- Style the textbox
+sizeInput.BorderSizePixel = 0
+local sizeInputCorner = Instance.new("UICorner")
+sizeInputCorner.CornerRadius = UDim.new(0, 4)
+sizeInputCorner.Parent = sizeInput
+
 local function createButton(parent, text, pos, color, size)
 	local btn = Instance.new("TextButton")
 	btn.Size = size or UDim2.new(0, 220, 0, 30)
 	btn.Position = pos
 	btn.Text = text
 	btn.BackgroundColor3 = color
-	btn.TextColor3 = Color3.new(1,1,1)
+	btn.TextColor3 = Color3.new(1, 1, 1)
 	btn.Font = Enum.Font.GothamBold
 	btn.TextSize = 14
+	btn.BorderSizePixel = 0
 	btn.Parent = parent
+	
+	-- Add rounded corners
+	local btnCorner = Instance.new("UICorner")
+	btnCorner.CornerRadius = UDim.new(0, 4)
+	btnCorner.Parent = btn
+	
+	-- Add hover effect
+	btn.MouseEnter:Connect(function()
+	    btn.BackgroundColor3 = Color3.fromRGB(
+	        math.min(color.R * 255 * 1.2, 255),
+	        math.min(color.G * 255 * 1.2, 255),
+	        math.min(color.B * 255 * 1.2, 255)
+	    )
+	end)
+	
+	btn.MouseLeave:Connect(function()
+	    btn.BackgroundColor3 = color
+	end)
+	
 	return btn
 end
 
-local toggleMenu = createButton(gui, "Show Menu", UDim2.new(0,10,0,10), Color3.fromRGB(50,50,50), UDim2.new(0,100,0,35))
+local autoToggle = createButton(optionsFrame, "Auto Hitbox: OFF", UDim2.new(0, 15, 0, 80), Color3.fromRGB(180, 50, 50))
+local removeAllBtn = createButton(optionsFrame, "Remove All Hitboxes", UDim2.new(0, 15, 0, 120), Color3.fromRGB(180, 50, 50))
 
-local frame = Instance.new("Frame")
-frame.Size = UDim2.new(0,250,0,200)
-frame.Position = UDim2.new(0,10,0,60)
-frame.BackgroundColor3 = Color3.fromRGB(25,25,25)
-frame.Active = true
-frame.Draggable = true
-frame.Parent = gui
-frame.Visible = false
-
-local title = Instance.new("TextLabel", frame)
-title.Size = UDim2.new(1,0,0,30)
-title.BackgroundColor3 = Color3.fromRGB(35,35,35)
-title.Text = "Player Head Hitbox Manager"
-title.TextColor3 = Color3.new(1,1,1)
-title.Font = Enum.Font.GothamBold
-title.TextSize = 14
-
-local sizeInput = Instance.new("TextBox", frame)
-sizeInput.Size = UDim2.new(0,220,0,30)
-sizeInput.Position = UDim2.new(0,15,0,40)
-sizeInput.PlaceholderText = "Size (e.g. 4)"
-sizeInput.Text = tostring(DEFAULT_HITBOX_SIZE)
-sizeInput.BackgroundColor3 = Color3.fromRGB(60,60,60)
-sizeInput.TextColor3 = Color3.new(1,1,1)
-sizeInput.Font = Enum.Font.Gotham
-sizeInput.TextSize = 14
-sizeInput.Parent = frame
-
-local autoToggle = createButton(frame, "Auto Hitbox: OFF", UDim2.new(0,15,0,80), Color3.fromRGB(100,0,0))
-local removeAllBtn = createButton(frame, "Remove All Hitboxes", UDim2.new(0,15,0,120), Color3.fromRGB(100,0,0))
-
-local statusLabel = Instance.new("TextLabel", frame)
-statusLabel.Size = UDim2.new(1,-10,0,20)
-statusLabel.Position = UDim2.new(0,5,0,160)
+local statusLabel = Instance.new("TextLabel", optionsFrame)
+statusLabel.Size = UDim2.new(1, -10, 0, 20)
+statusLabel.Position = UDim2.new(0, 5, 0, 160)
 statusLabel.BackgroundTransparency = 1
 statusLabel.Text = "Processing: 0 Players"
-statusLabel.TextColor3 = Color3.new(0,1,0)
+statusLabel.TextColor3 = Color3.fromRGB(150, 220, 255)
 statusLabel.Font = Enum.Font.Gotham
 statusLabel.TextSize = 12
 statusLabel.TextXAlignment = Enum.TextXAlignment.Left
-statusLabel.Parent = frame
+statusLabel.Parent = optionsFrame
 
 -- ADD ESP BOX
 local function addESPCharm(part)
@@ -209,7 +312,7 @@ end
 autoToggle.MouseButton1Click:Connect(function()
 	autoHitboxEnabled = not autoHitboxEnabled
 	autoToggle.Text = autoHitboxEnabled and "Auto Hitbox: ON" or "Auto Hitbox: OFF"
-	autoToggle.BackgroundColor3 = autoHitboxEnabled and Color3.fromRGB(0,100,0) or Color3.fromRGB(100,0,0)
+	autoToggle.BackgroundColor3 = autoHitboxEnabled and Color3.fromRGB(50, 180, 50) or Color3.fromRGB(180, 50, 50)
 
 	for _, c in ipairs(globalConnections) do pcall(function() c:Disconnect() end) end
 	globalConnections = {}
@@ -241,9 +344,9 @@ autoToggle.MouseButton1Click:Connect(function()
 end)
 
 -- UI toggle
-toggleMenu.MouseButton1Click:Connect(function()
-	frame.Visible = not frame.Visible
-	toggleMenu.Text = frame.Visible and "Hide Menu" or "Show Menu"
+toggleButton.MouseButton1Click:Connect(function()
+	optionsFrame.Visible = not optionsFrame.Visible
+	toggleButton.Text = optionsFrame.Visible and "Hide Options" or "Show Options"
 end)
 
 -- Remove all
