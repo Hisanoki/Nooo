@@ -1,53 +1,52 @@
--- Hàm tạo input field với góc bo tròn
-local function createInputField(text, placeholder, position, parent)
-	local input = Instance.new("TextBox")
-	input.Size = UDim2.new(1, 0, 0, 30)
-	input.Position = position
-	input.PlaceholderText = placeholder or ""
-	input.Text = text or ""
-	input.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
-	input.BackgroundTransparency = 0.7
-	input.TextColor3 = Color3.new(1, 1, 1)
-	input.Font = Enum.Font.Gotham
-	input.TextSize = 14
-	input.BorderSizePixel = 0
-	input.Parent = parent
+-- Utility function to create input field
+local function createInputField(placeholder, text, position, parent)
+    local input = Instance.new("TextBox")
+    input.Size = UDim2.new(1, 0, 0, 30)
+    input.Position = position
+    input.PlaceholderText = placeholder
+    input.Text = text
+    input.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+    input.BackgroundTransparency = 0.7
+    input.TextColor3 = Color3.new(1, 1, 1)
+    input.Font = Enum.Font.Gotham
+    input.TextSize = 14
+    input.BorderSizePixel = 0
+    input.Parent = parent
 
-	local inputCorner = Instance.new("UICorner")
-	inputCorner.CornerRadius = UDim.new(0, 4)
-	inputCorner.Parent = input
+    local inputCorner = Instance.new("UICorner")
+    inputCorner.CornerRadius = UDim.new(0, 4)
+    inputCorner.Parent = input
 
-	return input
+    return input
 end
 
--- Hàm tạo label trong suốt
+-- Utility function to create transparent label
 local function createTransparentLabel(text, position, parent)
-	local label = Instance.new("TextLabel")
-	label.Size = UDim2.new(1, 0, 0, 20)
-	label.Position = position
-	label.BackgroundTransparency = 1
-	label.Text = text or ""
-	label.TextColor3 = Color3.fromRGB(200, 200, 200)
-	label.Font = Enum.Font.Gotham
-	label.TextSize = 12
-	label.TextXAlignment = Enum.TextXAlignment.Left
-	label.Parent = parent
+    local label = Instance.new("TextLabel")
+    label.Size = UDim2.new(1, 0, 0, 20)
+    label.Position = position
+    label.BackgroundTransparency = 1
+    label.Text = text
+    label.TextColor3 = Color3.fromRGB(200, 200, 200)
+    label.Font = Enum.Font.Gotham
+    label.TextSize = 12
+    label.TextXAlignment = Enum.TextXAlignment.Left
+    label.Parent = parent
 
-	return label
+    return label
 end
 
--- Xóa GUI cũ nếu tồn tại để tránh lỗi khi chạy lại script
-local oldGui = game.CoreGui:FindFirstChild("Mobile_ESP_GUI")
-if oldGui then
-	oldGui:Destroy()
-end
+-- Wait for LocalPlayer and PlayerGui
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
 
 -- UI SETUP
 local gui = Instance.new("ScreenGui")
 gui.Name = "Mobile_ESP_GUI"
 gui.ResetOnSpawn = false
 gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-gui.Parent = game.CoreGui
+gui.Parent = PlayerGui
 
 -- Main transparent container
 local mainContainer = Instance.new("Frame")
@@ -130,40 +129,22 @@ leftPanel.ScrollBarThickness = 4
 leftPanel.CanvasSize = UDim2.new(0, 0, 0, 0)
 leftPanel.Parent = mainFrame
 
--- HITBOX INPUT UI
-local hitboxLabel = createTransparentLabel("Hitbox Size (nhập số bất kỳ):", UDim2.new(0, 0, 0, 0), leftPanel)
-local hitboxInput = createInputField("", "Nhập số...", UDim2.new(0, 0, 0, 22), leftPanel)
+local rightPanel = Instance.new("ScrollingFrame")
+rightPanel.Size = UDim2.new(0.45, 0, 1, -40)
+rightPanel.Position = UDim2.new(1, -5 - math.floor(0.45 * 300), 0, 35)
+rightPanel.AnchorPoint = Vector2.new(1, 0)
+rightPanel.BackgroundTransparency = 1
+rightPanel.BorderSizePixel = 0
+rightPanel.ScrollBarThickness = 4
+rightPanel.CanvasSize = UDim2.new(0, 0, 0, 0)
+rightPanel.Parent = mainFrame
 
--- Sự kiện cho nút toggle để mở/đóng mainFrame
+-- Toggle logic
 toggleUIButton.MouseButton1Click:Connect(function()
-	mainFrame.Visible = not mainFrame.Visible
+    mainFrame.Visible = not mainFrame.Visible
 end)
 
--- Sự kiện cho nút close để đóng mainFrame
+-- Close logic
 closeButton.MouseButton1Click:Connect(function()
-	mainFrame.Visible = false
-end)
-
--- Xử lý thay đổi hitbox khi nhập giá trị mới
-hitboxInput.FocusLost:Connect(function(enterPressed)
-	local value = hitboxInput.Text
-	local num = tonumber(value)
-	if num and num > 0 then
-		local hitbox = game:GetService("ReplicatedStorage"):FindFirstChild("Hitbox")
-		if hitbox and hitbox:IsA("Part") then
-			-- Đảm bảo không giới hạn số, resize hitbox theo giá trị nhập
-			hitbox.Size = Vector3.new(num, num, num)
-			hitboxInput.TextColor3 = Color3.fromRGB(0,255,0)
-			hitboxInput.Text = tostring(num)
-		else
-			hitboxInput.TextColor3 = Color3.fromRGB(255,0,0)
-			hitboxInput.Text = "Không tìm thấy Hitbox!"
-		end
-	else
-		hitboxInput.TextColor3 = Color3.fromRGB(255,0,0)
-		hitboxInput.Text = "Nhập số hợp lệ!"
-	end
-	task.wait(1)
-	hitboxInput.TextColor3 = Color3.new(1,1,1)
-	hitboxInput.Text = ""
+    mainFrame.Visible = false
 end)
