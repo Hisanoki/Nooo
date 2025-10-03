@@ -19,178 +19,183 @@ local selectedPlayers = {}
 local globalConnections = {}
 local playerData = {}
 
+-- Loopspeed state
+local loopspeedEnabled = false
+local loopspeedConnection = nil
+local loopspeedInputValue = "16" -- Default walkspeed
+
 -- Helper functions
 local function tableCount(t)
-    local count = 0
-    for _ in pairs(t) do
-        count = count + 1
-    end
-    return count
+	local count = 0
+	for _ in pairs(t) do
+		count = count + 1
+	end
+	return count
 end
 
 local function getTeamColor(player)
-    if player.Team and player.Team.TeamColor then
-        return player.Team.TeamColor.Color
-    end
-    return ESP_COLOR
+	if player.Team and player.Team.TeamColor then
+		return player.Team.TeamColor.Color
+	end
+	return ESP_COLOR
 end
 
 local function addESPCharm(part, color)
-    if not part or part:FindFirstChild("ESPCharm") then return end
+	if not part or part:FindFirstChild("ESPCharm") then return end
 
-    local box = Instance.new("BoxHandleAdornment")
-    box.Name = "ESPCharm"
-    box.Adornee = part
-    box.Size = part.Size + ESP_PADDING
-    box.AlwaysOnTop = true
-    box.ZIndex = 10
-    box.Transparency = ESP_TRANSPARENCY
-    box.Color3 = color or ESP_COLOR
-    box.Parent = part
+	local box = Instance.new("BoxHandleAdornment")
+	box.Name = "ESPCharm"
+	box.Adornee = part
+	box.Size = part.Size + ESP_PADDING
+	box.AlwaysOnTop = true
+	box.ZIndex = 10
+	box.Transparency = ESP_TRANSPARENCY
+	box.Color3 = color or ESP_COLOR
+	box.Parent = part
 
-    return box
+	return box
 end
 
 local function removeESPCharm(part)
-    if part and part:FindFirstChild("ESPCharm") then
-        part.ESPCharm:Destroy()
-    end
+	if part and part:FindFirstChild("ESPCharm") then
+		part.ESPCharm:Destroy()
+	end
 end
 
 local function removeHeadHitbox(character)
-    if not character then return end
+	if not character then return end
 
-    local head = character:FindFirstChild("Head")
-    if head then
-        if head:FindFirstChild("OriginalSize") then
-            head.Size = head.OriginalSize.Value
-            head.OriginalSize:Destroy()
-        end
+	local head = character:FindFirstChild("Head")
+	if head then
+		if head:FindFirstChild("OriginalSize") then
+			head.Size = head.OriginalSize.Value
+			head.OriginalSize:Destroy()
+		end
 
-        removeESPCharm(head)
+		removeESPCharm(head)
 
-        if playerData[character] and playerData[character].meshBackup then
-            playerData[character].meshBackup.Parent = head
-        end
+		if playerData[character] and playerData[character].meshBackup then
+			playerData[character].meshBackup.Parent = head
+		end
 
-        head.Transparency = 0
-        head.CanCollide = true
-        head.Material = Enum.Material.Plastic
-    end
+		head.Transparency = 0
+		head.CanCollide = true
+		head.Material = Enum.Material.Plastic
+	end
 
-    processedPlayers[character] = nil
+	processedPlayers[character] = nil
 end
 
 local function applyHeadHitbox(character, size)
-    if not character or processedPlayers[character] then return end
+	if not character or processedPlayers[character] then return end
 
-    local head = character:FindFirstChild("Head")
-    if not head then return end
+	local head = character:FindFirstChild("Head")
+	if not head then return end
 
-    -- Store original size
-    local original = Instance.new("Vector3Value")
-    original.Name = "OriginalSize"
-    original.Value = head.Size
-    original.Parent = head
+	-- Store original size
+	local original = Instance.new("Vector3Value")
+	original.Name = "OriginalSize"
+	original.Value = head.Size
+	original.Parent = head
 
-    -- Store mesh backup
-    if head:FindFirstChild("Mesh") then
-        playerData[character] = playerData[character] or {}
-        playerData[character].meshBackup = head.Mesh:Clone()
-        head.Mesh:Destroy()
-    end
+	-- Store mesh backup
+	if head:FindFirstChild("Mesh") then
+		playerData[character] = playerData[character] or {}
+		playerData[character].meshBackup = head.Mesh:Clone()
+		head.Mesh:Destroy()
+	end
 
-    -- Apply hitbox changes
-    head.Massless = true
-    head.Size = Vector3.new(size, size, size)
-    head.CanCollide = false
-    head.Transparency = 0.5
-    head.Material = Enum.Material.ForceField
+	-- Apply hitbox changes
+	head.Massless = true
+	head.Size = Vector3.new(size, size, size)
+	head.CanCollide = false
+	head.Transparency = 0.5
+	head.Material = Enum.Material.ForceField
 
-    -- Add ESP charm with team color if enabled
-    if charmESPEnabled then
-        local player = Players:GetPlayerFromCharacter(character)
-        local color = ESP_COLOR
-        if player then
-            color = getTeamColor(player)
-        end
-        addESPCharm(head, color)
-    end
+	-- Add ESP charm with team color if enabled
+	if charmESPEnabled then
+		local player = Players:GetPlayerFromCharacter(character)
+		local color = ESP_COLOR
+		if player then
+			color = getTeamColor(player)
+		end
+		addESPCharm(head, color)
+	end
 
-    -- Remove hitbox when dead
-    local humanoid = character:FindFirstChildOfClass("Humanoid")
-    if humanoid then
-        humanoid.Died:Connect(function()
-            removeHeadHitbox(character)
-        end)
-    end
+	-- Remove hitbox when dead
+	local humanoid = character:FindFirstChildOfClass("Humanoid")
+	if humanoid then
+		humanoid.Died:Connect(function()
+			removeHeadHitbox(character)
+		end)
+	end
 
-    -- Remove hitbox when character leaves workspace
-    character.AncestryChanged:Connect(function(_, parent)
-        if not parent then
-            removeHeadHitbox(character)
-        end
-    end)
+	-- Remove hitbox when character leaves workspace
+	character.AncestryChanged:Connect(function(_, parent)
+		if not parent then
+			removeHeadHitbox(character)
+		end
+	end)
 
-    processedPlayers[character] = true
+	processedPlayers[character] = true
 end
 
 -- Helper functions for UI creation
 local function createTransparentButton(text, position, color, parent)
-    local btn = Instance.new("TextButton")
-    btn.Size = UDim2.new(1, 0, 0, 30)
-    btn.Position = position
-    btn.Text = text
-    btn.BackgroundColor3 = color
-    btn.BackgroundTransparency = 0.7
-    btn.TextColor3 = Color3.new(1, 1, 1)
-    btn.Font = Enum.Font.Gotham
-    btn.TextSize = 14
-    btn.BorderSizePixel = 0
-    btn.Parent = parent
+	local btn = Instance.new("TextButton")
+	btn.Size = UDim2.new(1, 0, 0, 30)
+	btn.Position = position
+	btn.Text = text
+	btn.BackgroundColor3 = color
+	btn.BackgroundTransparency = 0.7
+	btn.TextColor3 = Color3.new(1, 1, 1)
+	btn.Font = Enum.Font.Gotham
+	btn.TextSize = 14
+	btn.BorderSizePixel = 0
+	btn.Parent = parent
 
-    local btnCorner = Instance.new("UICorner")
-    btnCorner.CornerRadius = UDim.new(0, 4)
-    btnCorner.Parent = btn
+	local btnCorner = Instance.new("UICorner")
+	btnCorner.CornerRadius = UDim.new(0, 4)
+	btnCorner.Parent = btn
 
-    return btn
+	return btn
 end
 
 local function createTransparentInput(placeholder, text, position, parent)
-    local input = Instance.new("TextBox")
+	local input = Instance.new("TextBox")
 
-    input.Size = UDim2.new(1, 0, 0, 30)
-    input.Position = position
-    input.PlaceholderText = placeholder
-    input.Text = text
-    input.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
-    input.BackgroundTransparency = 0.7
-    input.TextColor3 = Color3.new(1, 1, 1)
-    input.Font = Enum.Font.Gotham
-    input.TextSize = 14
-    input.BorderSizePixel = 0
-    input.Parent = parent
+	input.Size = UDim2.new(1, 0, 0, 30)
+	input.Position = position
+	input.PlaceholderText = placeholder
+	input.Text = text
+	input.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+	input.BackgroundTransparency = 0.7
+	input.TextColor3 = Color3.new(1, 1, 1)
+	input.Font = Enum.Font.Gotham
+	input.TextSize = 14
+	input.BorderSizePixel = 0
+	input.Parent = parent
 
-    local inputCorner = Instance.new("UICorner")
-    inputCorner.CornerRadius = UDim.new(0, 4)
-    inputCorner.Parent = input
+	local inputCorner = Instance.new("UICorner")
+	inputCorner.CornerRadius = UDim.new(0, 4)
+	inputCorner.Parent = input
 
-    return input
+	return input
 end
 
 local function createTransparentLabel(text, position, parent)
-    local label = Instance.new("TextLabel")
-    label.Size = UDim2.new(1, 0, 0, 20)
-    label.Position = position
-    label.BackgroundTransparency = 1
-    label.Text = text
-    label.TextColor3 = Color3.fromRGB(200, 200, 200)
-    label.Font = Enum.Font.Gotham
-    label.TextSize = 12
-    label.TextXAlignment = Enum.TextXAlignment.Left
-    label.Parent = parent
+	local label = Instance.new("TextLabel")
+	label.Size = UDim2.new(1, 0, 0, 20)
+	label.Position = position
+	label.BackgroundTransparency = 1
+	label.Text = text
+	label.TextColor3 = Color3.fromRGB(200, 200, 200)
+	label.Font = Enum.Font.Gotham
+	label.TextSize = 12
+	label.TextXAlignment = Enum.TextXAlignment.Left
+	label.Parent = parent
 
-    return label
+	return label
 end
 
 -- UI SETUP
@@ -315,6 +320,11 @@ local autoToggle = createTransparentButton("Auto Hitbox: OFF", UDim2.new(0, 0, 0
 local removeAllBtn = createTransparentButton("Remove All Hitboxes", UDim2.new(0, 0, 0, 110), Color3.fromRGB(180, 50, 50), leftPanel)
 local statusLabel = createTransparentLabel("Processing: 0 Players", UDim2.new(0, 0, 0, 150), leftPanel)
 
+-- Loopspeed UI (below Remove All Hitboxes)
+local loopspeedLabel = createTransparentLabel("Loopspeed", UDim2.new(0, 0, 0, 190), leftPanel)
+local loopspeedInput = createTransparentInput("Speed (e.g. 16)", loopspeedInputValue, UDim2.new(0, 0, 0, 215), leftPanel)
+local loopspeedToggle = createTransparentButton("Loopspeed: OFF", UDim2.new(0, 0, 0, 255), Color3.fromRGB(80, 80, 200), leftPanel)
+
 -- ESP name controls
 local playerList = Instance.new("ScrollingFrame")
 playerList.Size = UDim2.new(1, 0, 0, 150)
@@ -334,276 +344,321 @@ local charmESPBtn = createTransparentButton("ESP Charm", UDim2.new(0, 0, 0, 310)
 local nameESPObjects = {}
 
 local function createNameESP(player, char)
-    if player == LocalPlayer then return end
-    if not char then return end
+	if player == LocalPlayer then return end
+	if not char then return end
 
-    local head = char:FindFirstChild("Head")
-    if not head then return end
+	local head = char:FindFirstChild("Head")
+	if not head then return end
 
-    -- Remove existing ESP
-    if nameESPObjects[player] then
-        nameESPObjects[player]:Destroy()
-        nameESPObjects[player] = nil
-    end
+	-- Remove existing ESP
+	if nameESPObjects[player] then
+		nameESPObjects[player]:Destroy()
+		nameESPObjects[player] = nil
+	end
 
-    local billboard = Instance.new("BillboardGui")
-    billboard.Name = "NameESP"
-    billboard.Adornee = head
-    billboard.Size = UDim2.new(0, 200, 0, 50)
-    billboard.StudsOffset = Vector3.new(0, 2.5, 0)
-    billboard.AlwaysOnTop = true
-    billboard.MaxDistance = 1000
-    billboard.Parent = head
+	local billboard = Instance.new("BillboardGui")
+	billboard.Name = "NameESP"
+	billboard.Adornee = head
+	billboard.Size = UDim2.new(0, 200, 0, 50)
+	billboard.StudsOffset = Vector3.new(0, 2.5, 0)
+	billboard.AlwaysOnTop = true
+	billboard.MaxDistance = 1000
+	billboard.Parent = head
 
-    local nameLabel = Instance.new("TextLabel")
-    nameLabel.Size = UDim2.new(1, 0, 0.5, 0)
-    nameLabel.Position = UDim2.new(0, 0, 0, 0)
-    nameLabel.BackgroundTransparency = 1
-    nameLabel.Text = player.Name
-    nameLabel.TextColor3 = TEXT_ESP_COLOR
-    nameLabel.TextStrokeTransparency = 0
-    nameLabel.TextStrokeColor3 = Color3.new(0, 0, 0)
-    nameLabel.Font = Enum.Font.GothamBold
-    nameLabel.TextSize = 14
-    nameLabel.Parent = billboard
+	local nameLabel = Instance.new("TextLabel")
+	nameLabel.Size = UDim2.new(1, 0, 0.5, 0)
+	nameLabel.Position = UDim2.new(0, 0, 0, 0)
+	nameLabel.BackgroundTransparency = 1
+	nameLabel.Text = player.Name
+	nameLabel.TextColor3 = TEXT_ESP_COLOR
+	nameLabel.TextStrokeTransparency = 0
+	nameLabel.TextStrokeColor3 = Color3.new(0, 0, 0)
+	nameLabel.Font = Enum.Font.GothamBold
+	nameLabel.TextSize = 14
+	nameLabel.Parent = billboard
 
-    local distanceLabel = Instance.new("TextLabel")
-    distanceLabel.Size = UDim2.new(1, 0, 0.5, 0)
-    distanceLabel.Position = UDim2.new(0, 0, 0.5, 0)
-    distanceLabel.BackgroundTransparency = 1
-    distanceLabel.Text = "0m"
-    distanceLabel.TextColor3 = TEXT_ESP_COLOR
-    distanceLabel.TextStrokeTransparency = 0
-    distanceLabel.TextStrokeColor3 = Color3.new(0, 0, 0)
-    distanceLabel.Font = Enum.Font.Gotham
-    distanceLabel.TextSize = 12
-    distanceLabel.Parent = billboard
+	local distanceLabel = Instance.new("TextLabel")
+	distanceLabel.Size = UDim2.new(1, 0, 0.5, 0)
+	distanceLabel.Position = UDim2.new(0, 0, 0.5, 0)
+	distanceLabel.BackgroundTransparency = 1
+	distanceLabel.Text = "0m"
+	distanceLabel.TextColor3 = TEXT_ESP_COLOR
+	distanceLabel.TextStrokeTransparency = 0
+	distanceLabel.TextStrokeColor3 = Color3.new(0, 0, 0)
+	distanceLabel.Font = Enum.Font.Gotham
+	distanceLabel.TextSize = 12
+	distanceLabel.Parent = billboard
 
-    -- Update distance
-    local connection
-    connection = RunService.Heartbeat:Connect(function()
-        if not billboard or not billboard.Parent or not LocalPlayer.Character or not LocalPlayer.Character:FindFirstChild("Head") then
-            if connection then
-                connection:Disconnect()
-            end
-            return
-        end
+	-- Update distance
+	local connection
+	connection = RunService.Heartbeat:Connect(function()
+		if not billboard or not billboard.Parent or not LocalPlayer.Character or not LocalPlayer.Character:FindFirstChild("Head") then
+			if connection then
+				connection:Disconnect()
+			end
+			return
+		end
 
-        local localHead = LocalPlayer.Character.Head
-        local distance = (head.Position - localHead.Position).Magnitude
-        distanceLabel.Text = string.format("%.1fm", distance)
-    end)
+		local localHead = LocalPlayer.Character.Head
+		local distance = (head.Position - localHead.Position).Magnitude
+		distanceLabel.Text = string.format("%.1fm", distance)
+	end)
 
-    nameESPObjects[player] = billboard
+	nameESPObjects[player] = billboard
 end
 
 local function removeNameESP(player)
-    if nameESPObjects[player] then
-        nameESPObjects[player]:Destroy()
-        nameESPObjects[player] = nil
-    end
+	if nameESPObjects[player] then
+		nameESPObjects[player]:Destroy()
+		nameESPObjects[player] = nil
+	end
 end
 
 local function handlePlayer(player)
-    if player == LocalPlayer then return end
+	if player == LocalPlayer then return end
 
-    local function onCharacterAdded(char)
-        task.wait(0.5)
-        if autoHitboxEnabled then
-            applyHeadHitbox(char, tonumber(sizeInput.Text) or DEFAULT_HITBOX_SIZE)
-        end
-        if nameESPEnabled and selectedPlayers[player] then
-            createNameESP(player, char)
-        end
-        if charmESPEnabled then
-            local head = char:FindFirstChild("Head")
-            if head then
-                local color = getTeamColor(player)
-                addESPCharm(head, color)
-            end
-        end
-    end
+	local function onCharacterAdded(char)
+		task.wait(0.5)
+		if autoHitboxEnabled then
+			applyHeadHitbox(char, tonumber(sizeInput.Text) or DEFAULT_HITBOX_SIZE)
+		end
+		if nameESPEnabled and selectedPlayers[player] then
+			createNameESP(player, char)
+		end
+		if charmESPEnabled then
+			local head = char:FindFirstChild("Head")
+			if head then
+				local color = getTeamColor(player)
+				addESPCharm(head, color)
+			end
+		end
+	end
 
-    -- Setup character added connection
-    local charConn = player.CharacterAdded:Connect(onCharacterAdded)
-    table.insert(globalConnections, charConn)
+	-- Setup character added connection
+	local charConn = player.CharacterAdded:Connect(onCharacterAdded)
+	table.insert(globalConnections, charConn)
 
-    -- Handle existing character
-    if player.Character then
-        onCharacterAdded(player.Character)
-    end
+	-- Handle existing character
+	if player.Character then
+		onCharacterAdded(player.Character)
+	end
 
-    -- Handle player leaving
-    local leaveConn = player.AncestryChanged:Connect(function(_, parent)
-        if not parent then
-            if player.Character then
-                removeHeadHitbox(player.Character)
-                removeESPCharm(player.Character:FindFirstChild("Head"))
-            end
-            removeNameESP(player)
-            selectedPlayers[player] = nil
-        end
-    end)
-    table.insert(globalConnections, leaveConn)
+	-- Handle player leaving
+	local leaveConn = player.AncestryChanged:Connect(function(_, parent)
+		if not parent then
+			if player.Character then
+				removeHeadHitbox(player.Character)
+				removeESPCharm(player.Character:FindFirstChild("Head"))
+			end
+			removeNameESP(player)
+			selectedPlayers[player] = nil
+		end
+	end)
+	table.insert(globalConnections, leaveConn)
 end
 
 local function updatePlayerList()
-    -- Clear existing list
-    for _, child in ipairs(playerList:GetChildren()) do
-        if child:IsA("TextButton") then
-            child:Destroy()
-        end
-    end
+	-- Clear existing list
+	for _, child in ipairs(playerList:GetChildren()) do
+		if child:IsA("TextButton") then
+			child:Destroy()
+		end
+	end
 
-    -- Add players to list
-    local yPos = 0
-    for _, player in ipairs(Players:GetPlayers()) do
-        if player ~= LocalPlayer then
-            local playerBtn = Instance.new("TextButton")
-            playerBtn.Size = UDim2.new(1, -10, 0, 30)
-            playerBtn.Position = UDim2.new(0, 5, 0, yPos)
-            playerBtn.Text = player.Name
-            playerBtn.BackgroundColor3 = selectedPlayers[player] and Color3.fromRGB(80, 160, 80) or Color3.fromRGB(60, 60, 60)
-            playerBtn.BackgroundTransparency = 0.7
-            playerBtn.TextColor3 = Color3.new(1, 1, 1)
-            playerBtn.Font = Enum.Font.Gotham
-            playerBtn.TextSize = 14
-            playerBtn.BorderSizePixel = 0
-            playerBtn.Parent = playerList
+	-- Add players to list
+	local yPos = 0
+	for _, player in ipairs(Players:GetPlayers()) do
+		if player ~= LocalPlayer then
+			local playerBtn = Instance.new("TextButton")
+			playerBtn.Size = UDim2.new(1, -10, 0, 30)
+			playerBtn.Position = UDim2.new(0, 5, 0, yPos)
+			playerBtn.Text = player.Name
+			playerBtn.BackgroundColor3 = selectedPlayers[player] and Color3.fromRGB(80, 160, 80) or Color3.fromRGB(60, 60, 60)
+			playerBtn.BackgroundTransparency = 0.7
+			playerBtn.TextColor3 = Color3.new(1, 1, 1)
+			playerBtn.Font = Enum.Font.Gotham
+			playerBtn.TextSize = 14
+			playerBtn.BorderSizePixel = 0
+			playerBtn.Parent = playerList
 
-            local btnCorner = Instance.new("UICorner")
-            btnCorner.CornerRadius = UDim.new(0, 4)
-            btnCorner.Parent = playerBtn
+			local btnCorner = Instance.new("UICorner")
+			btnCorner.CornerRadius = UDim.new(0, 4)
+			btnCorner.Parent = playerBtn
 
-            playerBtn.MouseButton1Click:Connect(function()
-                selectedPlayers[player] = not selectedPlayers[player]
-                playerBtn.BackgroundColor3 = selectedPlayers[player] and Color3.fromRGB(80, 160, 80) or Color3.fromRGB(60, 60, 60)
+			playerBtn.MouseButton1Click:Connect(function()
+				selectedPlayers[player] = not selectedPlayers[player]
+				playerBtn.BackgroundColor3 = selectedPlayers[player] and Color3.fromRGB(80, 160, 80) or Color3.fromRGB(60, 60, 60)
 
-                if nameESPEnabled then
-                    if selectedPlayers[player] and player.Character then
-                        createNameESP(player, player.Character)
-                    else
-                        removeNameESP(player)
-                    end
-                end
-            end)
+				if nameESPEnabled then
+					if selectedPlayers[player] and player.Character then
+						createNameESP(player, player.Character)
+					else
+						removeNameESP(player)
+					end
+				end
+			end)
 
-            yPos = yPos + 35
-        end
-    end
+			yPos = yPos + 35
+		end
+	end
 
-    playerList.CanvasSize = UDim2.new(0, 0, 0, yPos)
+	playerList.CanvasSize = UDim2.new(0, 0, 0, yPos)
 end
+
+-- Loopspeed logic
+local function setLoopspeedEnabled(state)
+	loopspeedEnabled = state
+	loopspeedToggle.Text = loopspeedEnabled and "Loopspeed: ON" or "Loopspeed: OFF"
+	loopspeedToggle.BackgroundColor3 = loopspeedEnabled and Color3.fromRGB(80, 200, 80) or Color3.fromRGB(80, 80, 200)
+
+	if loopspeedConnection then
+		loopspeedConnection:Disconnect()
+		loopspeedConnection = nil
+	end
+
+	if loopspeedEnabled then
+		loopspeedConnection = RunService.Heartbeat:Connect(function()
+			local character = LocalPlayer.Character
+			if character then
+				local humanoid = character:FindFirstChildOfClass("Humanoid")
+				if humanoid then
+					local speedValue = tonumber(loopspeedInput.Text) or 16
+					humanoid.WalkSpeed = speedValue
+				end
+			end
+		end)
+	else
+		-- Restore default speed if needed
+		local character = LocalPlayer.Character
+		if character then
+			local humanoid = character:FindFirstChildOfClass("Humanoid")
+			if humanoid then
+				humanoid.WalkSpeed = 16
+			end
+		end
+	end
+end
+
+loopspeedToggle.MouseButton1Click:Connect(function()
+	setLoopspeedEnabled(not loopspeedEnabled)
+end)
+
+loopspeedInput.FocusLost:Connect(function(enterPressed)
+	loopspeedInputValue = loopspeedInput.Text
+	if loopspeedEnabled then
+		setLoopspeedEnabled(true)
+	end
+end)
 
 -- UI EVENT HANDLERS
 toggleUIButton.MouseButton1Click:Connect(function()
-    mainFrame.Visible = not mainFrame.Visible
-    toggleUIButton.Text = mainFrame.Visible and "☰ Close Menu" or "☰ Open Menu"
-    if mainFrame.Visible then
-        updatePlayerList()
-    end
+	mainFrame.Visible = not mainFrame.Visible
+	toggleUIButton.Text = mainFrame.Visible and "☰ Close Menu" or "☰ Open Menu"
+	if mainFrame.Visible then
+		updatePlayerList()
+	end
 end)
 
 closeButton.MouseButton1Click:Connect(function()
-    mainFrame.Visible = false
-    toggleUIButton.Text = "☰ Open Menu"
+	mainFrame.Visible = false
+	toggleUIButton.Text = "☰ Open Menu"
 end)
 
 autoToggle.MouseButton1Click:Connect(function()
-    autoHitboxEnabled = not autoHitboxEnabled
-    autoToggle.Text = autoHitboxEnabled and "Auto Hitbox: ON" or "Auto Hitbox: OFF"
-    autoToggle.BackgroundColor3 = autoHitboxEnabled and Color3.fromRGB(50, 180, 50) or Color3.fromRGB(180, 50, 50)
+	autoHitboxEnabled = not autoHitboxEnabled
+	autoToggle.Text = autoHitboxEnabled and "Auto Hitbox: ON" or "Auto Hitbox: OFF"
+	autoToggle.BackgroundColor3 = autoHitboxEnabled and Color3.fromRGB(50, 180, 50) or Color3.fromRGB(180, 50, 50)
 
-    if autoHitboxEnabled then
-        for _, player in ipairs(Players:GetPlayers()) do
-            if player ~= LocalPlayer and player.Character then
-                applyHeadHitbox(player.Character, tonumber(sizeInput.Text) or DEFAULT_HITBOX_SIZE)
-            end
-        end
-    else
-        for character, _ in pairs(processedPlayers) do
-            removeHeadHitbox(character)
-        end
-    end
+	if autoHitboxEnabled then
+		for _, player in ipairs(Players:GetPlayers()) do
+			if player ~= LocalPlayer and player.Character then
+				applyHeadHitbox(player.Character, tonumber(sizeInput.Text) or DEFAULT_HITBOX_SIZE)
+			end
+		end
+	else
+		for character, _ in pairs(processedPlayers) do
+			removeHeadHitbox(character)
+		end
+	end
 
-    statusLabel.Text = "Processing: " .. tableCount(processedPlayers) .. " Players"
+	statusLabel.Text = "Processing: " .. tableCount(processedPlayers) .. " Players"
 end)
 
 removeAllBtn.MouseButton1Click:Connect(function()
-    for character, _ in pairs(processedPlayers) do
-        removeHeadHitbox(character)
-    end
-    statusLabel.Text = "Processing: 0 Players"
+	for character, _ in pairs(processedPlayers) do
+		removeHeadHitbox(character)
+	end
+	statusLabel.Text = "Processing: 0 Players"
 end)
 
 autoNameESP.MouseButton1Click:Connect(function()
-    nameESPEnabled = not nameESPEnabled
-    autoNameESP.Text = nameESPEnabled and "Auto ESP Name: ON" or "Auto ESP Name: OFF"
-    autoNameESP.BackgroundColor3 = nameESPEnabled and Color3.fromRGB(50, 200, 50) or Color3.fromRGB(50, 150, 200)
+	nameESPEnabled = not nameESPEnabled
+	autoNameESP.Text = nameESPEnabled and "Auto ESP Name: ON" or "Auto ESP Name: OFF"
+	autoNameESP.BackgroundColor3 = nameESPEnabled and Color3.fromRGB(50, 200, 50) or Color3.fromRGB(50, 150, 200)
 
-    if not nameESPEnabled then
-        for player, _ in pairs(nameESPObjects) do
-            removeNameESP(player)
-        end
-    else
-        for player, selected in pairs(selectedPlayers) do
-            if selected and player.Character then
-                createNameESP(player, player.Character)
-            end
-        end
-    end
+	if not nameESPEnabled then
+		for player, _ in pairs(nameESPObjects) do
+			removeNameESP(player)
+		end
+	else
+		for player, selected in pairs(selectedPlayers) do
+			if selected and player.Character then
+				createNameESP(player, player.Character)
+			end
+		end
+	end
 end)
 
 refreshBtn.MouseButton1Click:Connect(function()
-    updatePlayerList()
+	updatePlayerList()
 end)
 
 espNameAllBtn.MouseButton1Click:Connect(function()
-    for _, player in ipairs(Players:GetPlayers()) do
-        if player ~= LocalPlayer then
-            selectedPlayers[player] = true
-            if player.Character then
-                createNameESP(player, player.Character)
-            end
-        end
-    end
-    updatePlayerList()
+	for _, player in ipairs(Players:GetPlayers()) do
+		if player ~= LocalPlayer then
+			selectedPlayers[player] = true
+			if player.Character then
+				createNameESP(player, player.Character)
+			end
+		end
+	end
+	updatePlayerList()
 end)
 
 charmESPBtn.MouseButton1Click:Connect(function()
-    charmESPEnabled = not charmESPEnabled
-    charmESPBtn.Text = charmESPEnabled and "ESP Charm: ON" or "ESP Charm"
-    charmESPBtn.BackgroundColor3 = charmESPEnabled and Color3.fromRGB(200, 220, 80) or Color3.fromRGB(200, 200, 80)
+	charmESPEnabled = not charmESPEnabled
+	charmESPBtn.Text = charmESPEnabled and "ESP Charm: ON" or "ESP Charm"
+	charmESPBtn.BackgroundColor3 = charmESPEnabled and Color3.fromRGB(200, 220, 80) or Color3.fromRGB(200, 200, 80)
 
-    for _, player in ipairs(Players:GetPlayers()) do
-        if player ~= LocalPlayer and player.Character then
-            local head = player.Character:FindFirstChild("Head")
-            if head then
-                if charmESPEnabled then
-                    local color = getTeamColor(player)
-                    addESPCharm(head, color)
-                else
-                    removeESPCharm(head)
-                end
-            end
-        end
-    end
+	for _, player in ipairs(Players:GetPlayers()) do
+		if player ~= LocalPlayer and player.Character then
+			local head = player.Character:FindFirstChild("Head")
+			if head then
+				if charmESPEnabled then
+					local color = getTeamColor(player)
+					addESPCharm(head, color)
+				else
+					removeESPCharm(head)
+				end
+			end
+		end
+	end
 end)
 
 -- Initialize player handling
 Players.PlayerAdded:Connect(handlePlayer)
 Players.PlayerRemoving:Connect(function(player)
-    if player.Character then
-        removeHeadHitbox(player.Character)
-        removeESPCharm(player.Character:FindFirstChild("Head"))
-    end
-    removeNameESP(player)
-    selectedPlayers[player] = nil
+	if player.Character then
+		removeHeadHitbox(player.Character)
+		removeESPCharm(player.Character:FindFirstChild("Head"))
+	end
+	removeNameESP(player)
+	selectedPlayers[player] = nil
 end)
 
 -- Handle existing players
 for _, player in ipairs(Players:GetPlayers()) do
-    handlePlayer(player)
+	handlePlayer(player)
 end
 
 statusLabel.Text = "Processing: " .. tableCount(processedPlayers) .. " Players"
