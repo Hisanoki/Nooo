@@ -1,4 +1,4 @@
--- Combined Head Hitbox & Invisibility GUI
+-- Combined Head Hitbox & Invisibility GUI (Mobile Tab Version)
 
 -- SERVICES
 local Players = game:GetService("Players")
@@ -244,10 +244,9 @@ local function applyHeadHitbox(character, size)
 end
 
 -- Helper functions for UI creation
-local function createTransparentButton(text, position, color, parent)
+local function createTransparentButton(text, color, parent)
 	local btn = Instance.new("TextButton")
-	btn.Size = UDim2.new(1, 0, 0, 30)
-	btn.Position = position
+	btn.Size = UDim2.new(1, 0, 0, 32)
 	btn.Text = text
 	btn.BackgroundColor3 = color
 	btn.BackgroundTransparency = 0.7
@@ -262,10 +261,9 @@ local function createTransparentButton(text, position, color, parent)
 	return btn
 end
 
-local function createTransparentInput(placeholder, text, position, parent)
+local function createTransparentInput(placeholder, text, parent)
 	local input = Instance.new("TextBox")
-	input.Size = UDim2.new(1, 0, 0, 30)
-	input.Position = position
+	input.Size = UDim2.new(1, 0, 0, 32)
 	input.PlaceholderText = placeholder
 	input.Text = text
 	input.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
@@ -281,10 +279,9 @@ local function createTransparentInput(placeholder, text, position, parent)
 	return input
 end
 
-local function createTransparentLabel(text, position, parent)
+local function createTransparentLabel(text, parent)
 	local label = Instance.new("TextLabel")
-	label.Size = UDim2.new(1, 0, 0, 20)
-	label.Position = position
+	label.Size = UDim2.new(1, 0, 0, 22)
 	label.BackgroundTransparency = 1
 	label.Text = text
 	label.TextColor3 = Color3.fromRGB(200, 200, 200)
@@ -295,7 +292,7 @@ local function createTransparentLabel(text, position, parent)
 	return label
 end
 
--- UI SETUP
+-- UI SETUP (Mobile size)
 local gui = Instance.new("ScreenGui")
 gui.Name = "Mobile_ESP_GUI"
 gui.ResetOnSpawn = false
@@ -303,8 +300,8 @@ gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 gui.Parent = LocalPlayer:WaitForChild("PlayerGui")
 
 local mainContainer = Instance.new("Frame")
-mainContainer.Size = UDim2.new(0, 300, 0, 40)
-mainContainer.Position = UDim2.new(0.5, -150, 0, 10)
+mainContainer.Size = UDim2.new(0, 220, 0, 36)
+mainContainer.Position = UDim2.new(0.5, -110, 0, 10)
 mainContainer.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
 mainContainer.BackgroundTransparency = 0.7
 mainContainer.BorderSizePixel = 0
@@ -316,8 +313,8 @@ corner.CornerRadius = UDim.new(0, 8)
 corner.Parent = mainContainer
 
 local toggleUIButton = Instance.new("TextButton")
-toggleUIButton.Size = UDim2.new(0, 120, 0, 30)
-toggleUIButton.Position = UDim2.new(0.5, -60, 0.5, -15)
+toggleUIButton.Size = UDim2.new(0, 110, 0, 28)
+toggleUIButton.Position = UDim2.new(0.5, -55, 0.5, -14)
 toggleUIButton.Text = "☰ Open Menu"
 toggleUIButton.TextColor3 = Color3.fromRGB(255, 255, 255)
 toggleUIButton.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
@@ -331,8 +328,8 @@ buttonCorner.CornerRadius = UDim.new(0, 6)
 buttonCorner.Parent = toggleUIButton
 
 local mainFrame = Instance.new("Frame")
-mainFrame.Size = UDim2.new(0, 300, 0, 400)
-mainFrame.Position = UDim2.new(0.5, -150, 0.5, -200)
+mainFrame.Size = UDim2.new(0, 220, 0, 320)
+mainFrame.Position = UDim2.new(0.5, -110, 0.5, -160)
 mainFrame.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
 mainFrame.BackgroundTransparency = 0.7
 mainFrame.BorderSizePixel = 0
@@ -344,73 +341,88 @@ local mainCorner = Instance.new("UICorner")
 mainCorner.CornerRadius = UDim.new(0, 8)
 mainCorner.Parent = mainFrame
 
-local title = Instance.new("TextLabel")
-title.Size = UDim2.new(1, 0, 0, 30)
-title.Position = UDim2.new(0, 0, 0, 0)
-title.BackgroundTransparency = 1
-title.Text = "ESP & Hitbox Manager"
-title.TextColor3 = Color3.fromRGB(255, 255, 255)
-title.Font = Enum.Font.GothamBold
-title.TextSize = 16
-title.Parent = mainFrame
+-- Tab Bar
+local tabBar = Instance.new("Frame")
+tabBar.Size = UDim2.new(1, 0, 0, 32)
+tabBar.Position = UDim2.new(0, 0, 0, 0)
+tabBar.BackgroundTransparency = 1
+tabBar.Parent = mainFrame
 
-local closeButton = Instance.new("TextButton")
-closeButton.Size = UDim2.new(0, 30, 0, 30)
-closeButton.Position = UDim2.new(1, -30, 0, 0)
-closeButton.Text = "X"
-closeButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-closeButton.BackgroundTransparency = 1
-closeButton.BorderSizePixel = 0
-closeButton.Font = Enum.Font.GothamBold
-closeButton.TextSize = 16
-closeButton.Parent = mainFrame
+local tab1Btn = Instance.new("TextButton")
+tab1Btn.Size = UDim2.new(0.5, -2, 1, 0)
+tab1Btn.Position = UDim2.new(0, 0, 0, 0)
+tab1Btn.Text = "HeadHitbox"
+tab1Btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+tab1Btn.BackgroundColor3 = Color3.fromRGB(220, 60, 60)
+tab1Btn.BackgroundTransparency = 0.2
+tab1Btn.Font = Enum.Font.GothamBold
+tab1Btn.TextSize = 14
+tab1Btn.BorderSizePixel = 0
+tab1Btn.Parent = tabBar
+local tab1Corner = Instance.new("UICorner")
+tab1Corner.CornerRadius = UDim.new(0, 6)
+tab1Corner.Parent = tab1Btn
 
-local leftPanel = Instance.new("ScrollingFrame")
-leftPanel.Size = UDim2.new(0.45, 0, 1, -40)
-leftPanel.Position = UDim2.new(0, 5, 0, 35)
+local tab2Btn = Instance.new("TextButton")
+tab2Btn.Size = UDim2.new(0.5, -2, 1, 0)
+tab2Btn.Position = UDim2.new(0.5, 2, 0, 0)
+tab2Btn.Text = "Other"
+tab2Btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+tab2Btn.BackgroundColor3 = Color3.fromRGB(60, 120, 220)
+tab2Btn.BackgroundTransparency = 0.2
+tab2Btn.Font = Enum.Font.GothamBold
+tab2Btn.TextSize = 14
+tab2Btn.BorderSizePixel = 0
+tab2Btn.Parent = tabBar
+local tab2Corner = Instance.new("UICorner")
+tab2Corner.CornerRadius = UDim.new(0, 6)
+tab2Corner.Parent = tab2Btn
+
+-- Tab Panels
+local leftPanel = Instance.new("Frame")
+leftPanel.Size = UDim2.new(1, -12, 1, -44)
+leftPanel.Position = UDim2.new(0, 6, 0, 38)
 leftPanel.BackgroundTransparency = 1
 leftPanel.BorderSizePixel = 0
-leftPanel.ScrollBarThickness = 4
-leftPanel.CanvasSize = UDim2.new(0, 0, 0, 0)
+leftPanel.Visible = true
 leftPanel.Parent = mainFrame
 
-local rightPanel = Instance.new("Frame")
-rightPanel.Size = UDim2.new(0.45, -10, 1, -40)
-rightPanel.Position = UDim2.new(0.55, 5, 0, 35)
+local rightPanel = Instance.new("ScrollingFrame")
+rightPanel.Size = UDim2.new(1, -12, 1, -44)
+rightPanel.Position = UDim2.new(0, 6, 0, 38)
 rightPanel.BackgroundTransparency = 1
 rightPanel.BorderSizePixel = 0
+rightPanel.ScrollBarThickness = 4
+rightPanel.CanvasSize = UDim2.new(0, 0, 0, 0)
+rightPanel.Visible = false
 rightPanel.Parent = mainFrame
 
-local leftTitle = Instance.new("TextLabel")
-leftTitle.Size = UDim2.new(1, 0, 0, 25)
-leftTitle.Position = UDim2.new(0, 0, 0, 0)
-leftTitle.BackgroundTransparency = 1
-leftTitle.Text = "Head hitbox"
+-- UIListLayout cho leftPanel
+local leftLayout = Instance.new("UIListLayout")
+leftLayout.Parent = leftPanel
+leftLayout.SortOrder = Enum.SortOrder.LayoutOrder
+leftLayout.Padding = UDim.new(0, 4)
+
+-- UIListLayout cho rightPanel
+local rightLayout = Instance.new("UIListLayout")
+rightLayout.Parent = rightPanel
+rightLayout.SortOrder = Enum.SortOrder.LayoutOrder
+rightLayout.Padding = UDim.new(0, 4)
+
+-- HeadHitbox Tab (leftPanel)
+local leftTitle = createTransparentLabel("Head hitbox", leftPanel)
 leftTitle.TextColor3 = Color3.fromRGB(255, 150, 150)
 leftTitle.Font = Enum.Font.GothamBold
 leftTitle.TextSize = 14
-leftTitle.Parent = leftPanel
 
-local rightTitle = Instance.new("TextLabel")
-rightTitle.Size = UDim2.new(1, 0, 0, 25)
-rightTitle.Position = UDim2.new(0, 0, 0, 0)
-rightTitle.BackgroundTransparency = 1
-rightTitle.Text = "ESP name"
-rightTitle.TextColor3 = Color3.fromRGB(150, 200, 255)
-rightTitle.Font = Enum.Font.GothamBold
-rightTitle.TextSize = 14
-rightTitle.Parent = rightPanel
-
-local sizeInput = createTransparentInput("Size (e.g. 4)", tostring(DEFAULT_HITBOX_SIZE), UDim2.new(0, 0, 0, 30), leftPanel)
-local autoToggle = createTransparentButton("Auto Hitbox: OFF", UDim2.new(0, 0, 0, 70), Color3.fromRGB(180, 50, 50), leftPanel)
-local removeAllBtn = createTransparentButton("Remove All Hitboxes", UDim2.new(0, 0, 0, 110), Color3.fromRGB(180, 50, 50), leftPanel)
-local statusLabel = createTransparentLabel("Processing: 0 Players", UDim2.new(0, 0, 0, 150), leftPanel)
-local loopspeedLabel = createTransparentLabel("Loopspeed", UDim2.new(0, 0, 0, 190), leftPanel)
-local loopspeedInput = createTransparentInput("Speed (e.g. 16)", "16", UDim2.new(0, 0, 0, 215), leftPanel)
-local loopspeedToggle = createTransparentButton("Loopspeed: OFF", UDim2.new(0, 0, 0, 255), Color3.fromRGB(80, 80, 200), leftPanel)
-
--- Add Invisible Button to leftPanel
-invisButton = createTransparentButton("INVISIBLE", UDim2.new(0, 0, 0, 295), INVIS_CONFIG.PRIMARY_COLOR, leftPanel)
+local sizeInput = createTransparentInput("Size (e.g. 4)", tostring(DEFAULT_HITBOX_SIZE), leftPanel)
+local autoToggle = createTransparentButton("Auto Hitbox: OFF", Color3.fromRGB(180, 50, 50), leftPanel)
+local removeAllBtn = createTransparentButton("Remove All Hitboxes", Color3.fromRGB(180, 50, 50), leftPanel)
+local statusLabel = createTransparentLabel("Processing: 0 Players", leftPanel)
+local loopspeedLabel = createTransparentLabel("Loopspeed", leftPanel)
+local loopspeedInput = createTransparentInput("Speed (e.g. 16)", "16", leftPanel)
+local loopspeedToggle = createTransparentButton("Loopspeed: OFF", Color3.fromRGB(80, 80, 200), leftPanel)
+invisButton = createTransparentButton("INVISIBLE", INVIS_CONFIG.PRIMARY_COLOR, leftPanel)
 
 -- Sound for invisibility toggle
 invisSound = Instance.new("Sound")
@@ -419,20 +431,65 @@ invisSound.SoundId = INVIS_CONFIG.SOUND_ID
 invisSound.Volume = 0.5
 invisSound.Parent = gui
 
+-- Other Tab (rightPanel)
+local rightTitle = createTransparentLabel("ESP & Other Features", rightPanel)
+rightTitle.TextColor3 = Color3.fromRGB(150, 200, 255)
+rightTitle.Font = Enum.Font.GothamBold
+rightTitle.TextSize = 14
+
 local playerList = Instance.new("ScrollingFrame")
-playerList.Size = UDim2.new(1, 0, 0, 150)
-playerList.Position = UDim2.new(0, 0, 0, 30)
+playerList.Size = UDim2.new(1, 0, 0, 110)
 playerList.BackgroundTransparency = 1
 playerList.BorderSizePixel = 0
 playerList.ScrollBarThickness = 4
 playerList.CanvasSize = UDim2.new(0, 0, 0, 0)
 playerList.Parent = rightPanel
+local playerListLayout = Instance.new("UIListLayout")
+playerListLayout.Parent = playerList
+playerListLayout.SortOrder = Enum.SortOrder.LayoutOrder
+playerListLayout.Padding = UDim.new(0, 2)
 
-local autoNameESP = createTransparentButton("Auto ESP Name: OFF", UDim2.new(0, 0, 0, 190), Color3.fromRGB(50, 150, 200), rightPanel)
-local refreshBtn = createTransparentButton("Refresh Player List", UDim2.new(0, 0, 0, 230), Color3.fromRGB(80, 80, 180), rightPanel)
-local espNameAllBtn = createTransparentButton("ESP Name All: OFF", UDim2.new(0, 0, 0, 270), Color3.fromRGB(80, 200, 80), rightPanel)
-local boxESPBtn = createTransparentButton("ESP Box Charm: OFF", UDim2.new(0, 0, 0, 310), Color3.fromRGB(200, 200, 80), rightPanel)
+local autoNameESP = createTransparentButton("Auto ESP Name: OFF", Color3.fromRGB(50, 150, 200), rightPanel)
+local refreshBtn = createTransparentButton("Refresh Player List", Color3.fromRGB(80, 80, 180), rightPanel)
+local espNameAllBtn = createTransparentButton("ESP Name All: OFF", Color3.fromRGB(80, 200, 80), rightPanel)
+local boxESPBtn = createTransparentButton("ESP Box Charm: OFF", Color3.fromRGB(200, 200, 80), rightPanel)
 
+-- Tab switching logic
+local function switchTab(tabIndex)
+	if tabIndex == 1 then
+		leftPanel.Visible = true
+		rightPanel.Visible = false
+		tab1Btn.BackgroundTransparency = 0.2
+		tab2Btn.BackgroundTransparency = 0.6
+	else
+		leftPanel.Visible = false
+		rightPanel.Visible = true
+		tab1Btn.BackgroundTransparency = 0.6
+		tab2Btn.BackgroundTransparency = 0.2
+	end
+end
+
+tab1Btn.MouseButton1Click:Connect(function()
+	switchTab(1)
+end)
+tab2Btn.MouseButton1Click:Connect(function()
+	switchTab(2)
+end)
+switchTab(1)
+
+-- Close Button
+local closeButton = Instance.new("TextButton")
+closeButton.Size = UDim2.new(0, 28, 0, 28)
+closeButton.Position = UDim2.new(1, -32, 0, 2)
+closeButton.Text = "X"
+closeButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+closeButton.BackgroundTransparency = 1
+closeButton.BorderSizePixel = 0
+closeButton.Font = Enum.Font.GothamBold
+closeButton.TextSize = 16
+closeButton.Parent = mainFrame
+
+-- ESP Name logic
 local function createNameESP(player, char)
 	if player == LocalPlayer then return end
 	if not char then return end
@@ -567,8 +624,7 @@ local function updatePlayerList()
 	for _, player in pairs(Players:GetPlayers()) do
 		if player ~= LocalPlayer then
 			local playerBtn = Instance.new("TextButton")
-			playerBtn.Size = UDim2.new(1, -10, 0, 30)
-			playerBtn.Position = UDim2.new(0, 5, 0, yPos)
+			playerBtn.Size = UDim2.new(1, -6, 0, 28)
 			playerBtn.Text = player.Name
 			playerBtn.BackgroundColor3 = selectedPlayers[player] and Color3.fromRGB(80, 160, 80) or Color3.fromRGB(60, 60, 60)
 			playerBtn.BackgroundTransparency = 0.7
@@ -591,7 +647,7 @@ local function updatePlayerList()
 					end
 				end
 			end)
-			yPos = yPos + 35
+			yPos = yPos + 30
 		end
 	end
 	playerList.CanvasSize = UDim2.new(0, 0, 0, yPos)
