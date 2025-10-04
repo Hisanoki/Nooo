@@ -18,16 +18,13 @@ local charmESPEnabled = false
 local selectedPlayers = {}
 local globalConnections = {}
 local playerData = {}
-
--- Loopspeed state
-local loopspeedEnabled = false
-local loopspeedConnection = nil
-local loopspeedInputValue = "16" -- Default walkspeed
+local charmESPObjects = {}
+local nameESPObjects = {}
 
 -- Helper functions
 local function tableCount(t)
 	local count = 0
-	for _ in pairs(t) do
+	for _ in t do
 		count = count + 1
 	end
 	return count
@@ -40,25 +37,56 @@ local function getTeamColor(player)
 	return ESP_COLOR
 end
 
-local function addESPCharm(part, color)
-	if not part or part:FindFirstChild("ESPCharm") then return end
-
-	local box = Instance.new("BoxHandleAdornment")
-	box.Name = "ESPCharm"
-	box.Adornee = part
-	box.Size = part.Size + ESP_PADDING
-	box.AlwaysOnTop = true
-	box.ZIndex = 10
-	box.Transparency = ESP_TRANSPARENCY
-	box.Color3 = color or ESP_COLOR
-	box.Parent = part
-
-	return box
+-- ESP Charm for upper body
+local function getUpperBodyParts(character)
+	local parts = {}
+	local names = {
+		"Head", "UpperTorso", "Torso", "LeftShoulder", "RightShoulder",
+		"LeftUpperArm", "RightUpperArm", "LeftArm", "RightArm"
+	}
+	for _, name in names do
+		local part = character:FindFirstChild(name)
+		if part and part:IsA("BasePart") then
+			table.insert(parts, part)
+		end
+	end
+	return parts
 end
 
-local function removeESPCharm(part)
-	if part and part:FindFirstChild("ESPCharm") then
-		part.ESPCharm:Destroy()
+local function addCharmESP(character, color)
+	if not character or charmESPObjects[character] then return end
+	local parts = getUpperBodyParts(character)
+	local highlights = {}
+	for _, part in parts do
+		local highlight = Instance.new("Highlight")
+		highlight.Name = "CharmESP"
+		highlight.Adornee = part
+		highlight.FillColor = color or ESP_COLOR
+		highlight.OutlineColor = color or ESP_COLOR
+		highlight.FillTransparency = 0.5
+		highlight.OutlineTransparency = 0.1
+		highlight.Parent = part
+		table.insert(highlights, highlight)
+	end
+	charmESPObjects[character] = highlights
+end
+
+local function removeCharmESP(character)
+	if not character then return end
+	if charmESPObjects[character] then
+		for _, highlight in charmESPObjects[character] do
+			if highlight and highlight.Parent then
+				highlight:Destroy()
+			end
+		end
+		charmESPObjects[character] = nil
+	end
+	-- Remove any leftover adornments
+	for _, part in getUpperBodyParts(character) do
+		local highlight = part:FindFirstChild("CharmESP")
+		if highlight then
+			highlight:Destroy()
+		end
 	end
 end
 
@@ -71,8 +99,6 @@ local function removeHeadHitbox(character)
 			head.Size = head.OriginalSize.Value
 			head.OriginalSize:Destroy()
 		end
-
-		removeESPCharm(head)
 
 		if playerData[character] and playerData[character].meshBackup then
 			playerData[character].meshBackup.Parent = head
@@ -111,16 +137,6 @@ local function applyHeadHitbox(character, size)
 	head.CanCollide = false
 	head.Transparency = 0.5
 	head.Material = Enum.Material.ForceField
-
-	-- Add ESP charm with team color if enabled
-	if charmESPEnabled then
-		local player = Players:GetPlayerFromCharacter(character)
-		local color = ESP_COLOR
-		if player then
-			color = getTeamColor(player)
-		end
-		addESPCharm(head, color)
-	end
 
 	-- Remove hitbox when dead
 	local humanoid = character:FindFirstChildOfClass("Humanoid")
@@ -322,7 +338,7 @@ local statusLabel = createTransparentLabel("Processing: 0 Players", UDim2.new(0,
 
 -- Loopspeed UI (below Remove All Hitboxes)
 local loopspeedLabel = createTransparentLabel("Loopspeed", UDim2.new(0, 0, 0, 190), leftPanel)
-local loopspeedInput = createTransparentInput("Speed (e.g. 16)", loopspeedInputValue, UDim2.new(0, 0, 0, 215), leftPanel)
+local loopspeedInput = createTransparentInput("Speed (e.g. 16)", "16", UDim2.new(0, 0, 0, 215), leftPanel)
 local loopspeedToggle = createTransparentButton("Loopspeed: OFF", UDim2.new(0, 0, 0, 255), Color3.fromRGB(80, 80, 200), leftPanel)
 
 -- ESP name controls
@@ -337,12 +353,10 @@ playerList.Parent = rightPanel
 
 local autoNameESP = createTransparentButton("Auto ESP Name: OFF", UDim2.new(0, 0, 0, 190), Color3.fromRGB(50, 150, 200), rightPanel)
 local refreshBtn = createTransparentButton("Refresh Player List", UDim2.new(0, 0, 0, 230), Color3.fromRGB(80, 80, 180), rightPanel)
-local espNameAllBtn = createTransparentButton("ESP Name All", UDim2.new(0, 0, 0, 270), Color3.fromRGB(80, 200, 80), rightPanel)
-local charmESPBtn = createTransparentButton("ESP Charm", UDim2.new(0, 0, 0, 310), Color3.fromRGB(200, 200, 80), rightPanel)
+local espNameAllBtn = createTransparentButton("ESP Name All: OFF", UDim2.new(0, 0, 0, 270), Color3.fromRGB(80, 200, 80), rightPanel)
+local charmESPBtn = createTransparentButton("ESP Charm: OFF", UDim2.new(0, 0, 0, 310), Color3.fromRGB(200, 200, 80), rightPanel)
 
 -- ESP Name Functions
-local nameESPObjects = {}
-
 local function createNameESP(player, char)
 	if player == LocalPlayer then return end
 	if not char then return end
@@ -414,6 +428,7 @@ local function removeNameESP(player)
 	end
 end
 
+-- Main logic for handling players
 local function handlePlayer(player)
 	if player == LocalPlayer then return end
 
@@ -426,12 +441,28 @@ local function handlePlayer(player)
 			createNameESP(player, char)
 		end
 		if charmESPEnabled then
-			local head = char:FindFirstChild("Head")
-			if head then
-				local color = getTeamColor(player)
-				addESPCharm(head, color)
-			end
+			local color = getTeamColor(player)
+			addCharmESP(char, color)
 		end
+
+		-- Remove hitbox/charm/ESP on death
+		local humanoid = char:FindFirstChildOfClass("Humanoid")
+		if humanoid then
+			humanoid.Died:Connect(function()
+				removeHeadHitbox(char)
+				removeCharmESP(char)
+				removeNameESP(player)
+			end)
+		end
+
+		-- Remove hitbox/charm/ESP if character leaves workspace
+		char.AncestryChanged:Connect(function(_, parent)
+			if not parent then
+				removeHeadHitbox(char)
+				removeCharmESP(char)
+				removeNameESP(player)
+			end
+		end)
 	end
 
 	-- Setup character added connection
@@ -448,7 +479,7 @@ local function handlePlayer(player)
 		if not parent then
 			if player.Character then
 				removeHeadHitbox(player.Character)
-				removeESPCharm(player.Character:FindFirstChild("Head"))
+				removeCharmESP(player.Character)
 			end
 			removeNameESP(player)
 			selectedPlayers[player] = nil
@@ -506,6 +537,10 @@ local function updatePlayerList()
 end
 
 -- Loopspeed logic
+local loopspeedEnabled = false
+local loopspeedConnection = nil
+local loopspeedInputValue = "16"
+
 local function setLoopspeedEnabled(state)
 	loopspeedEnabled = state
 	loopspeedToggle.Text = loopspeedEnabled and "Loopspeed: ON" or "Loopspeed: OFF"
@@ -613,12 +648,18 @@ refreshBtn.MouseButton1Click:Connect(function()
 	updatePlayerList()
 end)
 
+local espNameAllState = false
 espNameAllBtn.MouseButton1Click:Connect(function()
+	espNameAllState = not espNameAllState
+	espNameAllBtn.Text = espNameAllState and "ESP Name All: ON" or "ESP Name All: OFF"
+	espNameAllBtn.BackgroundColor3 = espNameAllState and Color3.fromRGB(80, 220, 80) or Color3.fromRGB(80, 200, 80)
 	for _, player in ipairs(Players:GetPlayers()) do
 		if player ~= LocalPlayer then
-			selectedPlayers[player] = true
-			if player.Character then
+			selectedPlayers[player] = espNameAllState
+			if espNameAllState and player.Character then
 				createNameESP(player, player.Character)
+			else
+				removeNameESP(player)
 			end
 		end
 	end
@@ -627,19 +668,16 @@ end)
 
 charmESPBtn.MouseButton1Click:Connect(function()
 	charmESPEnabled = not charmESPEnabled
-	charmESPBtn.Text = charmESPEnabled and "ESP Charm: ON" or "ESP Charm"
-	charmESPBtn.BackgroundColor3 = charmESPEnabled and Color3.fromRGB(200, 220, 80) or Color3.fromRGB(200, 200, 80)
+	charmESPBtn.Text = charmESPEnabled and "ESP Charm: ON" or "ESP Charm: OFF"
+	charmESPBtn.BackgroundColor3 = charmESPEnabled and Color3.fromRGB(220, 220, 80) or Color3.fromRGB(200, 200, 80)
 
 	for _, player in ipairs(Players:GetPlayers()) do
 		if player ~= LocalPlayer and player.Character then
-			local head = player.Character:FindFirstChild("Head")
-			if head then
-				if charmESPEnabled then
-					local color = getTeamColor(player)
-					addESPCharm(head, color)
-				else
-					removeESPCharm(head)
-				end
+			if charmESPEnabled then
+				local color = getTeamColor(player)
+				addCharmESP(player.Character, color)
+			else
+				removeCharmESP(player.Character)
 			end
 		end
 	end
@@ -650,7 +688,7 @@ Players.PlayerAdded:Connect(handlePlayer)
 Players.PlayerRemoving:Connect(function(player)
 	if player.Character then
 		removeHeadHitbox(player.Character)
-		removeESPCharm(player.Character:FindFirstChild("Head"))
+		removeCharmESP(player.Character)
 	end
 	removeNameESP(player)
 	selectedPlayers[player] = nil
