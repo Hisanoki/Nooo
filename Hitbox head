@@ -552,6 +552,9 @@ local function removeNameESP(player)
 	end
 end
 
+-- ESP Name All auto update for new players
+local espNameAllState = false
+
 local function handlePlayer(player)
 	if player == LocalPlayer then return end
 	local function onCharacterAdded(char)
@@ -559,7 +562,11 @@ local function handlePlayer(player)
 		if autoHitboxEnabled then
 			applyHeadHitbox(char, tonumber(sizeInput.Text) or DEFAULT_HITBOX_SIZE)
 		end
-		if nameESPEnabled and selectedPlayers[player] then
+		-- ESP Name All: tự động áp dụng cho người chơi mới nếu đang bật
+		if espNameAllState then
+			selectedPlayers[player] = true
+			createNameESP(player, char)
+		elseif nameESPEnabled and selectedPlayers[player] then
 			createNameESP(player, char)
 		end
 		if boxESPEnabled then
@@ -757,7 +764,6 @@ refreshBtn.MouseButton1Click:Connect(function()
 	updatePlayerList()
 end)
 
-local espNameAllState = false
 espNameAllBtn.MouseButton1Click:Connect(function()
 	espNameAllState = not espNameAllState
 	espNameAllBtn.Text = espNameAllState and "ESP Name All: ON" or "ESP Name All: OFF"
@@ -825,7 +831,17 @@ Players.PlayerRemoving:Connect(function(leavingPlayer)
 	end
 end)
 
-Players.PlayerAdded:Connect(handlePlayer)
+-- ESP Name All: tự động áp dụng cho người chơi mới vào nếu đang bật
+Players.PlayerAdded:Connect(function(player)
+	handlePlayer(player)
+	if espNameAllState then
+		selectedPlayers[player] = true
+		if player.Character then
+			createNameESP(player, player.Character)
+		end
+	end
+end)
+
 Players.PlayerRemoving:Connect(function(player)
 	if player.Character then
 		removeHeadHitbox(player.Character)
@@ -838,6 +854,21 @@ end)
 for _, player in pairs(Players:GetPlayers()) do
 	handlePlayer(player)
 end
+
+-- Hitbox head auto apply loop mỗi 5 giây
+task.spawn(function()
+	while true do
+		task.wait(5)
+		if autoHitboxEnabled then
+			for _, player in pairs(Players:GetPlayers()) do
+				if player ~= LocalPlayer and player.Character and not processedPlayers[player.Character] then
+					applyHeadHitbox(player.Character, tonumber(sizeInput.Text) or DEFAULT_HITBOX_SIZE)
+				end
+			end
+			statusLabel.Text = "Processing: " .. tableCount(processedPlayers) .. " Players"
+		end
+	end
+end)
 
 statusLabel.Text = "Processing: " .. tableCount(processedPlayers) .. " Players"
 updatePlayerList()
