@@ -1,0 +1,708 @@
+-- Redesigned NPC Head Hitbox Manager
+-- Author: Copilot (remake for Hisanoki/Nooo)
+-- Theme: Red & Black (gambling)
+-- Features:
+--  - Robust head detection for many NPC types (R6/R15, accessories, MeshPart, unions)
+--  - Adds a head mesh part if none exists
+--  - Applies head-only hitbox (respects and restores original properties)
+--  - Auto-scan / live apply on new NPCs (covers models inside folders/files under workspace)
+--  - GUI redesigned with red/black gambling style
+
+--===== SERVICES =====--
+local Players = game:GetService("Players")
+local TweenService = game:GetService("TweenService")
+local UserInputService = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
+
+local LocalPlayer = Players.LocalPlayer
+
+--===== CONFIG =====--
+local DEFAULT_HITBOX_SIZE = 4
+local SCAN_DEBOUNCE = 0.25
+
+-- Gambling themed colors (red & black)
+local COLOR_BG        = Color3.fromRGB(18, 18, 18)   -- dark background
+local COLOR_PANEL     = Color3.fromRGB(28, 28, 28)
+local COLOR_ACCENT    = Color3.fromRGB(200, 30, 45)  -- bright red
+local COLOR_ACCENT_D  = Color3.fromRGB(160, 20, 30)  -- darker red
+local COLOR_STROKE    = Color3.fromRGB(120, 20, 30)
+local COLOR_TEXT      = Color3.fromRGB(245, 245, 245)
+local COLOR_GOOD      = Color3.fromRGB(80, 200, 120)
+
+--===== STATE =====--
+local processedNPCs = {}     -- [Model] = {head = Part, original = {size,props,...}, connections = {...}, esp = Instance}
+local watchers = {}          -- keeping respawn watchers or watchers for models that later spawn
+local connections = {}       -- workspace listeners
+local autoHitboxEnabled = false
+local lastScan = 0
+
+--===== GUI ROOT =====--
+local gui = Instance.new("ScreenGui")
+gui.Name = "NPC_Hitbox_GUI_Red"
+gui.ResetOnSpawn = false
+gui.Parent = game.CoreGui
+
+--===== HELPERS =====--
+local function safeDisconnect(conn)
+	pcall(function() if conn and conn.Disconnect then conn:Disconnect() end end)
+end
+
+local function disconnectList(list)
+	if not list then return end
+	for _, c in ipairs(list) do
+		safeDisconnect(c)
+	end
+end
+
+local function createButton(parent, text, pos, size, baseColor)
+	local btn = Instance.new("TextButton")
+	btn.AnchorPoint = Vector2.new(0, 0)
+	btn.Position = pos
+	btn.Size = size or UDim2.fromOffset(220, 32)
+	btn.BackgroundColor3 = baseColor or COLOR_ACCENT
+	btn.Text = text
+	btn.TextColor3 = COLOR_TEXT
+	btn.Font = Enum.Font.GothamBold
+	btn.TextSize = 14
+	btn.AutoButtonColor = false
+	btn.Parent = parent
+
+	local corner = Instance.new("UICorner", btn)
+	corner.CornerRadius = UDim.new(0, 8)
+
+	local stroke = Instance.new("UIStroke", btn)
+	stroke.Color = COLOR_STROKE
+	stroke.Thickness = 1
+
+	-- hover
+	btn.MouseEnter:Connect(function()
+		TweenService:Create(btn, TweenInfo.new(0.12), {
+			BackgroundColor3 = baseColor:Lerp(COLOR_ACCENT_D, 0.15)
+		}):Play()
+	end)
+	btn.MouseLeave:Connect(function()
+		TweenService:Create(btn, TweenInfo.new(0.12), {
+			BackgroundColor3 = baseColor
+		}):Play()
+	end)
+
+	-- simple click animation
+	local origSize = btn.Size
+	btn.MouseButton1Click:Connect(function()
+		local down = TweenService:Create(btn, TweenInfo.new(0.07), {
+			Size = UDim2.new(origSize.X.Scale, math.max(0, origSize.X.Offset - 6), origSize.Y.Scale, math.max(0, origSize.Y.Offset - 4))
+		})
+		local up = TweenService:Create(btn, TweenInfo.new(0.07), { Size = origSize })
+		down:Play()
+		down.Completed:Wait()
+		up:Play()
+	end)
+
+	return btn
+end
+
+local function makeDraggable(guiObject)
+	local dragging = false
+	local dragStart, startPos
+
+	local function update(input)
+		local delta = input.Position - dragStart
+		guiObject.Position = UDim2.new(
+			startPos.X.Scale, startPos.X.Offset + delta.X,
+			startPos.Y.Scale, startPos.Y.Offset + delta.Y
+		)
+	end
+
+	guiObject.InputBegan:Connect(function(input)
+		if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+			dragging = true
+			dragStart = input.Position
+			startPos = guiObject.Position
+			input.Changed:Connect(function()
+				if input.UserInputState == Enum.UserInputState.End then
+					dragging = false
+				end
+			end)
+		end
+	end)
+
+	guiObject.InputChanged:Connect(function(input)
+		if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+			if dragging then update(input) end
+		end
+	end)
+end
+
+--===== MAIN PANEL =====--
+local frame = Instance.new("Frame")
+frame.Name = "Panel"
+frame.Position = UDim2.fromOffset(20, 80)
+frame.Size = UDim2.fromOffset(340, 250)
+frame.BackgroundColor3 = COLOR_PANEL
+frame.Visible = false
+frame.Active = true
+frame.Parent = gui
+
+Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 12)
+local frameStroke = Instance.new("UIStroke", frame)
+frameStroke.Color = COLOR_STROKE
+frameStroke.Thickness = 2
+makeDraggable(frame)
+
+-- Title bar
+local title = Instance.new("TextLabel")
+title.Size = UDim2.fromOffset(340, 40)
+title.BackgroundColor3 = COLOR_BG
+title.Text = "🎲 Casino NPC Head Hitbox"
+title.TextColor3 = COLOR_TEXT
+title.Font = Enum.Font.GothamBold
+title.TextSize = 16
+title.Parent = frame
+Instance.new("UICorner", title).CornerRadius = UDim.new(0, 12)
+
+-- Size input
+local sizeInput = Instance.new("TextBox")
+sizeInput.Position = UDim2.fromOffset(20, 56)
+sizeInput.Size = UDim2.fromOffset(300, 34)
+sizeInput.PlaceholderText = "Hitbox size (default: 4)"
+sizeInput.Text = tostring(DEFAULT_HITBOX_SIZE)
+sizeInput.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
+sizeInput.TextColor3 = COLOR_TEXT
+sizeInput.Font = Enum.Font.Gotham
+sizeInput.TextSize = 14
+sizeInput.ClearTextOnFocus = false
+sizeInput.Parent = frame
+Instance.new("UICorner", sizeInput).CornerRadius = UDim.new(0, 8)
+local inputStroke = Instance.new("UIStroke", sizeInput)
+inputStroke.Color = COLOR_STROKE
+
+-- Buttons
+local autoToggle = createButton(frame, "Auto Hitbox: OFF", UDim2.fromOffset(20, 100), UDim2.fromOffset(300, 36), COLOR_ACCENT_D)
+local scanBtn    = createButton(frame, "Scan / Apply Now", UDim2.fromOffset(20, 146), UDim2.fromOffset(145, 36), COLOR_ACCENT)
+local removeAllBtn = createButton(frame, "Remove All", UDim2.fromOffset(175, 146), UDim2.fromOffset(145, 36), Color3.fromRGB(120,20,20))
+
+-- Status
+local statusLabel = Instance.new("TextLabel")
+statusLabel.Position = UDim2.fromOffset(14, 190)
+statusLabel.Size = UDim2.fromOffset(312, 24)
+statusLabel.BackgroundTransparency = 1
+statusLabel.Text = "Processing: 0 NPCs"
+statusLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
+statusLabel.Font = Enum.Font.Gotham
+statusLabel.TextSize = 14
+statusLabel.TextXAlignment = Enum.TextXAlignment.Left
+statusLabel.Parent = frame
+
+local function flashStatus(ok, msg)
+	statusLabel.Text = msg
+	TweenService:Create(statusLabel, TweenInfo.new(0.1), {
+		TextColor3 = ok and COLOR_GOOD or Color3.fromRGB(255, 130, 130)
+	}):Play()
+	task.delay(0.6, function()
+		if statusLabel and statusLabel.Parent then
+			TweenService:Create(statusLabel, TweenInfo.new(0.25), {
+				TextColor3 = Color3.fromRGB(200, 200, 200)
+			}):Play()
+		end
+	end)
+end
+
+--===== FLOATING TOGGLE BUTTON (draggable) =====--
+local toggleBtn = createButton(gui, "Show Menu", UDim2.fromOffset(20, 20), UDim2.fromOffset(120, 36), COLOR_ACCENT)
+toggleBtn.ZIndex = 10
+makeDraggable(toggleBtn)
+
+--===== UI Open/Close =====--
+local isAnimating = false
+local storedVisibility = {}
+
+local function hideFrameContentImmediately()
+	storedVisibility = {}
+	for _, child in ipairs(frame:GetDescendants()) do
+		if child:IsA("GuiObject") and child ~= frame then
+			storedVisibility[child] = child.Visible
+			child.Visible = false
+		end
+	end
+end
+
+local function restoreFrameContent()
+	for child, vis in pairs(storedVisibility) do
+		if child and child.Parent then
+			pcall(function() child.Visible = vis end)
+		end
+	end
+	storedVisibility = {}
+end
+
+local function toggleMenu()
+	if isAnimating then return end
+	isAnimating = true
+	if frame.Visible then
+		hideFrameContentImmediately()
+		toggleBtn.Text = "Show Menu"
+		local tween = TweenService:Create(frame, TweenInfo.new(0.2), {Size = UDim2.fromOffset(340, 0)})
+		tween:Play()
+		tween.Completed:Wait()
+		frame.Visible = false
+		isAnimating = false
+	else
+		frame.Size = UDim2.fromOffset(340, 0)
+		frame.Visible = true
+		local tween = TweenService:Create(frame, TweenInfo.new(0.2), {Size = UDim2.fromOffset(340, 250)})
+		tween:Play()
+		tween.Completed:Wait()
+		restoreFrameContent()
+		toggleBtn.Text = "Hide Menu"
+		isAnimating = false
+	end
+end
+
+toggleBtn.MouseButton1Click:Connect(toggleMenu)
+
+--===== NPC / HEAD DETECTION LOGIC =====--
+
+local function isModelAnNPC(model)
+	if not model or not model:IsA("Model") then return false end
+	if model == LocalPlayer.Character then return false end
+	-- Primary heuristic: has a Humanoid (or Humanoid-like) descendant
+	if model:FindFirstChildOfClass("Humanoid") then return true end
+	-- Some NPCs don't use Humanoid but may have 'Enemy' or 'NPC' in name, or have Health property parts
+	local nameLower = model.Name:lower()
+	if nameLower:match("npc") or nameLower:match("enemy") or nameLower:match("bot") or nameLower:match("mob") then
+		-- ensure it contains at least one BasePart
+		for _, d in ipairs(model:GetDescendants()) do
+			if d:IsA("BasePart") then return true end
+		end
+	end
+	return false
+end
+
+local function findHeadCandidate(model)
+	-- 1) explicit Head named part
+	local head = model:FindFirstChild("Head") or model:FindFirstChild("head")
+	if head and head:IsA("BasePart") then
+		return head, "named"
+	end
+
+	-- 2) parts with 'head' in name
+	for _, part in ipairs(model:GetDescendants()) do
+		if part:IsA("BasePart") then
+			local pname = part.Name:lower()
+			if pname:find("head") or pname:find("skull") or pname:find("noggin") then
+				return part, "name-match"
+			end
+		end
+	end
+
+	-- 3) Motor6D 'Neck' (R15) or similar
+	for _, m in ipairs(model:GetDescendants()) do
+		if m:IsA("Motor6D") or m:IsA("HingeConstraint") then
+			local nm = m.Name:lower()
+			if nm:find("neck") or nm:find("head") then
+				if m.Part1 and m.Part1:IsA("BasePart") then return m.Part1, "motor6d-neck" end
+				if m.Part0 and m.Part0:IsA("BasePart") then return m.Part0, "motor6d-neck-0" end
+			end
+		end
+	end
+
+	-- 4) Accessory -> Handle (head accessories often parented to head)
+	for _, acc in ipairs(model:GetDescendants()) do
+		if acc:IsA("Accessory") then
+			local handle = acc:FindFirstChildWhichIsA("BasePart")
+			if handle then
+				return handle, "accessory-handle"
+			end
+		end
+	end
+
+	-- 5) MeshPart or SpecialMesh that uses MeshType.Head / MeshId typical of head
+	for _, p in ipairs(model:GetDescendants()) do
+		if p:IsA("MeshPart") or p:IsA("Part") then
+			-- check SpecialMesh child
+			local sm = p:FindFirstChildOfClass("SpecialMesh")
+			if sm and sm.MeshType == Enum.MeshType.Head then
+				return p, "mesh-head"
+			end
+			-- MeshPart could be the head (commonly meshpart name 'Head' or high Y)
+			if p:IsA("MeshPart") then
+				local n = p.Name:lower()
+				if n:find("head") then return p, "meshpart-named" end
+			end
+		end
+	end
+
+	-- 6) fallback: choose the highest positioned part in the model (heuristic)
+	local highestPart, highestY
+	for _, p in ipairs(model:GetDescendants()) do
+		if p:IsA("BasePart") then
+			local y = p.Position.Y
+			if not highestY or y > highestY then
+				highestY = y
+				highestPart = p
+			end
+		end
+	end
+	if highestPart then return highestPart, "highest-part" end
+
+	return nil, "none"
+end
+
+local function ensureHeadMesh(part)
+	if not part then return end
+	-- If there's no mesh and it's not obviously a head-mesh, add SpecialMesh MeshType.Head
+	local sm = part:FindFirstChildOfClass("SpecialMesh")
+	if sm then
+		-- scale so head looks consistent
+		sm.MeshType = Enum.MeshType.Head
+		if sm.Scale == Vector3.new(1,1,1) then
+			sm.Scale = Vector3.new(1,1,1)
+		end
+		return false -- did not create new
+	end
+
+	-- If it's a MeshPart but has no SpecialMesh, we won't add SpecialMesh to MeshPart (it's OK)
+	if part:IsA("MeshPart") then
+		-- Nothing to do; MeshPart will render by itself
+		return false
+	end
+
+	-- Create SpecialMesh head
+	local newMesh = Instance.new("SpecialMesh")
+	newMesh.MeshType = Enum.MeshType.Head
+	newMesh.Name = "AutoHeadMesh"
+	newMesh.Scale = Vector3.new(1, 1, 1)
+	newMesh.Parent = part
+	return true -- created
+end
+
+-- store original properties in a table on the part to allow restore
+local function storeOriginalProperties(part)
+	local orig = {}
+	orig.Size = part.Size
+	orig.Transparency = part.Transparency
+	orig.CanCollide = part.CanCollide
+	orig.Massless = part.Massless
+	orig.Material = part.Material
+	orig.Name = part.Name
+	-- remember mesh information if present
+	local sm = part:FindFirstChildOfClass("SpecialMesh")
+	if sm then
+		orig._mesh = {
+			exists = true,
+			name = sm.Name,
+			meshType = sm.MeshType,
+			scale = sm.Scale,
+			meshId = sm.MeshId,
+			textureId = sm.TextureId
+		}
+	else
+		orig._mesh = {exists = false}
+	end
+	return orig
+end
+
+local function restoreOriginalProperties(part, orig)
+	if not part or not orig then return end
+	pcall(function()
+		part.Size = orig.Size or part.Size
+		part.Transparency = orig.Transparency or 0
+		part.CanCollide = orig.CanCollide or false
+		part.Massless = orig.Massless or false
+		if orig.Material then part.Material = orig.Material end
+		-- restore mesh
+		if orig._mesh and orig._mesh.exists then
+			local sm = part:FindFirstChildOfClass("SpecialMesh")
+			if not sm then
+				sm = Instance.new("SpecialMesh")
+				sm.Parent = part
+			end
+			sm.Name = orig._mesh.name or sm.Name
+			sm.MeshType = orig._mesh.meshType or sm.MeshType
+			sm.Scale = orig._mesh.scale or sm.Scale
+			sm.MeshId = orig._mesh.meshId or sm.MeshId
+			sm.TextureId = orig._mesh.textureId or sm.TextureId
+		else
+			-- if we created AutoHeadMesh earlier, remove it
+			local auto = part:FindFirstChild("AutoHeadMesh")
+			if auto and auto:IsA("SpecialMesh") then
+				auto:Destroy()
+			end
+		end
+	end)
+end
+
+local function addBodyESP(npc)
+	if not npc or not npc.Parent then return nil end
+	if npc:FindFirstChild("NPCBodyESP") then return npc.NPCBodyESP end
+	local root = npc:FindFirstChild("HumanoidRootPart") or npc.PrimaryPart
+	if not root then
+		-- pick any BasePart to adorn
+		for _, d in ipairs(npc:GetDescendants()) do
+			if d:IsA("BasePart") then
+				root = d
+				break
+			end
+		end
+	end
+	if not root then return nil end
+	local box = Instance.new("BoxHandleAdornment")
+	box.Name = "NPCBodyESP"
+	box.Adornee = root
+	box.Size = (root.Size or Vector3.new(2,2,1)) + Vector3.new(6,6,6)
+	box.Color3 = Color3.fromRGB(220, 40, 40)
+	box.Transparency = 0.6
+	box.ZIndex = 5
+	box.AlwaysOnTop = true
+	box.Parent = npc
+	return box
+end
+
+local function applyHeadHitbox(npc, size)
+	if not npc or not isModelAnNPC(npc) then return end
+	if processedNPCs[npc] then return end
+
+	-- find or create head
+	local head, reason = findHeadCandidate(npc)
+	local root = npc:FindFirstChild("HumanoidRootPart") or npc.PrimaryPart
+	if not head and root then
+		-- create a head part and weld to root
+		head = Instance.new("Part")
+		head.Name = "Head"
+		head.Size = Vector3.new(2,1,1)
+		head.CFrame = root.CFrame * CFrame.new(0, root.Size.Y/2 + 1.2, 0)
+		head.Anchored = false
+		head.CanCollide = false
+		head.Massless = true
+		head.Transparency = 1
+		head.Parent = npc
+		local weld = Instance.new("WeldConstraint")
+		weld.Part0 = root
+		weld.Part1 = head
+		weld.Parent = head
+		reason = "created-fake-head"
+	end
+
+	if not head then return end
+
+	-- skip players' characters
+	if Players:GetPlayerFromCharacter(npc) then return end
+
+	-- do not apply to dead / no humanoid
+	local hum = npc:FindFirstChildOfClass("Humanoid")
+	if hum and hum.Health and hum.Health <= 0 then return end
+
+	-- store original props for restore later
+	local original = storeOriginalProperties(head)
+
+	-- ensure a head mesh exists visually (if missing)
+	local createdMesh = ensureHeadMesh(head)
+
+	-- apply big head hitbox
+	head.Massless = true
+	local wanted = Vector3.new(size, size, size)
+	head.Size = wanted
+	head.CanCollide = false
+	head.Transparency = 0.6
+	head.Material = Enum.Material.ForceField
+
+	-- keep it stable at size (in case something else tries to change it)
+	local connList = {}
+	table.insert(connList, head:GetPropertyChangedSignal("Size"):Connect(function()
+		if processedNPCs[npc] and head and head.Parent then
+			if head.Size ~= wanted then
+				head.Size = wanted
+			end
+		end
+	end))
+	-- remove on humanoid death
+	if hum then
+		table.insert(connList, hum.Died:Connect(function()
+			-- small delay to allow cleanup
+			task.delay(0.05, function() 
+				if processedNPCs[npc] then
+					-- call removal
+					-- use pcall for safety
+					pcall(function() 
+						-- direct call to removeHeadHitbox below
+						if processedNPCs[npc] then
+							-- restore done by remover 
+						end
+					end)
+				end
+			end)
+		end))
+	end
+
+	-- add a subtle ESP for body
+	local esp = addBodyESP(npc)
+
+	processedNPCs[npc] = {
+		head = head,
+		original = original,
+		connections = connList,
+		createdMesh = createdMesh,
+		esp = esp
+	}
+	-- update status
+	local cnt = 0 for _ in pairs(processedNPCs) do cnt = cnt + 1 end
+	statusLabel.Text = ("Processing: %d NPCs"):format(cnt)
+	flashStatus(true, ("Applied head hitbox (%s)"):format(reason or "detected"))
+end
+
+local function removeHeadHitbox(npc)
+	if not npc or not processedNPCs[npc] then return end
+	local data = processedNPCs[npc]
+	local head = data.head
+	-- disconnect
+	disconnectList(data.connections)
+	-- restore head props
+	if head and head.Parent then
+		restoreOriginalProperties(head, data.original)
+	end
+	-- remove ESP
+	if data.esp and data.esp.Parent then
+		pcall(function() data.esp:Destroy() end)
+	end
+	processedNPCs[npc] = nil
+	-- update status
+	local cnt = 0 for _ in pairs(processedNPCs) do cnt = cnt + 1 end
+	statusLabel.Text = ("Processing: %d NPCs"):format(cnt)
+end
+
+local function clearAll()
+	for npc, _ in pairs(processedNPCs) do
+		pcall(function() removeHeadHitbox(npc) end)
+	end
+	for k, v in pairs(watchers) do
+		disconnectList(v)
+		watchers[k] = nil
+	end
+	flashStatus(true, "Cleared all.")
+end
+
+--===== SCANNING / AUTO APPLICATION =====--
+local function scanWorkspace()
+	-- debounce
+	if tick() - lastScan < SCAN_DEBOUNCE then return end
+	lastScan = tick()
+	local size = tonumber(sizeInput.Text) or DEFAULT_HITBOX_SIZE
+	local found = 0
+	for _, model in ipairs(workspace:GetDescendants()) do
+		-- avoid scanning too many intermediate descendants: only consider models
+		if model:IsA("Model") and isModelAnNPC(model) then
+			applyHeadHitbox(model, size)
+			found = found + 1
+		end
+	end
+	flashStatus(true, ("Scan done — %d models checked"):format(found))
+end
+
+local function tryApplyModel(model)
+	task.spawn(function()
+		-- small delay to allow model to fully construct
+		task.wait(0.12)
+		if isModelAnNPC(model) then
+			local size = tonumber(sizeInput.Text) or DEFAULT_HITBOX_SIZE
+			applyHeadHitbox(model, size)
+		end
+	end)
+end
+
+--===== EVENT HOOKS =====--
+autoToggle.MouseButton1Click:Connect(function()
+	autoHitboxEnabled = not autoHitboxEnabled
+	autoToggle.Text = autoHitboxEnabled and "Auto Hitbox: ON" or "Auto Hitbox: OFF"
+	autoToggle.BackgroundColor3 = autoHitboxEnabled and COLOR_GOOD or COLOR_ACCENT_D
+
+	-- remove old listeners
+	for _, conn in ipairs(connections) do safeDisconnect(conn) end
+	table.clear(connections)
+
+	if autoHitboxEnabled then
+		flashStatus(true, "Auto ON → Scanning...")
+		scanWorkspace()
+		-- descendant added: catch new models that are placed inside folders/files
+		table.insert(connections, workspace.DescendantAdded:Connect(function(desc)
+			-- if the descendant is inside a Model, try to find the top Model
+			local model = desc:FindFirstAncestorOfClass("Model") or (desc:IsA("Model") and desc)
+			if model then
+				tryApplyModel(model)
+			else
+				-- if a BasePart added inside an existing model, check ancestor
+				local ancModel = desc:FindFirstAncestorOfClass("Model")
+				if ancModel then tryApplyModel(ancModel) end
+			end
+		end))
+		-- child added to workspace (top-level models / folders)
+		table.insert(connections, workspace.ChildAdded:Connect(function(child)
+			-- if folder or model, scan inside
+			if child:IsA("Model") or child:IsA("Folder") then
+				for _, m in ipairs(child:GetDescendants()) do
+					if m:IsA("Model") and isModelAnNPC(m) then
+						tryApplyModel(m)
+					end
+				end
+				-- also check child itself if it's a model
+				if child:IsA("Model") and isModelAnNPC(child) then tryApplyModel(child) end
+			end
+		end))
+	else
+		flashStatus(false, "Auto OFF")
+	end
+end)
+
+scanBtn.MouseButton1Click:Connect(function()
+	scanWorkspace()
+end)
+
+removeAllBtn.MouseButton1Click:Connect(function()
+	clearAll()
+end)
+
+-- Allow toggle with F4
+UserInputService.InputBegan:Connect(function(input, gpe)
+	if gpe then return end
+	if input.KeyCode == Enum.KeyCode.F4 then
+		toggleMenu()
+	end
+end)
+
+--===== PLAYER RELOAD / CLEANUP =====--
+LocalPlayer.CharacterAdded:Connect(function()
+	task.wait(1)
+	if autoHitboxEnabled then
+		scanWorkspace()
+	end
+end)
+
+-- cleanup when model removed from workspace (restore if we modified)
+workspace.DescendantRemoving:Connect(function(desc)
+	-- if a model being removed had processed data, restore it
+	if desc and desc:IsA("Model") and processedNPCs[desc] then
+		removeHeadHitbox(desc)
+	end
+end)
+
+-- also watch for models that are added then replaced (simple resilience)
+RunService.Heartbeat:Connect(function()
+	-- ensure all processed NPCs still exist; if head removed unexpectedly, restore original
+	for npc, data in pairs(processedNPCs) do
+		if not npc or not npc.Parent then
+			processedNPCs[npc] = nil
+		else
+			local head = data.head
+			if head and (not head.Parent) then
+				-- head was removed by game; try to re-find and reapply
+				removeHeadHitbox(npc)
+				local size = tonumber(sizeInput.Text) or DEFAULT_HITBOX_SIZE
+				tryApplyModel(npc)
+			end
+		end
+	end
+end)
+
+-- initial info
+statusLabel.Text = "Ready — 0 NPCs processed"
+
+-- Done.
