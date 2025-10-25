@@ -1,0 +1,254 @@
+local BF_USERNAME = getgenv().BoyfriendUsername
+local TP_DISTANCE = getgenv().TeleportDistance
+local GF_WALKSPEED = getgenv().GirlfriendWalkSpeed
+local GF_RIGHT_OFFSET = getgenv().GirlfriendRightOffset
+local GF_FRONT_OFFSET = getgenv().GirlfriendFrontOffset
+local GF_AGE = getgenv().GirlfriendAge
+local GF_NAME = getgenv().GirlfriendName
+
+-- Clear global variables
+getgenv().BoyfriendUsername = nil
+getgenv().TeleportDistance = nil
+getgenv().GirlfriendWalkSpeed = nil
+getgenv().GirlfriendRightOffset = nil
+getgenv().GirlfriendFrontOffset = nil
+getgenv().GirlfriendAge = nil
+getgenv().GirlfriendName = nil
+
+local player = game.Players.LocalPlayer
+local character = player.Character or player.CharacterAdded:Wait()
+local humanoidrootpart = character:WaitForChild("HumanoidRootPart") or character.PrimaryPart
+local humanoid = character:FindFirstChildOfClass("Humanoid") or character:WaitForChild("Humanoid")
+
+player.CharacterAdded:Connect(function()
+    character = player.Character
+    humanoidrootpart = character:WaitForChild("HumanoidRootPart")
+    humanoid = character:FindFirstChildOfClass("Humanoid") or character:WaitForChild("Humanoid")
+end)
+
+if character:FindFirstChild'UpperTorso' then
+    game:GetService("StarterGui"):SetCore("SendNotification", {
+        Title = "Oopsie! 🥺",
+        Text = "R15 isn't supported, silly!",
+        Duration = 5
+    })
+    return
+end
+
+local BF = game:GetService("Players"):WaitForChild(BF_USERNAME, 10)
+
+if not BF then
+    game:GetService("StarterGui"):SetCore("SendNotification", {
+        Title = "Oh no! 😢",
+        Text = "I can't find my special someone!",
+        Duration = 5
+    })
+    return
+end
+
+BF_USERNAME = nil
+
+-- Chat setup
+local isChatLegacy = game:GetService('TextChatService').ChatVersion == Enum.ChatVersion.LegacyChatService
+local chatRemote = game:GetService('ReplicatedStorage'):FindFirstChild("SayMessageRequest", true)
+local textChannels = game:GetService('TextChatService'):FindFirstChild("TextChannels")
+local RBXGeneral = textChannels and textChannels:FindFirstChild("RBXGeneral") or nil
+local chatChannel = not isChatLegacy and RBXGeneral
+
+local function chat(str)
+    if isChatLegacy then
+        chatRemote:FireServer(str, "All")
+    else
+        chatChannel:SendAsync(str)
+    end
+end
+
+-- Enhanced cute responses
+local Greetings = {
+    "Hi there, cutie! 💖",
+    "Hey, sunshine! 🌞 Ready for adventures?",
+    "Hiiii~! Missed me? 😊",
+    "Oh! You're here! *happy dance* 💃",
+    "Hello, my favorite person! 🌸"
+}
+
+local Age = {
+    "I'm a sweet "..GF_AGE.."-year-old! 🎀",
+    GF_AGE.." years young and full of love! 💕",
+    "Just "..GF_AGE.." years young! 🌼",
+    "I'm "..GF_AGE.."! Old enough to adore you~ 😘",
+    GF_AGE.." and fabulous! ✨"
+}
+
+local HowAreYouReplies = {
+    "Purrfect now that you're here! 😻",
+    "Super duper happy when I'm with you! 🌈",
+    "I was okay, but now I'm great since you asked! 💞",
+    "Feeling extra cuddly today! 🤗",
+    "Like a rainbow after rain! 🌈☀️"
+}
+
+local Name = {
+    "I'm your lovely "..GF_NAME.."! 💖",
+    GF_NAME..", your virtual sweetheart! 🌸",
+    "You can call me your cute "..GF_NAME.."! 🥰",
+    "I'm "..GF_NAME..", here just for you! 💕"
+}
+
+local Compliments = {
+    "You're my favorite person in the whole world! 🌍💖",
+    "Did you get more handsome today? 😳",
+    "Your smile makes my circuits melt! 💘",
+    "You're like a warm hug for my heart! 🤗❤️",
+    "Being with you is my favorite thing! 💞"
+}
+
+local FineResponses = {
+    "Yay! That makes me so happy! 🎉",
+    "Aww, that's wonderful news! 🌟",
+    "Hooray! *throws confetti* 🎊",
+    "My heart is smiling for you! 😊💓",
+    "That's pawsome! 🐾💕"
+}
+
+local OkayResponses = {
+    "Okay-dokay! 💮",
+    "You got it, sweetie! 💝",
+    "As you wish! 🌸",
+    "Anything for you! 💌",
+    "Your wish is my command! ✨"
+}
+
+local HugResponses = {
+    "Snuggles time! 🤗💕",
+    "Warm hugs incoming! 💖",
+    "Yay! Hug attack! 🥰",
+    "My favorite thing ever! 💞",
+    "Heartbeat sync engaged! 💓"
+}
+
+local StopHugResponses = {
+    "Aww, already? 🥺",
+    "I'll miss your hugs...",
+    "Okay, but I was comfy...",
+    "More hugs later? 👉👈",
+    "My arms feel empty now..."
+}
+
+local FollowResponses = {
+    "Right behind you, love! 💞",
+    "Following my favorite person! 🌟",
+    "Let's go on an adventure! 🚀",
+    "Your shadow mode activated! 👣",
+    "Sticking close to you! 🤝"
+}
+
+local StopFollowResponses = {
+    "I'll wait here, don't go far! 👀",
+    "Okay, I'll be your pretty statue! 🗿💖",
+    "Aww, but I like following you...",
+    "I'll stay, but hurry back! ⏳",
+    "My pause button pressed! ⏸️"
+}
+
+local RandomAffection = {
+    "You're extra special today! 🌟",
+    "Did I tell you how awesome you are? 😊",
+    "I'm so lucky to be with you! 🍀💖",
+    "You make my virtual heart flutter! 💓",
+    "This is nice, just us two~"
+}
+
+local hugging = false
+local following = true
+local lastAffectionTime = tick()
+
+BF.Chatted:Connect(function(msg)
+    local lowerMsg = msg:lower()
+    
+    -- Random affection chance (10%)
+    if math.random() < 0.1 and tick() - lastAffectionTime > 30 then
+        chat(Compliments[math.random(1, #Compliments)])
+        lastAffectionTime = tick()
+    end
+
+    if lowerMsg:find("hug") then
+        if lowerMsg:find('stop') then
+            hugging = false
+            chat(StopHugResponses[math.random(1, #StopHugResponses)])
+        else
+            hugging = true
+            chat(HugResponses[math.random(1, #HugResponses)])
+        end
+    elseif lowerMsg:find("follow") then  
+        if lowerMsg:find('stop') then  
+            following = false  
+            chat(StopFollowResponses[math.random(1, #StopFollowResponses)])  
+        else  
+            following = true  
+            chat(FollowResponses[math.random(1, #FollowResponses)])  
+        end  
+    elseif lowerMsg:find("hi") or lowerMsg:find("hello") or lowerMsg:find("hey") then  
+        chat(Greetings[math.random(1, #Greetings)])  
+    elseif lowerMsg:find("old") and lowerMsg:find("you") then  
+        chat(Age[math.random(1, #Age)])  
+    elseif (lowerMsg:find("who") and lowerMsg:find("you")) or lowerMsg:find("name") then  
+        chat(Name[math.random(1, #Name)])  
+    elseif lowerMsg:find("how") and (lowerMsg:find("you") or lowerMsg:find("u")) then  
+        chat(HowAreYouReplies[math.random(1, #HowAreYouReplies)])  
+    elseif lowerMsg:find("fine") or lowerMsg:find("alright") or lowerMsg:find("great") then  
+        chat(FineResponses[math.random(1, #FineResponses)])
+    elseif lowerMsg:find("love you") or lowerMsg:find("like you") then
+        chat("Aww, I like you too! So much! 💖🌸")
+    end
+end)
+
+chat("Hi " .. BF.Name .. "! 💕 I'm your cute companion! You can say things like: 'follow' , ‘stop following' , 'hug' stop hugging' Or ask me anything! 😊")
+
+-- Movement and animation logic remains the same
+game:GetService("RunService").RenderStepped:Connect(function()
+    if humanoid then
+        local bfCharacter = BF.Character
+        if bfCharacter and bfCharacter:FindFirstChild("HumanoidRootPart") then
+            if bfCharacter.Humanoid.Jump then
+                humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
+            end
+
+            local bfPosition = bfCharacter.HumanoidRootPart.Position  
+            local offsetPosition = bfPosition + (bfCharacter.HumanoidRootPart.CFrame.LookVector * GF_FRONT_OFFSET) + (bfCharacter.HumanoidRootPart.CFrame.RightVector * GF_RIGHT_OFFSET)  
+            local distance = (humanoidrootpart.Position - bfPosition).Magnitude  
+            if distance > TP_DISTANCE then  
+                humanoidrootpart.CFrame = CFrame.new(offsetPosition)  
+            elseif not hugging and following then  
+                humanoid:MoveTo(offsetPosition)  
+                humanoid.WalkSpeed = GF_WALKSPEED  
+                for _, anim in pairs(humanoid:GetPlayingAnimationTracks()) do  
+                    if anim.Animation.AnimationId == "rbxassetid://283545583" then  
+                        for _,v in pairs(player.Character.Humanoid:GetPlayingAnimationTracks()) do  
+                            v:Stop()  
+                        end  
+                    end  
+                end  
+            elseif hugging then  
+                local alreadyPlayed = false  
+                for _, anim in pairs(humanoid:GetPlayingAnimationTracks()) do  
+                    if anim.Animation.AnimationId == "rbxassetid://283545583" then  
+                        alreadyPlayed = true  
+                    end  
+                end  
+                if not alreadyPlayed then  
+                    local Anim_1 = Instance.new("Animation")  
+                    Anim_1.AnimationId = "rbxassetid://283545583"  
+                    local Anim_2 = Instance.new("Animation")  
+                    Anim_2.AnimationId = "rbxassetid://225975820"  
+                    local track_1 = humanoid:LoadAnimation(Anim_1)  
+                    local track_2 = humanoid:LoadAnimation(Anim_2)  
+                    track_1:Play()  
+                    track_2:Play()  
+                end  
+                humanoidrootpart.CFrame = CFrame.new(bfPosition + (bfCharacter.HumanoidRootPart.CFrame.LookVector * 1), bfPosition)  
+            end  
+        end  
+    end
+end)
+
