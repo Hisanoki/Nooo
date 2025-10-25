@@ -1,0 +1,8 @@
+--// Execute this on your alt (GF)
+getgenv().BoyfriendUsername = "USERNAME_HERE"
+getgenv().TeleportDistance = 200
+getgenv().GirlfriendWalkSpeed = 24
+getgenv().GirlfriendRightOffset = -3
+getgenv().GirlfriendFrontOffset = -1
+getgenv().GirlfriendAge = 18
+getgenv().GirlfriendName = "Cuties"
