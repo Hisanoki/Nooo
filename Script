@@ -2,13 +2,11 @@
 local Players = game:GetService("Players")
 local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
-local RunService = game:GetService("RunService")
 
 local LocalPlayer = Players.LocalPlayer
 
 --===== CONFIG =====--
 local DEFAULT_HITBOX_SIZE = 4
-local DEFAULT_MOVE_SPEED = 16 -- Tốc độ di chuyển mặc định
 
 -- Colors (light blue theme)
 local COLOR_PRIMARY   = Color3.fromRGB(140, 185, 255) -- buttons base
@@ -26,14 +24,12 @@ local processedNPCs = {}     -- [Model] = {connections = {RBXScriptConnection,..
 local respawnWatchers = {}   -- [Model] = {RBXScriptConnection,...}
 local connections = {}       -- workspace listeners
 local autoHitboxEnabled = false
-local autoMeshEnabled = false
-local moveSpeed = DEFAULT_MOVE_SPEED -- Đổi tên biến
-local speedConnection = nil
 
 --===== GUI ROOT =====--
 local gui = Instance.new("ScreenGui")
-gui.Name = "NPC_Hitbox_GUI_Mobile"
+gui.Name = "NPC_Hitbox_GUI"
 gui.ResetOnSpawn = false
+-- keep same parent as original script context
 gui.Parent = game.CoreGui
 
 --===== HELPERS =====--
@@ -131,7 +127,7 @@ end
 local frame = Instance.new("Frame")
 frame.Name = "Panel"
 frame.Position = UDim2.fromOffset(20, 80)
-frame.Size = UDim2.fromOffset(300, 380)
+frame.Size = UDim2.fromOffset(300, 230)
 frame.BackgroundColor3 = COLOR_FRAME
 frame.Visible = false
 frame.Active = true
@@ -147,7 +143,7 @@ makeDraggable(frame)
 local title = Instance.new("TextLabel")
 title.Size = UDim2.fromOffset(300, 36)
 title.BackgroundColor3 = COLOR_TITLE
-title.Text = "NPC Head Hitbox Manager"
+title.Text = "🌌 NPC Head Hitbox Manager"
 title.TextColor3 = Color3.fromRGB(220, 240, 255)
 title.Font = Enum.Font.GothamBold
 title.TextSize = 16
@@ -158,7 +154,7 @@ Instance.new("UICorner", title).CornerRadius = UDim.new(0, 12)
 local sizeInput = Instance.new("TextBox")
 sizeInput.Position = UDim2.fromOffset(20, 50)
 sizeInput.Size = UDim2.fromOffset(260, 32)
-sizeInput.PlaceholderText = "Hitbox Size (e.g. 4)"
+sizeInput.PlaceholderText = "Size (e.g. 4)"
 sizeInput.Text = tostring(DEFAULT_HITBOX_SIZE)
 sizeInput.BackgroundColor3 = COLOR_INPUT
 sizeInput.TextColor3 = COLOR_TEXT
@@ -168,29 +164,13 @@ sizeInput.ClearTextOnFocus = false
 sizeInput.Parent = frame
 Instance.new("UICorner", sizeInput).CornerRadius = UDim.new(0, 8)
 
--- Move Speed input (đã đổi tên)
-local speedInput = Instance.new("TextBox")
-speedInput.Position = UDim2.fromOffset(20, 90)
-speedInput.Size = UDim2.fromOffset(260, 32)
-speedInput.PlaceholderText = "Move Speed (e.g. 16)"
-speedInput.Text = tostring(DEFAULT_MOVE_SPEED)
-speedInput.BackgroundColor3 = COLOR_INPUT
-speedInput.TextColor3 = COLOR_TEXT
-speedInput.Font = Enum.Font.Gotham
-speedInput.TextSize = 14
-speedInput.ClearTextOnFocus = false
-speedInput.Parent = frame
-Instance.new("UICorner", speedInput).CornerRadius = UDim.new(0, 8)
-
 -- Buttons
-local autoToggle = createButton(frame, "Auto Hitbox: OFF", UDim2.fromOffset(20, 130), UDim2.fromOffset(260, 32), COLOR_PRIMARY_D)
-local autoMeshToggle = createButton(frame, "Auto Mesh All: OFF", UDim2.fromOffset(20, 170), UDim2.fromOffset(260, 32), COLOR_PRIMARY_D)
-local removeAllBtn = createButton(frame, "Remove All Hitboxes", UDim2.fromOffset(20, 210), UDim2.fromOffset(260, 32), COLOR_DANGER)
-local clearAllMeshBtn = createButton(frame, "Clear All Mesh", UDim2.fromOffset(20, 250), UDim2.fromOffset(260, 32), COLOR_DANGER)
+local autoToggle = createButton(frame, "Auto Hitbox: OFF", UDim2.fromOffset(20, 95), UDim2.fromOffset(260, 32), COLOR_PRIMARY_D)
+local removeAllBtn = createButton(frame, "Remove All Hitboxes", UDim2.fromOffset(20, 135), UDim2.fromOffset(260, 32), COLOR_DANGER)
 
 -- Status
 local statusLabel = Instance.new("TextLabel")
-statusLabel.Position = UDim2.fromOffset(14, 290)
+statusLabel.Position = UDim2.fromOffset(14, 180)
 statusLabel.Size = UDim2.fromOffset(272, 24)
 statusLabel.BackgroundTransparency = 1
 statusLabel.Text = "Processing: 0 NPCs"
@@ -222,10 +202,13 @@ local isAnimating = false
 local storedVisibility = {}
 
 local function hideFrameContentImmediately()
+	-- store and hide only GuiObjects (TextLabel, TextButton, TextBox, ImageLabel, etc.)
 	storedVisibility = {}
 	for _, child in ipairs(frame:GetDescendants()) do
 		if child:IsA("GuiObject") and child ~= frame then
+			-- save old visibility
 			storedVisibility[child] = child.Visible
+			-- hide instantly
 			child.Visible = false
 		end
 	end
@@ -233,6 +216,7 @@ end
 
 local function restoreFrameContent()
 	for child, vis in pairs(storedVisibility) do
+		-- restore only if still exists
 		if child and child.Parent then
 			pcall(function() child.Visible = vis end)
 		end
@@ -246,6 +230,8 @@ local function toggleMenu()
 	isAnimating = true
 
 	if frame.Visible then
+		-- closing: hide children immediately so text/buttons disappear at once,
+		-- but keep frame visible while animation plays
 		hideFrameContentImmediately()
 		toggleBtn.Text = "Show Menu"
 
@@ -253,16 +239,19 @@ local function toggleMenu()
 		tween:Play()
 		tween.Completed:Wait()
 
+		-- after tween hide whole frame
 		frame.Visible = false
 		isAnimating = false
 	else
+		-- opening: prepare collapsed frame then expand; restore contents AFTER animation
 		frame.Size = UDim2.fromOffset(300, 0)
 		frame.Visible = true
 
-		local tween = TweenService:Create(frame, TweenInfo.new(0.25), {Size = UDim2.fromOffset(300, 380)})
+		local tween = TweenService:Create(frame, TweenInfo.new(0.25), {Size = UDim2.fromOffset(300, 230)})
 		tween:Play()
 		tween.Completed:Wait()
 
+		-- restore UI content visibility to previous states
 		restoreFrameContent()
 		toggleBtn.Text = "Hide Menu"
 		isAnimating = false
@@ -309,10 +298,12 @@ local function removeHeadHitbox(npc)
 	if not npc or not processedNPCs[npc] then return end
 	local head = npc:FindFirstChild("Head")
 
+	-- disconnect per-NPC connections
 	if processedNPCs[npc].connections then
 		disconnectList(processedNPCs[npc].connections)
 	end
 
+	-- restore head
 	if head and head:FindFirstChild("OriginalSize") then
 		local originalSize = head.OriginalSize.Value
 		head.Size = originalSize
@@ -330,6 +321,7 @@ local function removeHeadHitbox(npc)
 		end
 	end
 
+	-- remove ESP
 	if processedNPCs[npc].esp then
 		processedNPCs[npc].esp:Destroy()
 	end
@@ -350,6 +342,7 @@ local function applyHeadHitbox(npc, size)
 	local root = npc:FindFirstChild("HumanoidRootPart")
 	local hum  = npc:FindFirstChildOfClass("Humanoid")
 
+	-- fake head if missing
 	if not head and root then
 		head = Instance.new("Part")
 		head.Name = "Head"
@@ -370,18 +363,13 @@ local function applyHeadHitbox(npc, size)
 	if not head then return end
 	if hum and hum.Health and hum.Health <= 0 then return end
 
-	-- Force add mesh head (even if already exists)
-	local mesh = head:FindFirstChildOfClass("SpecialMesh")
-	if not mesh then
-		mesh = Instance.new("SpecialMesh")
+	-- ensure mesh + original size
+	if not head:FindFirstChild("Mesh") then
+		local mesh = Instance.new("SpecialMesh")
 		mesh.MeshType = Enum.MeshType.Head
 		mesh.Scale = Vector3.new(1, 1, 1)
 		mesh.Name = "Mesh"
 		mesh.Parent = head
-	else
-		-- Reset existing mesh
-		mesh.MeshType = Enum.MeshType.Head
-		mesh.Scale = Vector3.new(1, 1, 1)
 	end
 
 	if not head:FindFirstChild("OriginalSize") then
@@ -391,7 +379,7 @@ local function applyHeadHitbox(npc, size)
 		original.Parent = head
 	end
 
-	-- Apply big head
+	-- apply big head
 	head.Massless = true
 	head.Size = Vector3.new(size, size, size)
 	head.CanCollide = false
@@ -417,28 +405,6 @@ local function applyHeadHitbox(npc, size)
 	local esp = addBodyESP(npc)
 	processedNPCs[npc] = {connections = npcConns, esp = esp}
 	updateStatus()
-end
-
-local function addMeshToAllNPCs()
-	local size = tonumber(sizeInput.Text) or DEFAULT_HITBOX_SIZE
-	for _, npc in ipairs(workspace:GetDescendants()) do
-		if isValidNPC(npc) then
-			applyHeadHitbox(npc, size)
-		end
-	end
-end
-
-local function clearAllMesh()
-	for npc, _ in pairs(processedNPCs) do
-		local head = npc:FindFirstChild("Head")
-		if head then
-			local mesh = head:FindFirstChildOfClass("SpecialMesh")
-			if mesh then
-				mesh:Destroy()
-			end
-		end
-	end
-	flashStatus(true, "Cleared all mesh.")
 end
 
 local function scanWorkspace()
@@ -470,84 +436,13 @@ local function clearAll()
 	flashStatus(true, "Cleared all.")
 end
 
--- Hàm điều chỉnh tốc độ di chuyển của nhân vật
-local function updatePlayerSpeed()
-	local character = LocalPlayer.Character
-	if not character then return end
-	
-	local humanoid = character:FindFirstChildOfClass("Humanoid")
-	if humanoid then
-		humanoid.WalkSpeed = moveSpeed
-	end
-end
-
--- Kết nối để theo dõi thay đổi nhân vật
-local function startSpeedControl()
-	if speedConnection then
-		speedConnection:Disconnect()
-		speedConnection = nil
-	end
-	
-	-- Cập nhật tốc độ khi nhân vật thay đổi
-	speedConnection = LocalPlayer.CharacterAdded:Connect(function(character)
-		character:WaitForChild("Humanoid")
-		updatePlayerSpeed()
-		
-		-- Cũng theo dõi khi Humanoid được thêm vào sau
-		character.ChildAdded:Connect(function(child)
-			if child:IsA("Humanoid") then
-				updatePlayerSpeed()
-			end
-		end)
-	end)
-	
-	-- Cập nhật tốc độ cho nhân vật hiện tại
-	updatePlayerSpeed()
-end
-
-local function stopSpeedControl()
-	if speedConnection then
-		speedConnection:Disconnect()
-		speedConnection = nil
-	end
-	
-	-- Reset tốc độ về mặc định
-	local character = LocalPlayer.Character
-	if character then
-		local humanoid = character:FindFirstChildOfClass("Humanoid")
-		if humanoid then
-			humanoid.WalkSpeed = 16 -- Tốc độ mặc định của Roblox
-		end
-	end
-end
-
--- Auto loop function cho mesh (giữ nguyên)
-local function startAutoMeshLoop()
-	if speedConnection then
-		speedConnection:Disconnect()
-		speedConnection = nil
-	end
-	
-	speedConnection = RunService.Heartbeat:Connect(function()
-		if autoMeshEnabled then
-			addMeshToAllNPCs()
-		end
-	end)
-end
-
-local function stopAutoMeshLoop()
-	if speedConnection then
-		speedConnection:Disconnect()
-		speedConnection = nil
-	end
-end
-
 --===== BUTTON EVENTS =====--
 autoToggle.MouseButton1Click:Connect(function()
 	autoHitboxEnabled = not autoHitboxEnabled
 	autoToggle.Text = autoHitboxEnabled and "Auto Hitbox: ON" or "Auto Hitbox: OFF"
 	autoToggle.BackgroundColor3 = autoHitboxEnabled and COLOR_GOOD or COLOR_PRIMARY_D
 
+	-- remove old listeners
 	for _, conn in ipairs(connections) do pcall(function() conn:Disconnect() end) end
 	table.clear(connections)
 
@@ -566,46 +461,20 @@ autoToggle.MouseButton1Click:Connect(function()
 	end
 end)
 
-autoMeshToggle.MouseButton1Click:Connect(function()
-	autoMeshEnabled = not autoMeshEnabled
-	autoMeshToggle.Text = autoMeshEnabled and "Auto Mesh All: ON" or "Auto Mesh All: OFF"
-	autoMeshToggle.BackgroundColor3 = autoMeshEnabled and COLOR_GOOD or COLOR_PRIMARY_D
-
-	if autoMeshEnabled then
-		flashStatus(true, "Auto Mesh ON")
-		startAutoMeshLoop()
-	else
-		flashStatus(false, "Auto Mesh OFF")
-		stopAutoMeshLoop()
-	end
-end)
-
 removeAllBtn.MouseButton1Click:Connect(function()
 	clearAll()
 end)
 
-clearAllMeshBtn.MouseButton1Click:Connect(function()
-	clearAllMesh()
+-- Toggle panel by keyboard (F4) — respects animation/debounce
+UserInputService.InputBegan:Connect(function(input, gpe)
+	if gpe then return end
+	if input.KeyCode == Enum.KeyCode.F4 then
+		toggleMenu()
+	end
 end)
-
--- Update move speed when input changes
-speedInput.FocusLost:Connect(function()
-	local newSpeed = tonumber(speedInput.Text) or DEFAULT_MOVE_SPEED
-	moveSpeed = math.max(0, math.min(100, newSpeed)) -- Clamp between 0 and 100
-	
-	-- Cập nhật tốc độ di chuyển ngay lập tức
-	updatePlayerSpeed()
-	flashStatus(true, "Move speed: " .. moveSpeed)
-end)
-
--- Tự động bật điều khiển tốc độ khi script chạy
-startSpeedControl()
 
 --===== PLAYER RELOAD =====--
 LocalPlayer.CharacterAdded:Connect(function()
 	task.wait(2)
 	if autoHitboxEnabled then scanWorkspace() end
-	if autoMeshEnabled then addMeshToAllNPCs() end
-	-- Cập nhật lại tốc độ khi nhân vật respawn
-	updatePlayerSpeed()
 end)
