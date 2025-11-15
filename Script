@@ -1,13 +1,14 @@
-
 --===== SERVICES =====--
 local Players = game:GetService("Players")
 local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
 
 local LocalPlayer = Players.LocalPlayer
 
 --===== CONFIG =====--
 local DEFAULT_HITBOX_SIZE = 4
+local DEFAULT_LOOP_SPEED = 1
 
 -- Colors (light blue theme)
 local COLOR_PRIMARY   = Color3.fromRGB(140, 185, 255) -- buttons base
@@ -25,12 +26,15 @@ local processedNPCs = {}     -- [Model] = {connections = {RBXScriptConnection,..
 local respawnWatchers = {}   -- [Model] = {RBXScriptConnection,...}
 local connections = {}       -- workspace listeners
 local autoHitboxEnabled = false
+local autoMeshEnabled = false
+local autoLoopEnabled = false
+local autoLoopSpeed = DEFAULT_LOOP_SPEED
+local autoLoopConnection = nil
 
 --===== GUI ROOT =====--
 local gui = Instance.new("ScreenGui")
-gui.Name = "NPC_Hitbox_GUI"
+gui.Name = "NPC_Hitbox_GUI_Mobile"
 gui.ResetOnSpawn = false
--- keep same parent as original script context
 gui.Parent = game.CoreGui
 
 --===== HELPERS =====--
@@ -128,7 +132,7 @@ end
 local frame = Instance.new("Frame")
 frame.Name = "Panel"
 frame.Position = UDim2.fromOffset(20, 80)
-frame.Size = UDim2.fromOffset(300, 230)
+frame.Size = UDim2.fromOffset(300, 380)
 frame.BackgroundColor3 = COLOR_FRAME
 frame.Visible = false
 frame.Active = true
@@ -144,7 +148,7 @@ makeDraggable(frame)
 local title = Instance.new("TextLabel")
 title.Size = UDim2.fromOffset(300, 36)
 title.BackgroundColor3 = COLOR_TITLE
-title.Text = "🌌 NPC Head Hitbox Manager"
+title.Text = "NPC Head Hitbox Manager"
 title.TextColor3 = Color3.fromRGB(220, 240, 255)
 title.Font = Enum.Font.GothamBold
 title.TextSize = 16
@@ -155,7 +159,7 @@ Instance.new("UICorner", title).CornerRadius = UDim.new(0, 12)
 local sizeInput = Instance.new("TextBox")
 sizeInput.Position = UDim2.fromOffset(20, 50)
 sizeInput.Size = UDim2.fromOffset(260, 32)
-sizeInput.PlaceholderText = "Size (e.g. 4)"
+sizeInput.PlaceholderText = "Hitbox Size (e.g. 4)"
 sizeInput.Text = tostring(DEFAULT_HITBOX_SIZE)
 sizeInput.BackgroundColor3 = COLOR_INPUT
 sizeInput.TextColor3 = COLOR_TEXT
@@ -165,13 +169,30 @@ sizeInput.ClearTextOnFocus = false
 sizeInput.Parent = frame
 Instance.new("UICorner", sizeInput).CornerRadius = UDim.new(0, 8)
 
+-- Loop Speed input
+local speedInput = Instance.new("TextBox")
+speedInput.Position = UDim2.fromOffset(20, 90)
+speedInput.Size = UDim2.fromOffset(260, 32)
+speedInput.PlaceholderText = "Loop Speed (e.g. 1)"
+speedInput.Text = tostring(DEFAULT_LOOP_SPEED)
+speedInput.BackgroundColor3 = COLOR_INPUT
+speedInput.TextColor3 = COLOR_TEXT
+speedInput.Font = Enum.Font.Gotham
+speedInput.TextSize = 14
+speedInput.ClearTextOnFocus = false
+speedInput.Parent = frame
+Instance.new("UICorner", speedInput).CornerRadius = UDim.new(0, 8)
+
 -- Buttons
-local autoToggle = createButton(frame, "Auto Hitbox: OFF", UDim2.fromOffset(20, 95), UDim2.fromOffset(260, 32), COLOR_PRIMARY_D)
-local removeAllBtn = createButton(frame, "Remove All Hitboxes", UDim2.fromOffset(20, 135), UDim2.fromOffset(260, 32), COLOR_DANGER)
+local autoToggle = createButton(frame, "Auto Hitbox: OFF", UDim2.fromOffset(20, 135), UDim2.fromOffset(260, 32), COLOR_PRIMARY_D)
+local autoMeshToggle = createButton(frame, "Auto Add Mesh All NPC: OFF", UDim2.fromOffset(20, 175), UDim2.fromOffset(260, 32), COLOR_PRIMARY_D)
+local autoLoopToggle = createButton(frame, "Auto Loop: OFF", UDim2.fromOffset(20, 215), UDim2.fromOffset(260, 32), COLOR_PRIMARY_D)
+local removeAllBtn = createButton(frame, "Remove All Hitboxes", UDim2.fromOffset(20, 255), UDim2.fromOffset(260, 32), COLOR_DANGER)
+local clearAllMeshBtn = createButton(frame, "Clear All Mesh", UDim2.fromOffset(20, 295), UDim2.fromOffset(260, 32), COLOR_DANGER)
 
 -- Status
 local statusLabel = Instance.new("TextLabel")
-statusLabel.Position = UDim2.fromOffset(14, 180)
+statusLabel.Position = UDim2.fromOffset(14, 340)
 statusLabel.Size = UDim2.fromOffset(272, 24)
 statusLabel.BackgroundTransparency = 1
 statusLabel.Text = "Processing: 0 NPCs"
@@ -248,7 +269,7 @@ local function toggleMenu()
 		frame.Size = UDim2.fromOffset(300, 0)
 		frame.Visible = true
 
-		local tween = TweenService:Create(frame, TweenInfo.new(0.25), {Size = UDim2.fromOffset(300, 230)})
+		local tween = TweenService:Create(frame, TweenInfo.new(0.25), {Size = UDim2.fromOffset(300, 380)})
 		tween:Play()
 		tween.Completed:Wait()
 
@@ -408,6 +429,23 @@ local function applyHeadHitbox(npc, size)
 	updateStatus()
 end
 
+local function addMeshToNPC(npc)
+	if not isValidNPC(npc) then return end
+	local head = npc:FindFirstChild("Head")
+	if not head then return end
+	
+	-- Add mesh if not exists
+	if not head:FindFirstChild("Mesh") then
+		local mesh = Instance.new("SpecialMesh")
+		mesh.MeshType = Enum.MeshType.Head
+		mesh.Scale = Vector3.new(1, 1, 1)
+		mesh.Name = "Mesh"
+		mesh.Parent = head
+		return true
+	end
+	return false
+end
+
 local function scanWorkspace()
 	local size = tonumber(sizeInput.Text) or DEFAULT_HITBOX_SIZE
 	for _, v in ipairs(workspace:GetDescendants()) do
@@ -415,6 +453,35 @@ local function scanWorkspace()
 			applyHeadHitbox(v, size)
 		end
 	end
+end
+
+local function scanAndAddMesh()
+	local meshAdded = 0
+	for _, v in ipairs(workspace:GetDescendants()) do
+		if isValidNPC(v) then
+			if addMeshToNPC(v) then
+				meshAdded = meshAdded + 1
+			end
+		end
+	end
+	return meshAdded
+end
+
+local function clearAllMesh()
+	local meshRemoved = 0
+	for _, v in ipairs(workspace:GetDescendants()) do
+		if isValidNPC(v) then
+			local head = v:FindFirstChild("Head")
+			if head then
+				local mesh = head:FindFirstChild("Mesh")
+				if mesh and mesh:IsA("SpecialMesh") then
+					mesh:Destroy()
+					meshRemoved = meshRemoved + 1
+				end
+			end
+		end
+	end
+	return meshRemoved
 end
 
 local function tryApplyModel(model)
@@ -437,6 +504,30 @@ local function clearAll()
 	flashStatus(true, "Cleared all.")
 end
 
+-- Auto Loop function
+local function startAutoLoop()
+	if autoLoopConnection then
+		autoLoopConnection:Disconnect()
+		autoLoopConnection = nil
+	end
+	
+	autoLoopConnection = RunService.Heartbeat:Connect(function()
+		if autoHitboxEnabled then
+			scanWorkspace()
+		end
+		if autoMeshEnabled then
+			scanAndAddMesh()
+		end
+	end)
+end
+
+local function stopAutoLoop()
+	if autoLoopConnection then
+		autoLoopConnection:Disconnect()
+		autoLoopConnection = nil
+	end
+end
+
 --===== BUTTON EVENTS =====--
 autoToggle.MouseButton1Click:Connect(function()
 	autoHitboxEnabled = not autoHitboxEnabled
@@ -448,7 +539,7 @@ autoToggle.MouseButton1Click:Connect(function()
 	table.clear(connections)
 
 	if autoHitboxEnabled then
-		flashStatus(true, "Auto ON → Scanning...")
+		flashStatus(true, "Auto Hitbox ON → Scanning...")
 		scanWorkspace()
 		table.insert(connections, workspace.DescendantAdded:Connect(function(desc)
 			local model = desc:FindFirstAncestorOfClass("Model")
@@ -458,7 +549,39 @@ autoToggle.MouseButton1Click:Connect(function()
 			if child:IsA("Model") then tryApplyModel(child) end
 		end))
 	else
-		flashStatus(false, "Auto OFF")
+		flashStatus(false, "Auto Hitbox OFF")
+	end
+end)
+
+autoMeshToggle.MouseButton1Click:Connect(function()
+	autoMeshEnabled = not autoMeshEnabled
+	autoMeshToggle.Text = autoMeshEnabled and "Auto Add Mesh All NPC: ON" or "Auto Add Mesh All NPC: OFF"
+	autoMeshToggle.BackgroundColor3 = autoMeshEnabled and COLOR_GOOD or COLOR_PRIMARY_D
+
+	if autoMeshEnabled then
+		local meshAdded = scanAndAddMesh()
+		flashStatus(true, "Auto Mesh ON → Added " .. meshAdded .. " meshes")
+		table.insert(connections, workspace.DescendantAdded:Connect(function(desc)
+			local model = desc:FindFirstAncestorOfClass("Model")
+			if model then addMeshToNPC(model) end
+		end))
+	else
+		flashStatus(false, "Auto Mesh OFF")
+	end
+end)
+
+autoLoopToggle.MouseButton1Click:Connect(function()
+	autoLoopEnabled = not autoLoopEnabled
+	autoLoopToggle.Text = autoLoopEnabled and "Auto Loop: ON" or "Auto Loop: OFF"
+	autoLoopToggle.BackgroundColor3 = autoLoopEnabled and COLOR_GOOD or COLOR_PRIMARY_D
+
+	if autoLoopEnabled then
+		autoLoopSpeed = tonumber(speedInput.Text) or DEFAULT_LOOP_SPEED
+		startAutoLoop()
+		flashStatus(true, "Auto Loop ON → Speed: " .. autoLoopSpeed)
+	else
+		stopAutoLoop()
+		flashStatus(false, "Auto Loop OFF")
 	end
 end)
 
@@ -466,11 +589,23 @@ removeAllBtn.MouseButton1Click:Connect(function()
 	clearAll()
 end)
 
--- Toggle panel by keyboard (F4) — respects animation/debounce
-UserInputService.InputBegan:Connect(function(input, gpe)
-	if gpe then return end
-	if input.KeyCode == Enum.KeyCode.F4 then
-		toggleMenu()
+clearAllMeshBtn.MouseButton1Click:Connect(function()
+	local meshRemoved = clearAllMesh()
+	flashStatus(true, "Removed " .. meshRemoved .. " meshes")
+end)
+
+-- Update loop speed when input changes
+speedInput.FocusLost:Connect(function()
+	local newSpeed = tonumber(speedInput.Text)
+	if newSpeed and newSpeed > 0 then
+		autoLoopSpeed = newSpeed
+		if autoLoopEnabled then
+			stopAutoLoop()
+			startAutoLoop()
+		end
+	else
+		speedInput.Text = tostring(DEFAULT_LOOP_SPEED)
+		autoLoopSpeed = DEFAULT_LOOP_SPEED
 	end
 end)
 
@@ -478,4 +613,6 @@ end)
 LocalPlayer.CharacterAdded:Connect(function()
 	task.wait(2)
 	if autoHitboxEnabled then scanWorkspace() end
+	if autoMeshEnabled then scanAndAddMesh() end
+	if autoLoopEnabled then startAutoLoop() end
 end)
