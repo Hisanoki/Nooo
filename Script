@@ -29,6 +29,7 @@ local autoHitboxEnabled = false
 local gui = Instance.new("ScreenGui")
 gui.Name = "NPC_Hitbox_GUI"
 gui.ResetOnSpawn = false
+-- keep same parent as original script context
 gui.Parent = game.CoreGui
 
 --===== HELPERS =====--
@@ -39,6 +40,7 @@ local function disconnectList(list)
 	end
 end
 
+-- create button helper (with hover + press animation)
 local function createButton(parent, text, pos, size, baseColor)
 	local btn = Instance.new("TextButton")
 	btn.AnchorPoint = Vector2.new(0, 0)
@@ -59,6 +61,7 @@ local function createButton(parent, text, pos, size, baseColor)
 	stroke.Color = COLOR_ACCENT
 	stroke.Thickness = 1
 
+	-- hover
 	btn.MouseEnter:Connect(function()
 		TweenService:Create(btn, TweenInfo.new(0.15), {
 			BackgroundColor3 = baseColor:Lerp(COLOR_ACCENT, 0.25)
@@ -70,6 +73,7 @@ local function createButton(parent, text, pos, size, baseColor)
 		}):Play()
 	end)
 
+	-- click "press" animation (uses original size)
 	local origSize = btn.Size
 	btn.MouseButton1Click:Connect(function()
 		local down = TweenService:Create(btn, TweenInfo.new(0.08), {
@@ -86,9 +90,11 @@ local function createButton(parent, text, pos, size, baseColor)
 	return btn
 end
 
+-- Custom draggable for ANY GuiObject (works better than .Draggable)
 local function makeDraggable(guiObject)
 	local dragging = false
 	local dragStart, startPos
+
 	local function update(input)
 		local delta = input.Position - dragStart
 		guiObject.Position = UDim2.new(
@@ -96,6 +102,7 @@ local function makeDraggable(guiObject)
 			startPos.Y.Scale, startPos.Y.Offset + delta.Y
 		)
 	end
+
 	guiObject.InputBegan:Connect(function(input)
 		if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
 			dragging = true
@@ -108,6 +115,7 @@ local function makeDraggable(guiObject)
 			end)
 		end
 	end)
+
 	guiObject.InputChanged:Connect(function(input)
 		if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
 			if dragging then update(input) end
@@ -131,6 +139,7 @@ frameStroke.Color = COLOR_ACCENT
 frameStroke.Thickness = 2
 makeDraggable(frame)
 
+-- Title bar
 local title = Instance.new("TextLabel")
 title.Size = UDim2.fromOffset(300, 36)
 title.BackgroundColor3 = COLOR_TITLE
@@ -141,6 +150,7 @@ title.TextSize = 16
 title.Parent = frame
 Instance.new("UICorner", title).CornerRadius = UDim.new(0, 12)
 
+-- Size input
 local sizeInput = Instance.new("TextBox")
 sizeInput.Position = UDim2.fromOffset(20, 50)
 sizeInput.Size = UDim2.fromOffset(260, 32)
@@ -154,9 +164,11 @@ sizeInput.ClearTextOnFocus = false
 sizeInput.Parent = frame
 Instance.new("UICorner", sizeInput).CornerRadius = UDim.new(0, 8)
 
+-- Buttons
 local autoToggle = createButton(frame, "Auto Hitbox: OFF", UDim2.fromOffset(20, 95), UDim2.fromOffset(260, 32), COLOR_PRIMARY_D)
 local removeAllBtn = createButton(frame, "Remove All Hitboxes", UDim2.fromOffset(20, 135), UDim2.fromOffset(260, 32), COLOR_DANGER)
 
+-- Status
 local statusLabel = Instance.new("TextLabel")
 statusLabel.Position = UDim2.fromOffset(14, 180)
 statusLabel.Size = UDim2.fromOffset(272, 24)
@@ -180,18 +192,23 @@ local function flashStatus(ok, msg)
 	end)
 end
 
+--===== FLOATING TOGGLE BUTTON (draggable) =====--
 local toggleBtn = createButton(gui, "Show Menu", UDim2.fromOffset(20, 20), UDim2.fromOffset(120, 36), COLOR_PRIMARY)
 toggleBtn.ZIndex = 10
 makeDraggable(toggleBtn)
 
+--===== IMMEDIATE HIDE / RESTORE LOGIC =====--
 local isAnimating = false
 local storedVisibility = {}
 
 local function hideFrameContentImmediately()
+	-- store and hide only GuiObjects (TextLabel, TextButton, TextBox, ImageLabel, etc.)
 	storedVisibility = {}
 	for _, child in ipairs(frame:GetDescendants()) do
 		if child:IsA("GuiObject") and child ~= frame then
+			-- save old visibility
 			storedVisibility[child] = child.Visible
+			-- hide instantly
 			child.Visible = false
 		end
 	end
@@ -199,6 +216,7 @@ end
 
 local function restoreFrameContent()
 	for child, vis in pairs(storedVisibility) do
+		-- restore only if still exists
 		if child and child.Parent then
 			pcall(function() child.Visible = vis end)
 		end
@@ -206,23 +224,34 @@ local function restoreFrameContent()
 	storedVisibility = {}
 end
 
+-- Open/Close panel with tween (slide + instant-hide content)
 local function toggleMenu()
 	if isAnimating then return end
 	isAnimating = true
+
 	if frame.Visible then
+		-- closing: hide children immediately so text/buttons disappear at once,
+		-- but keep frame visible while animation plays
 		hideFrameContentImmediately()
 		toggleBtn.Text = "Show Menu"
+
 		local tween = TweenService:Create(frame, TweenInfo.new(0.25), {Size = UDim2.fromOffset(300, 0)})
 		tween:Play()
 		tween.Completed:Wait()
+
+		-- after tween hide whole frame
 		frame.Visible = false
 		isAnimating = false
 	else
+		-- opening: prepare collapsed frame then expand; restore contents AFTER animation
 		frame.Size = UDim2.fromOffset(300, 0)
 		frame.Visible = true
+
 		local tween = TweenService:Create(frame, TweenInfo.new(0.25), {Size = UDim2.fromOffset(300, 230)})
 		tween:Play()
 		tween.Completed:Wait()
+
+		-- restore UI content visibility to previous states
 		restoreFrameContent()
 		toggleBtn.Text = "Hide Menu"
 		isAnimating = false
@@ -231,6 +260,7 @@ end
 
 toggleBtn.MouseButton1Click:Connect(toggleMenu)
 
+--===== LOGIC (hitbox & esp) =====--
 local function updateStatus()
 	local count = 0
 	for _ in pairs(processedNPCs) do count = count + 1 end
@@ -273,7 +303,7 @@ local function removeHeadHitbox(npc)
 		disconnectList(processedNPCs[npc].connections)
 	end
 
-	-- restore head properties and mesh
+	-- restore head
 	if head and head:FindFirstChild("OriginalSize") then
 		local originalSize = head.OriginalSize.Value
 		head.Size = originalSize
@@ -288,7 +318,6 @@ local function removeHeadHitbox(npc)
 		if mesh then
 			mesh.MeshType = Enum.MeshType.Head
 			mesh.Scale = Vector3.new(1, 1, 1)
-			mesh.VertexColor = Vector3.new(1, 1, 1)
 		end
 	end
 
@@ -320,9 +349,9 @@ local function applyHeadHitbox(npc, size)
 		head.Size = Vector3.new(2, 1, 1)
 		head.CFrame = root.CFrame * CFrame.new(0, root.Size.Y/2 + 1, 0)
 		head.Anchored = false
-		head.CanCollide = true
-		head.Massless = false
-		head.Transparency = 0
+		head.CanCollide = false
+		head.Massless = true
+		head.Transparency = 1
 		head.Parent = npc
 
 		local weld = Instance.new("WeldConstraint")
@@ -335,18 +364,13 @@ local function applyHeadHitbox(npc, size)
 	if hum and hum.Health and hum.Health <= 0 then return end
 
 	-- ensure mesh + original size
-	local mesh = head:FindFirstChild("Mesh")
-	if not mesh then
-		mesh = Instance.new("SpecialMesh")
+	if not head:FindFirstChild("Mesh") then
+		local mesh = Instance.new("SpecialMesh")
 		mesh.MeshType = Enum.MeshType.Head
 		mesh.Scale = Vector3.new(1, 1, 1)
 		mesh.Name = "Mesh"
 		mesh.Parent = head
 	end
-	-- luôn cập nhật mesh
-	mesh.MeshType = Enum.MeshType.Head
-	mesh.Scale = Vector3.new(size, size, size)
-	mesh.VertexColor = Vector3.new(1, 1, 1)
 
 	if not head:FindFirstChild("OriginalSize") then
 		local original = Instance.new("Vector3Value")
@@ -355,11 +379,11 @@ local function applyHeadHitbox(npc, size)
 		original.Parent = head
 	end
 
-	-- apply big head hitbox
-	head.Massless = false
+	-- apply big head
+	head.Massless = false -- Make sure physics works for Touched
 	head.Size = Vector3.new(size, size, size)
-	head.CanCollide = true -- sửa thành true để hitbox hoạt động "va chạm"
-	head.Transparency = 0
+	head.CanCollide = true -- Enable collisions for Touched
+	head.Transparency = 0.7
 	head.Material = Enum.Material.ForceField
 
 	local npcConns = {}
@@ -369,9 +393,6 @@ local function applyHeadHitbox(npc, size)
 			if head.Size ~= wanted then
 				head.Size = wanted
 			end
-			if mesh then
-				mesh.Scale = Vector3.new(size, size, size)
-			end
 		end
 	end))
 
@@ -380,6 +401,23 @@ local function applyHeadHitbox(npc, size)
 			removeHeadHitbox(npc)
 		end))
 	end
+
+	-- Add Touched event for persistent contact
+	local debounce = {}
+	table.insert(npcConns, head.Touched:Connect(function(hit)
+		local char = hit.Parent
+		if char and char:FindFirstChild("Humanoid") then
+			local hum = char:FindFirstChild("Humanoid")
+			if hum and not debounce[hum] then
+				debounce[hum] = true
+				-- Example: kill player on touch
+				hum.Health = 0
+				task.delay(1, function()
+					debounce[hum] = nil
+				end)
+			end
+		end
+	end))
 
 	local esp = addBodyESP(npc)
 	processedNPCs[npc] = {connections = npcConns, esp = esp}
@@ -421,6 +459,7 @@ autoToggle.MouseButton1Click:Connect(function()
 	autoToggle.Text = autoHitboxEnabled and "Auto Hitbox: ON" or "Auto Hitbox: OFF"
 	autoToggle.BackgroundColor3 = autoHitboxEnabled and COLOR_GOOD or COLOR_PRIMARY_D
 
+	-- remove old listeners
 	for _, conn in ipairs(connections) do pcall(function() conn:Disconnect() end) end
 	table.clear(connections)
 
@@ -443,6 +482,7 @@ removeAllBtn.MouseButton1Click:Connect(function()
 	clearAll()
 end)
 
+-- Toggle panel by keyboard (F4) — respects animation/debounce
 UserInputService.InputBegan:Connect(function(input, gpe)
 	if gpe then return end
 	if input.KeyCode == Enum.KeyCode.F4 then
@@ -450,6 +490,7 @@ UserInputService.InputBegan:Connect(function(input, gpe)
 	end
 end)
 
+--===== PLAYER RELOAD =====--
 LocalPlayer.CharacterAdded:Connect(function()
 	task.wait(2)
 	if autoHitboxEnabled then scanWorkspace() end
