@@ -1,3 +1,5 @@
+
+
 --===== SERVICES =====--
 local Players = game:GetService("Players")
 local TweenService = game:GetService("TweenService")
@@ -7,29 +9,32 @@ local LocalPlayer = Players.LocalPlayer
 
 --===== CONFIG =====--
 local DEFAULT_HITBOX_SIZE = 4
+local MOBILE_FRAME_WIDTH = 280
+local MOBILE_PADDING = 15
 
--- Colors (light blue theme)
-local COLOR_PRIMARY   = Color3.fromRGB(140, 185, 255) -- buttons base
-local COLOR_PRIMARY_D = Color3.fromRGB(100, 150, 255) -- darker
-local COLOR_ACCENT    = Color3.fromRGB(180, 220, 255) -- strokes/hover
+-- Colors (light blue theme - mobile friendly)
+local COLOR_PRIMARY   = Color3.fromRGB(140, 185, 255)
+local COLOR_PRIMARY_D = Color3.fromRGB(100, 150, 255)
+local COLOR_ACCENT    = Color3.fromRGB(180, 220, 255)
 local COLOR_FRAME     = Color3.fromRGB(40, 60, 100)
 local COLOR_TITLE     = Color3.fromRGB(30, 50, 90)
 local COLOR_INPUT     = Color3.fromRGB(60, 90, 140)
 local COLOR_TEXT      = Color3.fromRGB(255, 255, 255)
 local COLOR_DANGER    = Color3.fromRGB(200, 80, 80)
 local COLOR_GOOD      = Color3.fromRGB(80, 180, 120)
+local COLOR_WARN      = Color3.fromRGB(255, 170, 80)
 
 --===== STATE =====--
 local processedNPCs = {}     -- [Model] = {connections = {RBXScriptConnection,...}, esp = Instance}
 local respawnWatchers = {}   -- [Model] = {RBXScriptConnection,...}
 local connections = {}       -- workspace listeners
 local autoHitboxEnabled = false
+local autoMeshEnabled = false
 
 --===== GUI ROOT =====--
 local gui = Instance.new("ScreenGui")
-gui.Name = "NPC_Hitbox_GUI"
+gui.Name = "NPC_Hitbox_GUI_Mobile"
 gui.ResetOnSpawn = false
--- keep same parent as original script context
 gui.Parent = game.CoreGui
 
 --===== HELPERS =====--
@@ -40,12 +45,12 @@ local function disconnectList(list)
 	end
 end
 
--- create button helper (with hover + press animation)
+-- Create mobile-friendly button
 local function createButton(parent, text, pos, size, baseColor)
 	local btn = Instance.new("TextButton")
 	btn.AnchorPoint = Vector2.new(0, 0)
 	btn.Position = pos
-	btn.Size = size or UDim2.fromOffset(220, 32)
+	btn.Size = size or UDim2.fromOffset(MOBILE_FRAME_WIDTH - MOBILE_PADDING * 2, 32)
 	btn.BackgroundColor3 = baseColor or COLOR_PRIMARY
 	btn.Text = text
 	btn.TextColor3 = COLOR_TEXT
@@ -61,7 +66,7 @@ local function createButton(parent, text, pos, size, baseColor)
 	stroke.Color = COLOR_ACCENT
 	stroke.Thickness = 1
 
-	-- hover
+	-- hover/press effect (mobile touch friendly)
 	btn.MouseEnter:Connect(function()
 		TweenService:Create(btn, TweenInfo.new(0.15), {
 			BackgroundColor3 = baseColor:Lerp(COLOR_ACCENT, 0.25)
@@ -73,7 +78,7 @@ local function createButton(parent, text, pos, size, baseColor)
 		}):Play()
 	end)
 
-	-- click "press" animation (uses original size)
+	-- touch "press" animation
 	local origSize = btn.Size
 	btn.MouseButton1Click:Connect(function()
 		local down = TweenService:Create(btn, TweenInfo.new(0.08), {
@@ -90,7 +95,7 @@ local function createButton(parent, text, pos, size, baseColor)
 	return btn
 end
 
--- Custom draggable for ANY GuiObject (works better than .Draggable)
+-- Mobile-friendly draggable (better for touch)
 local function makeDraggable(guiObject)
 	local dragging = false
 	local dragStart, startPos
@@ -98,13 +103,15 @@ local function makeDraggable(guiObject)
 	local function update(input)
 		local delta = input.Position - dragStart
 		guiObject.Position = UDim2.new(
-			startPos.X.Scale, startPos.X.Offset + delta.X,
-			startPos.Y.Scale, startPos.Y.Offset + delta.Y
+			math.clamp(startPos.X.Scale, 0, 1),
+			math.clamp(startPos.X.Offset + delta.X, -10, 300),
+			math.clamp(startPos.Y.Scale, 0, 1),
+			math.clamp(startPos.Y.Offset + delta.Y, -10, 100)
 		)
 	end
 
 	guiObject.InputBegan:Connect(function(input)
-		if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+		if input.UserInputType == Enum.UserInputType.Touch then
 			dragging = true
 			dragStart = input.Position
 			startPos = guiObject.Position
@@ -117,7 +124,7 @@ local function makeDraggable(guiObject)
 	end)
 
 	guiObject.InputChanged:Connect(function(input)
-		if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+		if input.UserInputType == Enum.UserInputType.Touch then
 			if dragging then update(input) end
 		end
 	end)
@@ -126,8 +133,8 @@ end
 --===== MAIN PANEL =====--
 local frame = Instance.new("Frame")
 frame.Name = "Panel"
-frame.Position = UDim2.fromOffset(20, 80)
-frame.Size = UDim2.fromOffset(300, 230)
+frame.Position = UDim2.fromOffset(10, 100)
+frame.Size = UDim2.fromOffset(MOBILE_FRAME_WIDTH, 0) -- Start collapsed
 frame.BackgroundColor3 = COLOR_FRAME
 frame.Visible = false
 frame.Active = true
@@ -141,9 +148,9 @@ makeDraggable(frame)
 
 -- Title bar
 local title = Instance.new("TextLabel")
-title.Size = UDim2.fromOffset(300, 36)
+title.Size = UDim2.fromOffset(MOBILE_FRAME_WIDTH, 36)
 title.BackgroundColor3 = COLOR_TITLE
-title.Text = "🌌 NPC Head Hitbox Manager"
+title.Text = "🌌 NPC Hitbox Mobile"
 title.TextColor3 = Color3.fromRGB(220, 240, 255)
 title.Font = Enum.Font.GothamBold
 title.TextSize = 16
@@ -152,9 +159,9 @@ Instance.new("UICorner", title).CornerRadius = UDim.new(0, 12)
 
 -- Size input
 local sizeInput = Instance.new("TextBox")
-sizeInput.Position = UDim2.fromOffset(20, 50)
-sizeInput.Size = UDim2.fromOffset(260, 32)
-sizeInput.PlaceholderText = "Size (e.g. 4)"
+sizeInput.Position = UDim2.fromOffset(MOBILE_PADDING, 50)
+sizeInput.Size = UDim2.fromOffset(MOBILE_FRAME_WIDTH - MOBILE_PADDING * 2, 32)
+sizeInput.PlaceholderText = "Hitbox Size (e.g. 4)"
 sizeInput.Text = tostring(DEFAULT_HITBOX_SIZE)
 sizeInput.BackgroundColor3 = COLOR_INPUT
 sizeInput.TextColor3 = COLOR_TEXT
@@ -164,19 +171,31 @@ sizeInput.ClearTextOnFocus = false
 sizeInput.Parent = frame
 Instance.new("UICorner", sizeInput).CornerRadius = UDim.new(0, 8)
 
--- Buttons
-local autoToggle = createButton(frame, "Auto Hitbox: OFF", UDim2.fromOffset(20, 95), UDim2.fromOffset(260, 32), COLOR_PRIMARY_D)
-local removeAllBtn = createButton(frame, "Remove All Hitboxes", UDim2.fromOffset(20, 135), UDim2.fromOffset(260, 32), COLOR_DANGER)
+-- Buttons (mobile layout)
+local indexY = 90
+local buttonSpacing = 36
+
+local autoToggle = createButton(frame, "Auto Hitbox: OFF", UDim2.fromOffset(MOBILE_PADDING, indexY), nil, COLOR_PRIMARY_D)
+indexY = indexY + buttonSpacing
+
+local autoMeshToggle = createButton(frame, "Auto Add Mesh: OFF", UDim2.fromOffset(MOBILE_PADDING, indexY), nil, COLOR_WARN)
+indexY = indexY + buttonSpacing
+
+local removeAllBtn = createButton(frame, "Remove All Hitboxes", UDim2.fromOffset(MOBILE_PADDING, indexY), nil, COLOR_DANGER)
+indexY = indexY + buttonSpacing
+
+local clearMeshBtn = createButton(frame, "Clear All Mesh", UDim2.fromOffset(MOBILE_PADDING, indexY), nil, Color3.fromRGB(120, 80, 180))
+indexY = indexY + buttonSpacing
 
 -- Status
 local statusLabel = Instance.new("TextLabel")
-statusLabel.Position = UDim2.fromOffset(14, 180)
-statusLabel.Size = UDim2.fromOffset(272, 24)
+statusLabel.Position = UDim2.fromOffset(MOBILE_PADDING, indexY)
+statusLabel.Size = UDim2.fromOffset(MOBILE_FRAME_WIDTH - MOBILE_PADDING * 2, 24)
 statusLabel.BackgroundTransparency = 1
 statusLabel.Text = "Processing: 0 NPCs"
 statusLabel.TextColor3 = Color3.fromRGB(180, 255, 200)
 statusLabel.Font = Enum.Font.Gotham
-statusLabel.TextSize = 14
+statusLabel.TextSize = 13
 statusLabel.TextXAlignment = Enum.TextXAlignment.Left
 statusLabel.Parent = frame
 
@@ -192,23 +211,20 @@ local function flashStatus(ok, msg)
 	end)
 end
 
---===== FLOATING TOGGLE BUTTON (draggable) =====--
-local toggleBtn = createButton(gui, "Show Menu", UDim2.fromOffset(20, 20), UDim2.fromOffset(120, 36), COLOR_PRIMARY)
+--===== MOBILE TOGGLE BUTTON (draggable) =====--
+local toggleBtn = createButton(gui, "Menu", UDim2.fromOffset(10, 10), UDim2.fromOffset(100, 36), COLOR_PRIMARY)
 toggleBtn.ZIndex = 10
 makeDraggable(toggleBtn)
 
---===== IMMEDIATE HIDE / RESTORE LOGIC =====--
+--===== ANIMATION SYSTEM =====--
 local isAnimating = false
 local storedVisibility = {}
 
 local function hideFrameContentImmediately()
-	-- store and hide only GuiObjects (TextLabel, TextButton, TextBox, ImageLabel, etc.)
 	storedVisibility = {}
 	for _, child in ipairs(frame:GetDescendants()) do
 		if child:IsA("GuiObject") and child ~= frame then
-			-- save old visibility
 			storedVisibility[child] = child.Visible
-			-- hide instantly
 			child.Visible = false
 		end
 	end
@@ -216,7 +232,6 @@ end
 
 local function restoreFrameContent()
 	for child, vis in pairs(storedVisibility) do
-		-- restore only if still exists
 		if child and child.Parent then
 			pcall(function() child.Visible = vis end)
 		end
@@ -224,43 +239,36 @@ local function restoreFrameContent()
 	storedVisibility = {}
 end
 
--- Open/Close panel with tween (slide + instant-hide content)
 local function toggleMenu()
 	if isAnimating then return end
 	isAnimating = true
 
 	if frame.Visible then
-		-- closing: hide children immediately so text/buttons disappear at once,
-		-- but keep frame visible while animation plays
 		hideFrameContentImmediately()
-		toggleBtn.Text = "Show Menu"
+		toggleBtn.Text = "Menu"
 
-		local tween = TweenService:Create(frame, TweenInfo.new(0.25), {Size = UDim2.fromOffset(300, 0)})
+		local tween = TweenService:Create(frame, TweenInfo.new(0.25), {Size = UDim2.fromOffset(MOBILE_FRAME_WIDTH, 0)})
 		tween:Play()
 		tween.Completed:Wait()
-
-		-- after tween hide whole frame
 		frame.Visible = false
 		isAnimating = false
 	else
-		-- opening: prepare collapsed frame then expand; restore contents AFTER animation
-		frame.Size = UDim2.fromOffset(300, 0)
+		frame.Size = UDim2.fromOffset(MOBILE_FRAME_WIDTH, 0)
 		frame.Visible = true
 
-		local tween = TweenService:Create(frame, TweenInfo.new(0.25), {Size = UDim2.fromOffset(300, 230)})
+		local tween = TweenService:Create(frame, TweenInfo.new(0.25), {Size = UDim2.fromOffset(MOBILE_FRAME_WIDTH, indexY + 30)})
 		tween:Play()
 		tween.Completed:Wait()
 
-		-- restore UI content visibility to previous states
 		restoreFrameContent()
-		toggleBtn.Text = "Hide Menu"
+		toggleBtn.Text = "Close"
 		isAnimating = false
 	end
 end
 
 toggleBtn.MouseButton1Click:Connect(toggleMenu)
 
---===== LOGIC (hitbox & esp) =====--
+--===== CORE LOGIC =====--
 local function updateStatus()
 	local count = 0
 	for _ in pairs(processedNPCs) do count = count + 1 end
@@ -277,6 +285,7 @@ local function isValidNPC(model)
 	return true
 end
 
+-- Add body ESP
 local function addBodyESP(npc)
 	if npc:FindFirstChild("NPCBodyESP") then return npc.NPCBodyESP end
 	local root = npc:FindFirstChild("HumanoidRootPart")
@@ -294,16 +303,15 @@ local function addBodyESP(npc)
 	return box
 end
 
+-- Remove head hitbox
 local function removeHeadHitbox(npc)
 	if not npc or not processedNPCs[npc] then return end
 	local head = npc:FindFirstChild("Head")
 
-	-- disconnect per-NPC connections
 	if processedNPCs[npc].connections then
 		disconnectList(processedNPCs[npc].connections)
 	end
 
-	-- restore head
 	if head and head:FindFirstChild("OriginalSize") then
 		local originalSize = head.OriginalSize.Value
 		head.Size = originalSize
@@ -321,7 +329,6 @@ local function removeHeadHitbox(npc)
 		end
 	end
 
-	-- remove ESP
 	if processedNPCs[npc].esp then
 		processedNPCs[npc].esp:Destroy()
 	end
@@ -330,19 +337,15 @@ local function removeHeadHitbox(npc)
 	updateStatus()
 end
 
+-- Apply head hitbox
 local function applyHeadHitbox(npc, size)
 	if not isValidNPC(npc) then return end
 	if processedNPCs[npc] then return end
-	if respawnWatchers[npc] then
-		disconnectList(respawnWatchers[npc])
-		respawnWatchers[npc] = nil
-	end
 
 	local head = npc:FindFirstChild("Head")
 	local root = npc:FindFirstChild("HumanoidRootPart")
-	local hum  = npc:FindFirstChildOfClass("Humanoid")
+	local hum = npc:FindFirstChildOfClass("Humanoid")
 
-	-- fake head if missing
 	if not head and root then
 		head = Instance.new("Part")
 		head.Name = "Head"
@@ -363,7 +366,6 @@ local function applyHeadHitbox(npc, size)
 	if not head then return end
 	if hum and hum.Health and hum.Health <= 0 then return end
 
-	-- ensure mesh + original size
 	if not head:FindFirstChild("Mesh") then
 		local mesh = Instance.new("SpecialMesh")
 		mesh.MeshType = Enum.MeshType.Head
@@ -379,7 +381,6 @@ local function applyHeadHitbox(npc, size)
 		original.Parent = head
 	end
 
-	-- apply big head
 	head.Massless = true
 	head.Size = Vector3.new(size, size, size)
 	head.CanCollide = false
@@ -407,6 +408,25 @@ local function applyHeadHitbox(npc, size)
 	updateStatus()
 end
 
+-- Add/Update Mesh Head for any NPC (even if exists)
+local function addOrUpdateMeshHead(npc)
+	if not isValidNPC(npc) then return end
+	local head = npc:FindFirstChild("Head")
+	if not head then return end
+
+	local mesh = head:FindFirstChild("SpecialMesh") or head:FindFirstChildWhichIsA("Mesh")
+	if not mesh then
+		mesh = Instance.new("SpecialMesh")
+		mesh.MeshType = Enum.MeshType.Head
+		mesh.Scale = Vector3.new(1, 1, 1)
+		mesh.Parent = head
+	else
+		mesh.MeshType = Enum.MeshType.Head
+		mesh.Scale = Vector3.new(1, 1, 1)
+	end
+end
+
+-- Scan all NPCs in workspace (deep search)
 local function scanWorkspace()
 	local size = tonumber(sizeInput.Text) or DEFAULT_HITBOX_SIZE
 	for _, v in ipairs(workspace:GetDescendants()) do
@@ -414,6 +434,45 @@ local function scanWorkspace()
 			applyHeadHitbox(v, size)
 		end
 	end
+end
+
+-- Auto add mesh to all NPCs (recursive, non-laggy)
+local function addMeshToAllNPCs()
+	local size = tonumber(sizeInput.Text) or DEFAULT_HITBOX_SIZE
+	local processed = 0
+
+	for _, v in ipairs(workspace:GetDescendants()) do
+		if isValidNPC(v) then
+			addOrUpdateMeshHead(v)
+			applyHeadHitbox(v, size)
+			processed = processed + 1
+
+			-- Prevent lag: yield every 10 NPCs
+			if processed % 10 == 0 then
+				task.wait()
+			end
+		end
+	end
+
+	flashStatus(true, "Mesh added to " .. processed .. " NPCs")
+end
+
+-- Clear all mesh heads
+local function clearAllMesh()
+	local cleared = 0
+	for _, v in ipairs(workspace:GetDescendants()) do
+		if isValidNPC(v) then
+			local head = v:FindFirstChild("Head")
+			if head then
+				local mesh = head:FindFirstChild("Mesh") or head:FindFirstChild("SpecialMesh")
+				if mesh and mesh.Name == "Mesh" then
+					mesh:Destroy()
+					cleared = cleared + 1
+				end
+			end
+		end
+	end
+	flashStatus(true, "Cleared " .. cleared .. " meshes")
 end
 
 local function tryApplyModel(model)
@@ -442,8 +501,9 @@ autoToggle.MouseButton1Click:Connect(function()
 	autoToggle.Text = autoHitboxEnabled and "Auto Hitbox: ON" or "Auto Hitbox: OFF"
 	autoToggle.BackgroundColor3 = autoHitboxEnabled and COLOR_GOOD or COLOR_PRIMARY_D
 
-	-- remove old listeners
-	for _, conn in ipairs(connections) do pcall(function() conn:Disconnect() end) end
+	for _, conn in ipairs(connections) do
+		pcall(function() conn:Disconnect() end)
+	end
 	table.clear(connections)
 
 	if autoHitboxEnabled then
@@ -461,20 +521,34 @@ autoToggle.MouseButton1Click:Connect(function()
 	end
 end)
 
+autoMeshToggle.MouseButton1Click:Connect(function()
+	autoMeshEnabled = not autoMeshEnabled
+	autoMeshToggle.Text = autoMeshEnabled and "Auto Add Mesh: ON" or "Auto Add Mesh: OFF"
+	autoMeshToggle.BackgroundColor3 = autoMeshEnabled and COLOR_GOOD or COLOR_WARN
+
+	if autoMeshEnabled then
+		flashStatus(true, "Auto Mesh ON → Adding to all...")
+		task.spawn(addMeshToAllNPCs)
+	else
+		flashStatus(false, "Auto Mesh OFF")
+	end
+end)
+
 removeAllBtn.MouseButton1Click:Connect(function()
 	clearAll()
 end)
 
--- Toggle panel by keyboard (F4) — respects animation/debounce
-UserInputService.InputBegan:Connect(function(input, gpe)
-	if gpe then return end
-	if input.KeyCode == Enum.KeyCode.F4 then
-		toggleMenu()
-	end
+clearMeshBtn.MouseButton1Click:Connect(function()
+	clearAllMesh()
 end)
 
 --===== PLAYER RELOAD =====--
 LocalPlayer.CharacterAdded:Connect(function()
 	task.wait(2)
-	if autoHitboxEnabled then scanWorkspace() end
+	if autoHitboxEnabled then
+		scanWorkspace()
+	end
+	if autoMeshEnabled then
+		task.spawn(addMeshToAllNPCs)
+	end
 end)
