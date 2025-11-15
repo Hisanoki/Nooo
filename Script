@@ -1,715 +1,480 @@
-local lastPromptedContainer = nil
+--===== SERVICES =====--
 local Players = game:GetService("Players")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local RunService = game:GetService("RunService")
+local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
-local Lighting = game:GetService("Lighting")
-local player = Players.LocalPlayer
-local playerGui = player:WaitForChild("PlayerGui")
-local LootEvent = ReplicatedStorage:WaitForChild("Events").Loot.LootObject
-local MinigameEvent = ReplicatedStorage:WaitForChild("Events").Loot.MinigameResult
-local UpdateStates = ReplicatedStorage:WaitForChild("Events").Player.UpdateStates
-local StaminaRemote = ReplicatedStorage:WaitForChild("Events").Player.Stamina
-local lootFolder = workspace:WaitForChild("Map").Loot
-local NPCFolder = workspace:WaitForChild("NPCs").Custom
 
-local noCamShakeEnabled = false
-local noCamShakeHook
+local LocalPlayer = Players.LocalPlayer
 
-local function enableNoCamShake(state)
-    if state then
-        local windShakeScript = player:WaitForChild("PlayerScripts"):FindFirstChild("WindShake")
-        if windShakeScript and windShakeScript:IsA("LocalScript") then
-            windShakeScript.Disabled = true
-        end
-        local charsFolder = workspace:FindFirstChild("Chars")
-        if charsFolder then
-            local pChar = charsFolder:FindFirstChild(player.Name)
-            if pChar then
-                local screenShake = pChar:FindFirstChild("ScreenShake")
-                if screenShake then
-                    if screenShake:IsA("LocalScript") or screenShake:IsA("Script") then
-                        screenShake.Disabled = true
-                    elseif screenShake:IsA("BasePart") then
-                        screenShake.Enabled = false
-                    end
-                end
-            end
-        end
-        if not noCamShakeHook then
-            noCamShakeHook = hookmetamethod(game, "__namecall", function(self, ...)
-                if getnamecallmethod() == "InvokeClient" and tostring(self) == "CameraShake" then
-                    return
-                end
-                return noCamShakeHook(self, ...)
-            end)
-        end
-    else
-        if noCamShakeHook then
-            noCamShakeHook:Disconnect()
-            noCamShakeHook = nil
-        end
-    end
-    noCamShakeEnabled = state
+--===== CONFIG =====--
+local DEFAULT_HITBOX_SIZE = 4
+
+-- Colors (light blue theme)
+local COLOR_PRIMARY   = Color3.fromRGB(140, 185, 255) -- buttons base
+local COLOR_PRIMARY_D = Color3.fromRGB(100, 150, 255) -- darker
+local COLOR_ACCENT    = Color3.fromRGB(180, 220, 255) -- strokes/hover
+local COLOR_FRAME     = Color3.fromRGB(40, 60, 100)
+local COLOR_TITLE     = Color3.fromRGB(30, 50, 90)
+local COLOR_INPUT     = Color3.fromRGB(60, 90, 140)
+local COLOR_TEXT      = Color3.fromRGB(255, 255, 255)
+local COLOR_DANGER    = Color3.fromRGB(200, 80, 80)
+local COLOR_GOOD      = Color3.fromRGB(80, 180, 120)
+
+--===== STATE =====--
+local processedNPCs = {}     -- [Model] = {connections = {RBXScriptConnection,...}, esp = Instance}
+local respawnWatchers = {}   -- [Model] = {RBXScriptConnection,...}
+local connections = {}       -- workspace listeners
+local autoHitboxEnabled = false
+
+--===== GUI ROOT =====--
+local gui = Instance.new("ScreenGui")
+gui.Name = "NPC_Hitbox_GUI"
+gui.ResetOnSpawn = false
+-- keep same parent as original script context
+gui.Parent = game.CoreGui
+
+--===== HELPERS =====--
+local function disconnectList(list)
+	if not list then return end
+	for _, c in ipairs(list) do
+		pcall(function() c:Disconnect() end)
+	end
 end
 
-local function setupNPCDeathRemoval(model)
-    if not model:IsA("Model") then return end
-    if model:FindFirstChild("DeathListener") then return end
-    local humanoid = model:FindFirstChildOfClass("Humanoid")
-    if not humanoid then return end
-    local marker = Instance.new("BoolValue")
-    marker.Name = "DeathListener"
-    marker.Parent = model
-    humanoid.HealthChanged:Connect(function(health)
-        if health <= 0 then
-            task.delay(1, function()
-                if model and model.Parent then
-                    model:Destroy()
-                end
-            end)
-        end
-    end)
+-- create button helper (with hover + press animation)
+local function createButton(parent, text, pos, size, baseColor)
+	local btn = Instance.new("TextButton")
+	btn.AnchorPoint = Vector2.new(0, 0)
+	btn.Position = pos
+	btn.Size = size or UDim2.fromOffset(220, 32)
+	btn.BackgroundColor3 = baseColor or COLOR_PRIMARY
+	btn.Text = text
+	btn.TextColor3 = COLOR_TEXT
+	btn.Font = Enum.Font.GothamBold
+	btn.TextSize = 14
+	btn.AutoButtonColor = false
+	btn.Parent = parent
+
+	local corner = Instance.new("UICorner", btn)
+	corner.CornerRadius = UDim.new(0, 8)
+
+	local stroke = Instance.new("UIStroke", btn)
+	stroke.Color = COLOR_ACCENT
+	stroke.Thickness = 1
+
+	-- hover
+	btn.MouseEnter:Connect(function()
+		TweenService:Create(btn, TweenInfo.new(0.15), {
+			BackgroundColor3 = baseColor:Lerp(COLOR_ACCENT, 0.25)
+		}):Play()
+	end)
+	btn.MouseLeave:Connect(function()
+		TweenService:Create(btn, TweenInfo.new(0.15), {
+			BackgroundColor3 = baseColor
+		}):Play()
+	end)
+
+	-- click "press" animation (uses original size)
+	local origSize = btn.Size
+	btn.MouseButton1Click:Connect(function()
+		local down = TweenService:Create(btn, TweenInfo.new(0.08), {
+			Size = UDim2.new(origSize.X.Scale, math.max(0, origSize.X.Offset - 6), origSize.Y.Scale, math.max(0, origSize.Y.Offset - 4))
+		})
+		local up = TweenService:Create(btn, TweenInfo.new(0.08), {
+			Size = origSize
+		})
+		down:Play()
+		down.Completed:Wait()
+		up:Play()
+	end)
+
+	return btn
 end
 
-for _, model in ipairs(NPCFolder:GetDescendants()) do
-    setupNPCDeathRemoval(model)
+-- Custom draggable for ANY GuiObject (works better than .Draggable)
+local function makeDraggable(guiObject)
+	local dragging = false
+	local dragStart, startPos
+
+	local function update(input)
+		local delta = input.Position - dragStart
+		guiObject.Position = UDim2.new(
+			startPos.X.Scale, startPos.X.Offset + delta.X,
+			startPos.Y.Scale, startPos.Y.Offset + delta.Y
+		)
+	end
+
+	guiObject.InputBegan:Connect(function(input)
+		if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+			dragging = true
+			dragStart = input.Position
+			startPos = guiObject.Position
+			input.Changed:Connect(function()
+				if input.UserInputState == Enum.UserInputState.End then
+					dragging = false
+				end
+			end)
+		end
+	end)
+
+	guiObject.InputChanged:Connect(function(input)
+		if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+			if dragging then update(input) end
+		end
+	end)
 end
 
-NPCFolder.DescendantAdded:Connect(function(descendant)
-    local model = descendant
-    if not descendant:IsA("Model") and descendant.Parent then
-        model = descendant.Parent
-    end
-    setupNPCDeathRemoval(model)
-end)
+--===== MAIN PANEL =====--
+local frame = Instance.new("Frame")
+frame.Name = "Panel"
+frame.Position = UDim2.fromOffset(20, 80)
+frame.Size = UDim2.fromOffset(300, 230)
+frame.BackgroundColor3 = COLOR_FRAME
+frame.Visible = false
+frame.Active = true
+frame.Parent = gui
 
-local validContainers = {
-    ["DuffelBag"] = true,
-    ["Case"] = true,
-    ["BunkerCrate"] = true,
-    ["CashRegister"] = true,
-    ["Locker"] = true,
-    ["MedBox"] = true,
-    ["Safe"] = true
-}
+Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 12)
+local frameStroke = Instance.new("UIStroke", frame)
+frameStroke.Color = COLOR_ACCENT
+frameStroke.Thickness = 2
+makeDraggable(frame)
 
-Lighting.GlobalShadows = false
-Lighting.Brightness = 1
-Lighting.ClockTime = 14
-
-local screenGui = Instance.new("ScreenGui", playerGui)
-screenGui.Name = "AutoSystemUI"
-screenGui.ResetOnSpawn = false
-
-local frame = Instance.new("Frame", screenGui)
-frame.Size = UDim2.new(0, 200, 0, 480)
-frame.Position = UDim2.new(0, 10, 0.5, -220)
-frame.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
-frame.BorderSizePixel = 0
-Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 8)
-
-local layout = Instance.new("UIListLayout")
-layout.Padding = UDim.new(0, 4)
-layout.SortOrder = Enum.SortOrder.LayoutOrder
-layout.Parent = frame
-
-local dragging, dragInput, dragStart, startPos
-local function update(input)
-    local delta = input.Position - dragStart
-    frame.Position = UDim2.new(
-        startPos.X.Scale,
-        startPos.X.Offset + delta.X,
-        startPos.Y.Scale,
-        startPos.Y.Offset + delta.Y
-    )
-end
-
-frame.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-        dragging = true
-        dragStart = input.Position
-        startPos = frame.Position
-        input.Changed:Connect(function()
-            if input.UserInputState == Enum.UserInputState.End then
-                dragging = false
-            end
-        end)
-    end
-end)
-
-frame.InputChanged:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
-        dragInput = input
-    end
-end)
-
-UserInputService.InputChanged:Connect(function(input)
-    if input == dragInput and dragging then
-        update(input)
-    end
-end)
-
-local function createEvenFrame(parent, height)
-    local f = Instance.new("Frame")
-    f.Size = UDim2.new(1, 0, 0, height)
-    f.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
-    f.BorderSizePixel = 0
-    Instance.new("UICorner", f).CornerRadius = UDim.new(0, 6)
-    f.Parent = parent
-    return f
-end
-
-local humanoid = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
-local speedValue = 16
-local speedSetByUser = false
-local speedFrame = createEvenFrame(frame, 36)
-speedFrame.LayoutOrder = 99
-
-local speedLabel = Instance.new("TextLabel", speedFrame)
-speedLabel.Size = UDim2.new(1, 0, 0, 14)
-speedLabel.BackgroundTransparency = 1
-speedLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-speedLabel.Font = Enum.Font.GothamBold
-speedLabel.TextSize = 11
-speedLabel.Text = "WalkSpeed"
-speedLabel.Position = UDim2.new(0, 0, 0, 0)
-
-local speedBox = Instance.new("TextBox", speedFrame)
-speedBox.Size = UDim2.new(1, -12, 0, 16)
-speedBox.Position = UDim2.new(0, 6, 0, 16)
-speedBox.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-speedBox.TextColor3 = Color3.fromRGB(255, 255, 255)
-speedBox.Font = Enum.Font.Gotham
-speedBox.TextSize = 11
-speedBox.Text = tostring(speedValue)
-Instance.new("UICorner", speedBox).CornerRadius = UDim.new(0, 4)
-
-speedBox.FocusLost:Connect(function()
-    local val = tonumber(speedBox.Text)
-    if val and val > 0 then
-        speedValue = val
-        speedSetByUser = true
-        if humanoid then humanoid.WalkSpeed = speedValue end
-        speedBox.Text = tostring(speedValue)
-    else
-        speedBox.Text = tostring(speedValue)
-    end
-end)
-
-RunService.RenderStepped:Connect(function()
-    humanoid = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
-    if speedSetByUser and humanoid and humanoid.WalkSpeed ~= speedValue then
-        humanoid.WalkSpeed = speedValue
-    end
-end)
-
-local title = Instance.new("TextLabel", frame)
-title.Size = UDim2.new(1, 0, 0, 22)
-title.BackgroundTransparency = 1
-title.TextColor3 = Color3.fromRGB(255, 255, 255)
+-- Title bar
+local title = Instance.new("TextLabel")
+title.Size = UDim2.fromOffset(300, 36)
+title.BackgroundColor3 = COLOR_TITLE
+title.Text = "🌌 NPC Head Hitbox Manager"
+title.TextColor3 = Color3.fromRGB(220, 240, 255)
 title.Font = Enum.Font.GothamBold
-title.TextSize = 13
-title.Text = "Blackout: Revival"
+title.TextSize = 16
+title.Parent = frame
+Instance.new("UICorner", title).CornerRadius = UDim.new(0, 12)
 
-local toggleUIRefs = {}
-local function createToggle(name, callback)
-    local buttonFrame = createEvenFrame(frame, 22)
-    buttonFrame.LayoutOrder = 0
-    local button = Instance.new("TextButton")
-    button.Size = UDim2.new(1, 0, 1, 0)
-    button.BackgroundTransparency = 1
-    button.TextColor3 = Color3.fromRGB(255, 255, 255)
-    button.Font = Enum.Font.GothamBold
-    button.TextSize = 11
-    button.Text = name .. ": OFF"
-    button.Parent = buttonFrame
-    local state = false
-    button.MouseButton1Click:Connect(function()
-        state = not state
-        button.Text = name .. ": " .. (state and "ON" or "OFF")
-        buttonFrame.BackgroundColor3 = state and Color3.fromRGB(0, 170, 0) or Color3.fromRGB(40, 40, 40)
-        callback(state)
-    end)
-    toggleUIRefs[name] = {button = button, frame = buttonFrame, setState = function(val)
-        state = val
-        button.Text = name .. ": " .. (state and "ON" or "OFF")
-        buttonFrame.BackgroundColor3 = state and Color3.fromRGB(0, 170, 0) or Color3.fromRGB(40, 40, 40)
-    end}
-    return function(val)
-        state = val
-        button.Text = name .. ": " .. (state and "ON" or "OFF")
-        buttonFrame.BackgroundColor3 = state and Color3.fromRGB(0, 170, 0) or Color3.fromRGB(40, 40, 40)
-        callback(state)
-    end
+-- Size input
+local sizeInput = Instance.new("TextBox")
+sizeInput.Position = UDim2.fromOffset(20, 50)
+sizeInput.Size = UDim2.fromOffset(260, 32)
+sizeInput.PlaceholderText = "Size (e.g. 4)"
+sizeInput.Text = tostring(DEFAULT_HITBOX_SIZE)
+sizeInput.BackgroundColor3 = COLOR_INPUT
+sizeInput.TextColor3 = COLOR_TEXT
+sizeInput.Font = Enum.Font.Gotham
+sizeInput.TextSize = 14
+sizeInput.ClearTextOnFocus = false
+sizeInput.Parent = frame
+Instance.new("UICorner", sizeInput).CornerRadius = UDim.new(0, 8)
+
+-- Buttons
+local autoToggle = createButton(frame, "Auto Hitbox: OFF", UDim2.fromOffset(20, 95), UDim2.fromOffset(260, 32), COLOR_PRIMARY_D)
+local removeAllBtn = createButton(frame, "Remove All Hitboxes", UDim2.fromOffset(20, 135), UDim2.fromOffset(260, 32), COLOR_DANGER)
+
+-- Status
+local statusLabel = Instance.new("TextLabel")
+statusLabel.Position = UDim2.fromOffset(14, 180)
+statusLabel.Size = UDim2.fromOffset(272, 24)
+statusLabel.BackgroundTransparency = 1
+statusLabel.Text = "Processing: 0 NPCs"
+statusLabel.TextColor3 = Color3.fromRGB(180, 255, 200)
+statusLabel.Font = Enum.Font.Gotham
+statusLabel.TextSize = 14
+statusLabel.TextXAlignment = Enum.TextXAlignment.Left
+statusLabel.Parent = frame
+
+local function flashStatus(ok, msg)
+	statusLabel.Text = msg
+	TweenService:Create(statusLabel, TweenInfo.new(0.1), {
+		TextColor3 = ok and Color3.fromRGB(190, 255, 210) or Color3.fromRGB(255, 200, 200)
+	}):Play()
+	task.delay(0.5, function()
+		TweenService:Create(statusLabel, TweenInfo.new(0.3), {
+			TextColor3 = Color3.fromRGB(180, 255, 200)
+		}):Play()
+	end)
 end
 
-local autoLootEnabled, autoWinEnabled, hitboxEnabled, proximityEnabled = false, false, false, false
-local infJump = false
-local noRagDmgEnabled = false
-local spoofInfStamEnabled = false
+--===== FLOATING TOGGLE BUTTON (draggable) =====--
+local toggleBtn = createButton(gui, "Show Menu", UDim2.fromOffset(20, 20), UDim2.fromOffset(120, 36), COLOR_PRIMARY)
+toggleBtn.ZIndex = 10
+makeDraggable(toggleBtn)
 
-local toggleSetters = {}
+--===== IMMEDIATE HIDE / RESTORE LOGIC =====--
+local isAnimating = false
+local storedVisibility = {}
 
-local function addToggle(name, setter)
-    local set = createToggle(name, setter)
-    table.insert(toggleSetters, set)
+local function hideFrameContentImmediately()
+	-- store and hide only GuiObjects (TextLabel, TextButton, TextBox, ImageLabel, etc.)
+	storedVisibility = {}
+	for _, child in ipairs(frame:GetDescendants()) do
+		if child:IsA("GuiObject") and child ~= frame then
+			-- save old visibility
+			storedVisibility[child] = child.Visible
+			-- hide instantly
+			child.Visible = false
+		end
+	end
 end
 
-local hitboxLoop
-local function patchNPCHitboxes()
-    for _, model in ipairs(NPCFolder:GetDescendants()) do
-        if model:IsA("Model") then
-            local humanoid = model:FindFirstChildOfClass("Humanoid")
-            if humanoid and humanoid.Health > 0 and model ~= player.Character then
-                local head = model:FindFirstChild("Head")
-                if head then
-                    head.Size = Vector3.new(6, 6, 6)
-                    head.Transparency = 0.5
-                    head.CanCollide = false
-                end
-                local root = model:FindFirstChild("HumanoidRootPart")
-                if root then
-                    root.Size = Vector3.new(5, 5, 5)
-                    root.Transparency = 1
-                    root.CanCollide = true
-                end
-            end
-        end
-    end
+local function restoreFrameContent()
+	for child, vis in pairs(storedVisibility) do
+		-- restore only if still exists
+		if child and child.Parent then
+			pcall(function() child.Visible = vis end)
+		end
+	end
+	storedVisibility = {}
 end
 
-addToggle("Auto Loot", function(state) autoLootEnabled = state end)
-addToggle("Auto Lockpick", function(state) autoWinEnabled = state end)
-addToggle("Hitbox", function(state)
-    hitboxEnabled = state
-    if state then
-        if not hitboxLoop then
-            hitboxLoop = task.spawn(function()
-                while hitboxEnabled do
-                    patchNPCHitboxes()
-                    task.wait(2)
-                end
-                hitboxLoop = nil
-            end)
-        end
-    else
-        hitboxEnabled = false
-        hitboxLoop = nil
-    end
-end)
-addToggle("Instant Interact", function(state) proximityEnabled = state end)
-addToggle("No Fall Damage", function(state)
-    noRagDmgEnabled = state
-    if state and not _G.noRagDmgHook then
-        _G.noRagDmgHook = hookmetamethod(game, "__namecall", function(self, ...)
-            local method = getnamecallmethod()
-            if method == "FireServer" then
-                local targetName = tostring(self)
-                if targetName == "Ragdoll" or targetName == "Damage" then
-                    return
-                end
-            end
-            return _G.noRagDmgHook(self, ...)
-        end)
-    end
-end)
-addToggle("Infinite Stamina", function(state)
-    spoofInfStamEnabled = state
-    if state then
-        if not _G.spoofInfStamConn then
-            _G.spoofInfStamConn = RunService.RenderStepped:Connect(function()
-                if not spoofInfStamEnabled then return end
-                local character = player.Character
-                if not character then return end
-                local root = character:FindFirstChild("HumanoidRootPart")
-                if not root then return end
-                UpdateStates:FireServer(root.Position, root.Velocity, root.CFrame.LookVector, {
-                    Crouching = false,
-                    Sprinting = false,
-                    Aiming = false
-                })
-            end)
-        end
-        if not _G.infStaminaHook then
-            _G.infStaminaHook = hookmetamethod(game, "__namecall", function(self, ...)
-                if self == StaminaRemote and getnamecallmethod() == "FireServer" then
-                    return nil
-                end
-                return _G.infStaminaHook(self, ...)
-            end)
-        end
-    else
-        if _G.spoofInfStamConn then
-            _G.spoofInfStamConn:Disconnect()
-            _G.spoofInfStamConn = nil
-        end
-        _G.infStaminaHook = nil
-    end
-end)
-addToggle("No Camera Shake", function(state)
-    enableNoCamShake(state)
-end)
-addToggle("Infinite Jump", function(state)
-    infJump = state
-    if not state and _G.infJumpConn then
-        _G.infJumpConn:Disconnect()
-        _G.infJumpConn = nil
-    end
-end)
+-- Open/Close panel with tween (slide + instant-hide content)
+local function toggleMenu()
+	if isAnimating then return end
+	isAnimating = true
 
-local gunModEnabled = false
-local gunModRunning = false
-local patchedGuns = setmetatable({}, { __mode = "k" })
+	if frame.Visible then
+		-- closing: hide children immediately so text/buttons disappear at once,
+		-- but keep frame visible while animation plays
+		hideFrameContentImmediately()
+		toggleBtn.Text = "Show Menu"
 
-local rpmValue = 9999
-local rpmSetByUser = false
+		local tween = TweenService:Create(frame, TweenInfo.new(0.25), {Size = UDim2.fromOffset(300, 0)})
+		tween:Play()
+		tween.Completed:Wait()
 
-local gunModFrame = createEvenFrame(frame, 36)
-gunModFrame.Size = UDim2.new(1, -12, 0, 36)
-gunModFrame.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
-gunModFrame.BorderSizePixel = 0
-gunModFrame.LayoutOrder = 100
-Instance.new("UICorner", gunModFrame).CornerRadius = UDim.new(0, 6)
-gunModFrame.Parent = frame
+		-- after tween hide whole frame
+		frame.Visible = false
+		isAnimating = false
+	else
+		-- opening: prepare collapsed frame then expand; restore contents AFTER animation
+		frame.Size = UDim2.fromOffset(300, 0)
+		frame.Visible = true
 
-local gunModLabel = Instance.new("TextLabel", gunModFrame)
-gunModLabel.Size = UDim2.new(1, 0, 0, 14)
-gunModLabel.BackgroundTransparency = 1
-gunModLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-gunModLabel.Font = Enum.Font.GothamBold
-gunModLabel.TextSize = 11
-gunModLabel.Text = "Gun Mods"
-gunModLabel.Position = UDim2.new(0, 0, 0, 0)
+		local tween = TweenService:Create(frame, TweenInfo.new(0.25), {Size = UDim2.fromOffset(300, 230)})
+		tween:Play()
+		tween.Completed:Wait()
 
-local rpmBox = Instance.new("TextBox", gunModFrame)
-rpmBox.Size = UDim2.new(0.7, 0, 0, 14)
-rpmBox.Position = UDim2.new(0, 6, 0, 16)
-rpmBox.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-rpmBox.TextColor3 = Color3.fromRGB(255, 255, 255)
-rpmBox.Font = Enum.Font.Gotham
-rpmBox.TextSize = 11
-rpmBox.Text = tostring(rpmValue)
-Instance.new("UICorner", rpmBox).CornerRadius = UDim.new(0, 4)
-
-rpmBox.FocusLost:Connect(function()
-    local val = tonumber(rpmBox.Text)
-    if val and val > 0 then
-        rpmValue = val
-        rpmSetByUser = true
-        rpmBox.Text = tostring(rpmValue)
-    else
-        rpmBox.Text = tostring(rpmValue)
-    end
-end)
-
-local rpmLabel = Instance.new("TextLabel", gunModFrame)
-rpmLabel.Size = UDim2.new(0.3, -12, 0, 14)
-rpmLabel.Position = UDim2.new(0.7, 6, 0, 16)
-rpmLabel.BackgroundTransparency = 1
-rpmLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
-rpmLabel.Font = Enum.Font.Gotham
-rpmLabel.TextSize = 11
-rpmLabel.Text = "RPM"
-rpmLabel.TextXAlignment = Enum.TextXAlignment.Left
-
-local gunModButton = Instance.new("TextButton", gunModFrame)
-gunModButton.Size = UDim2.new(1, -12, 0, 14)
-gunModButton.Position = UDim2.new(0, 6, 0, 30)
-gunModButton.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
-gunModButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-gunModButton.Font = Enum.Font.GothamBold
-gunModButton.TextSize = 11
-gunModButton.Text = "Toggle Gun Mods: OFF"
-Instance.new("UICorner", gunModButton).CornerRadius = UDim.new(0, 4)
-
-gunModButton.MouseButton1Click:Connect(function()
-    gunModEnabled = not gunModEnabled
-    gunModRunning = gunModEnabled
-    gunModButton.Text = "Toggle Gun Mods: " .. (gunModEnabled and "ON" or "OFF")
-    gunModButton.BackgroundColor3 = gunModEnabled and Color3.fromRGB(0, 170, 0) or Color3.fromRGB(40, 40, 40)
-    if not gunModEnabled then
-        patchedGuns = setmetatable({}, { __mode = "k" })
-    end
-end)
-
-local function patchGun(settings)
-    settings.Firing.Recoil = NumberRange.new(0, 0)
-    settings.Firing.Kickback = 0
-    settings.Firing.AimedKickback = 0
-    settings.Firing.Spread = 0
-    settings.Firing.AimedSpread = 0
-    settings.Firing.Velocity = 9999
-    settings.Firing.MaxRange = 99999
-    settings.Firing.Penetration = 99999
-    settings.Firing.PierceAmount = 9999
-    settings.Firing.PierceSize = 9999
-    settings.Firing.Shake = 0
-    settings.Firing.ReloadingMovementSpeed = 1
-    settings.Firing.AimingMovementSpeed = 1
-    settings.Firing.DamageDropOff = NumberRange.new(0, 0)
-    settings.Firing.DropOffModifier = 0
-    local mode = settings.Modes[1]
-    if mode then
-        mode.Automatic = true
-        if rpmSetByUser then
-            mode.RPM = rpmValue
-        end
-    end
+		-- restore UI content visibility to previous states
+		restoreFrameContent()
+		toggleBtn.Text = "Hide Menu"
+		isAnimating = false
+	end
 end
 
-local function patchViewModel()
-    if not gunModEnabled then return end
-    local cam = workspace:FindFirstChild("Camera")
-    if cam then
-        local vm = cam:FindFirstChild("ViewModel")
-        if vm then
-            for _, child in ipairs(vm:GetDescendants()) do
-                if typeof(child) == "table" and rawget(child, "Firing") and rawget(child, "Modes") then
-                    if not patchedGuns[child] then
-                        patchedGuns[child] = true
-                        pcall(patchGun, child)
-                    end
-                end
-            end
-        end
-    end
+toggleBtn.MouseButton1Click:Connect(toggleMenu)
+
+--===== LOGIC (hitbox & esp) =====--
+local function updateStatus()
+	local count = 0
+	for _ in pairs(processedNPCs) do count = count + 1 end
+	statusLabel.Text = ("Processing: %d NPCs"):format(count)
 end
 
-task.spawn(function()
-    while true do
-        if gunModRunning then
-            if getgc then
-                for _, v in next, getgc(true) do
-                    if typeof(v) == "table" and rawget(v, "Firing") and rawget(v, "Modes") then
-                        pcall(patchGun, v)
-                    end
-                end
-            else
-                patchViewModel()
-            end
-        end
-        task.wait(1)
-    end
-end)
-
-player.CharacterAdded:Connect(patchViewModel)
-RunService.Heartbeat:Connect(patchViewModel)
-
-workspace.DescendantAdded:Connect(function(desc)
-    if desc:IsA("ProximityPrompt") then
-        desc.PromptButtonHoldBegan:Connect(function()
-            if proximityEnabled and desc.HoldDuration > 0 then
-                fireproximityprompt(desc, 0)
-            end
-        end)
-    end
-end)
-
-for _, prompt in pairs(workspace:GetDescendants()) do
-    if prompt:IsA("ProximityPrompt") then
-        prompt.PromptButtonHoldBegan:Connect(function()
-            if proximityEnabled and prompt.HoldDuration > 0 then
-                fireproximityprompt(prompt, 0)
-            end
-        end)
-        prompt.Triggered:Connect(function(player)
-            local container = prompt:FindFirstAncestorWhichIsA("Model")
-            if container and validContainers[container.Name] then
-                lastPromptedContainer = container
-            end
-        end)
-    end
+local function isValidNPC(model)
+	if not model or not model:IsA("Model") then return false end
+	if model == LocalPlayer.Character then return false end
+	if Players:GetPlayerFromCharacter(model) then return false end
+	local hum = model:FindFirstChildOfClass("Humanoid")
+	local root = model:FindFirstChild("HumanoidRootPart")
+	if not hum or not root then return false end
+	return true
 end
 
-task.spawn(function()
-    local lastLootTime, lastWinTime = {}, {}
-    while task.wait(2) do
-        local containers = {}
-        for _, c in ipairs(lootFolder:GetChildren()) do
-            if validContainers[c.Name] then
-                table.insert(containers, c)
-            end
-        end
-        local drop = workspace:FindFirstChild("Debris") and workspace.Debris:FindFirstChild("Airdrop")
-        if drop and drop:FindFirstChild("Drop") and drop.Drop:FindFirstChild("Crate") then
-            table.insert(containers, drop.Drop.Crate)
-        end
-        for _, container in ipairs(containers) do
-            local lootBase = container:FindFirstChild("LootBase")
-            local lootTable = lootBase and lootBase:FindFirstChild("LootTable")
-            if autoLootEnabled and lootTable and #lootTable:GetChildren() > 0 then
-                if lastPromptedContainer == container then
-                    lastPromptedContainer = nil
-                    if not lastLootTime[container] or tick() - lastLootTime[container] > 2 then
-                        lastLootTime[container] = tick()
-                        coroutine.wrap(function()
-                            pcall(function()
-                                pcall(function() LootEvent:FireServer(lootTable, "Cash") end)
-                                task.wait(0.5)
-                                pcall(function() LootEvent:FireServer(lootTable, "Valuables") end)
-                                task.wait(0.5)
-                                local cashAttr = lootTable:GetAttribute("Cash")
-                                local valAttr = lootTable:GetAttribute("Valuables")
-                                if (not cashAttr or cashAttr == 0) and (not valAttr or valAttr == 0) then
-                                    for _, item in ipairs(lootTable:GetChildren()) do
-                                        if item:IsA("ValueBase") and item.Name ~= "Cash" and item.Name ~= "Valuables" then
-                                            pcall(function()
-                                                LootEvent:FireServer(lootTable, item, true)
-                                            end)
-                                            task.wait(0.5)
-                                        end
-                                    end
-                                end
-                            end)
-                        end)()
-                    end
-                end
-            end
-            if autoWinEnabled then
-                local now = tick()
-                if not lastWinTime[container] or now - lastWinTime[container] > 1 then
-                    MinigameEvent:FireServer(container, true)
-                    lastWinTime[container] = now
-                end
-            end
-        end
-    end
-end)
+local function addBodyESP(npc)
+	if npc:FindFirstChild("NPCBodyESP") then return npc.NPCBodyESP end
+	local root = npc:FindFirstChild("HumanoidRootPart")
+	if not root then return end
 
-do
-    local buttonFrame = createEvenFrame(frame, 22)
-    buttonFrame.LayoutOrder = -100
-    local button = Instance.new("TextButton")
-    button.Size = UDim2.new(1, 0, 1, 0)
-    button.BackgroundTransparency = 1
-    button.TextColor3 = Color3.fromRGB(255, 255, 255)
-    button.Font = Enum.Font.GothamBold
-    button.TextSize = 11
-    button.Text = "Enable All: OFF"
-    button.Parent = buttonFrame
-    local state = false
-    button.MouseButton1Click:Connect(function()
-        state = not state
-        button.Text = "Enable All: " .. (state and "ON" or "OFF")
-        buttonFrame.BackgroundColor3 = state and Color3.fromRGB(0, 170, 0) or Color3.fromRGB(40, 40, 40)
-        for _, setter in ipairs(toggleSetters) do
-            setter(state)
-        end
-        for name, ref in pairs(toggleUIRefs) do
-            ref.setState(state)
-        end
-        if not state then
-            for _, setter in ipairs(toggleSetters) do
-                setter(false)
-            end
-            for name, ref in pairs(toggleUIRefs) do
-                ref.setState(false)
-            end
-            if gunModButton then
-                gunModEnabled = false
-                gunModRunning = false
-                gunModButton.Text = "Toggle Gun Mods: OFF"
-                gunModButton.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
-            end
-            enableNoCamShake(false)
-            for _, obj in ipairs(getgc and getgc(true) or {}) do
-                if typeof(obj) == "table" and rawget(obj, "Enabled") ~= nil then
-                    pcall(function() obj.Enabled = false end)
-                end
-            end
-            for _, v in ipairs(workspace:GetDescendants()) do
-                if v:IsA("Script") or v:IsA("LocalScript") then
-                    pcall(function() v.Enabled = false end)
-                end
-            end
-        end
-    end)
+	local box = Instance.new("BoxHandleAdornment")
+	box.Name = "NPCBodyESP"
+	box.Adornee = root
+	box.Size = root.Size + Vector3.new(4, 4, 4)
+	box.Color3 = Color3.fromRGB(255, 120, 120)
+	box.Transparency = 0.5
+	box.ZIndex = 5
+	box.AlwaysOnTop = true
+	box.Parent = npc
+	return box
 end
 
-UserInputService.JumpRequest:Connect(function()
-    if not _G.infJumpConn then
-        _G.infJumpConn = UserInputService.JumpRequest:Connect(function()
-            if infJump then
-                local char = player.Character
-                local hum = char and char:FindFirstChildWhichIsA("Humanoid")
-                if hum then
-                    hum:ChangeState(Enum.HumanoidStateType.Jumping)
-                end
-            end
-        end)
-    end
-end)
+local function removeHeadHitbox(npc)
+	if not npc or not processedNPCs[npc] then return end
+	local head = npc:FindFirstChild("Head")
 
-local function createResetUI(frame)
-    if frame:FindFirstChild("ConfirmReset") then return end
-    local confirm = Instance.new("Frame", frame)
-    confirm.Name = "ConfirmReset"
-    confirm.Size = UDim2.new(0.8, 0, 0, 60)
-    confirm.AnchorPoint = Vector2.new(0.5, 1)
-    confirm.Position = UDim2.new(0.5, 0, 1, -10)
-    confirm.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
-    confirm.BorderSizePixel = 0
-    Instance.new("UICorner", confirm).CornerRadius = UDim.new(0, 6)
-    local label = Instance.new("TextLabel", confirm)
-    label.Size = UDim2.new(1, 0, 0, 24)
-    label.Position = UDim2.new(0, 0, 0, 6)
-    label.BackgroundTransparency = 1
-    label.TextColor3 = Color3.new(1, 1, 1)
-    label.Font = Enum.Font.GothamBold
-    label.TextSize = 14
-    label.Text = "Click YES to confirm reset"
-    label.TextWrapped = true
-    label.TextYAlignment = Enum.TextYAlignment.Center
-    local yesButton = Instance.new("TextButton", confirm)
-    yesButton.Size = UDim2.new(0.45, 0, 0, 24)
-    yesButton.Position = UDim2.new(0.05, 0, 0.6, 0)
-    yesButton.BackgroundColor3 = Color3.fromRGB(0, 170, 0)
-    yesButton.TextColor3 = Color3.new(1, 1, 1)
-    yesButton.Font = Enum.Font.GothamBold
-    yesButton.TextSize = 14
-    yesButton.Text = "YES"
-    Instance.new("UICorner", yesButton).CornerRadius = UDim.new(0, 4)
-    local noButton = Instance.new("TextButton", confirm)
-    noButton.Size = UDim2.new(0.45, 0, 0, 24)
-    noButton.Position = UDim2.new(0.5, 0, 0.6, 0)
-    noButton.BackgroundColor3 = Color3.fromRGB(170, 0, 0)
-    noButton.TextColor3 = Color3.new(1, 1, 1)
-    noButton.Font = Enum.Font.GothamBold
-    noButton.TextSize = 14
-    noButton.Text = "NO"
-    Instance.new("UICorner", noButton).CornerRadius = UDim.new(0, 4)
-    yesButton.MouseButton1Click:Connect(function()
-        confirm:Destroy()
-        local character = player.Character
-        if character then
-            local humanoid = character:FindFirstChildOfClass("Humanoid")
-            if humanoid then
-                humanoid.Health = 0
-            else
-                player:LoadCharacter()
-            end
-        else
-            player:LoadCharacter()
-        end
-    end)
-    noButton.MouseButton1Click:Connect(function()
-        confirm:Destroy()
-    end)
+	-- disconnect per-NPC connections
+	if processedNPCs[npc].connections then
+		disconnectList(processedNPCs[npc].connections)
+	end
+
+	-- restore head
+	if head and head:FindFirstChild("OriginalSize") then
+		local originalSize = head.OriginalSize.Value
+		head.Size = originalSize
+		head.OriginalSize:Destroy()
+
+		head.Massless = false
+		head.CanCollide = true
+		head.Transparency = 0
+		head.Material = Enum.Material.Plastic
+
+		local mesh = head:FindFirstChild("Mesh")
+		if mesh then
+			mesh.MeshType = Enum.MeshType.Head
+			mesh.Scale = Vector3.new(1, 1, 1)
+		end
+	end
+
+	-- remove ESP
+	if processedNPCs[npc].esp then
+		processedNPCs[npc].esp:Destroy()
+	end
+
+	processedNPCs[npc] = nil
+	updateStatus()
 end
 
-local resetButtonFrame = createEvenFrame(frame, 22)
-resetButtonFrame.LayoutOrder = 101
-local resetButton = Instance.new("TextButton")
-resetButton.Size = UDim2.new(1, 0, 1, 0)
-resetButton.BackgroundColor3 = Color3.fromRGB(170, 0, 0)
-resetButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-resetButton.Font = Enum.Font.GothamBold
-resetButton.TextSize = 14
-resetButton.Text = "Reset Character"
-Instance.new("UICorner", resetButton).CornerRadius = UDim.new(0, 6)
-resetButton.Parent = resetButtonFrame
+local function applyHeadHitbox(npc, size)
+	if not isValidNPC(npc) then return end
+	if processedNPCs[npc] then return end
+	if respawnWatchers[npc] then
+		disconnectList(respawnWatchers[npc])
+		respawnWatchers[npc] = nil
+	end
 
-resetButton.MouseButton1Click:Connect(function()
-    createResetUI(frame)
+	local head = npc:FindFirstChild("Head")
+	local root = npc:FindFirstChild("HumanoidRootPart")
+	local hum  = npc:FindFirstChildOfClass("Humanoid")
+
+	-- fake head if missing
+	if not head and root then
+		head = Instance.new("Part")
+		head.Name = "Head"
+		head.Size = Vector3.new(2, 1, 1)
+		head.CFrame = root.CFrame * CFrame.new(0, root.Size.Y/2 + 1, 0)
+		head.Anchored = false
+		head.CanCollide = false
+		head.Massless = true
+		head.Transparency = 1
+		head.Parent = npc
+
+		local weld = Instance.new("WeldConstraint")
+		weld.Part0 = root
+		weld.Part1 = head
+		weld.Parent = head
+	end
+
+	if not head then return end
+	if hum and hum.Health and hum.Health <= 0 then return end
+
+	-- ensure mesh + original size
+	if not head:FindFirstChild("Mesh") then
+		local mesh = Instance.new("SpecialMesh")
+		mesh.MeshType = Enum.MeshType.Head
+		mesh.Scale = Vector3.new(1, 1, 1)
+		mesh.Name = "Mesh"
+		mesh.Parent = head
+	end
+
+	if not head:FindFirstChild("OriginalSize") then
+		local original = Instance.new("Vector3Value")
+		original.Name = "OriginalSize"
+		original.Value = head.Size
+		original.Parent = head
+	end
+
+	-- apply big head
+	head.Massless = true
+	head.Size = Vector3.new(size, size, size)
+	head.CanCollide = false
+	head.Transparency = 0.7
+	head.Material = Enum.Material.ForceField
+
+	local npcConns = {}
+	table.insert(npcConns, head:GetPropertyChangedSignal("Size"):Connect(function()
+		if processedNPCs[npc] then
+			local wanted = Vector3.new(size, size, size)
+			if head.Size ~= wanted then
+				head.Size = wanted
+			end
+		end
+	end))
+
+	if hum then
+		table.insert(npcConns, hum.Died:Connect(function()
+			removeHeadHitbox(npc)
+		end))
+	end
+
+	local esp = addBodyESP(npc)
+	processedNPCs[npc] = {connections = npcConns, esp = esp}
+	updateStatus()
+end
+
+local function scanWorkspace()
+	local size = tonumber(sizeInput.Text) or DEFAULT_HITBOX_SIZE
+	for _, v in ipairs(workspace:GetDescendants()) do
+		if isValidNPC(v) then
+			applyHeadHitbox(v, size)
+		end
+	end
+end
+
+local function tryApplyModel(model)
+	task.delay(0.2, function()
+		if isValidNPC(model) then
+			local size = tonumber(sizeInput.Text) or DEFAULT_HITBOX_SIZE
+			applyHeadHitbox(model, size)
+		end
+	end)
+end
+
+local function clearAll()
+	for npc, _ in pairs(processedNPCs) do
+		removeHeadHitbox(npc)
+	end
+	for npc, conns in pairs(respawnWatchers) do
+		disconnectList(conns)
+		respawnWatchers[npc] = nil
+	end
+	flashStatus(true, "Cleared all.")
+end
+
+--===== BUTTON EVENTS =====--
+autoToggle.MouseButton1Click:Connect(function()
+	autoHitboxEnabled = not autoHitboxEnabled
+	autoToggle.Text = autoHitboxEnabled and "Auto Hitbox: ON" or "Auto Hitbox: OFF"
+	autoToggle.BackgroundColor3 = autoHitboxEnabled and COLOR_GOOD or COLOR_PRIMARY_D
+
+	-- remove old listeners
+	for _, conn in ipairs(connections) do pcall(function() conn:Disconnect() end) end
+	table.clear(connections)
+
+	if autoHitboxEnabled then
+		flashStatus(true, "Auto ON → Scanning...")
+		scanWorkspace()
+		table.insert(connections, workspace.DescendantAdded:Connect(function(desc)
+			local model = desc:FindFirstAncestorOfClass("Model")
+			if model then tryApplyModel(model) end
+		end))
+		table.insert(connections, workspace.ChildAdded:Connect(function(child)
+			if child:IsA("Model") then tryApplyModel(child) end
+		end))
+	else
+		flashStatus(false, "Auto OFF")
+	end
+end)
+
+removeAllBtn.MouseButton1Click:Connect(function()
+	clearAll()
+end)
+
+-- Toggle panel by keyboard (F4) — respects animation/debounce
+UserInputService.InputBegan:Connect(function(input, gpe)
+	if gpe then return end
+	if input.KeyCode == Enum.KeyCode.F4 then
+		toggleMenu()
+	end
+end)
+
+--===== PLAYER RELOAD =====--
+LocalPlayer.CharacterAdded:Connect(function()
+	task.wait(2)
+	if autoHitboxEnabled then scanWorkspace() end
 end)
