@@ -380,9 +380,9 @@ local function applyHeadHitbox(npc, size)
 	end
 
 	-- apply big head
-	head.Massless = false -- Make sure physics works for Touched
+	head.Massless = true
 	head.Size = Vector3.new(size, size, size)
-	head.CanCollide = true -- Enable collisions for Touched
+	head.CanCollide = false
 	head.Transparency = 0.7
 	head.Material = Enum.Material.ForceField
 
@@ -401,23 +401,6 @@ local function applyHeadHitbox(npc, size)
 			removeHeadHitbox(npc)
 		end))
 	end
-
-	-- Add Touched event for persistent contact
-	local debounce = {}
-	table.insert(npcConns, head.Touched:Connect(function(hit)
-		local char = hit.Parent
-		if char and char:FindFirstChild("Humanoid") then
-			local hum = char:FindFirstChild("Humanoid")
-			if hum and not debounce[hum] then
-				debounce[hum] = true
-				-- Example: kill player on touch
-				hum.Health = 0
-				task.delay(1, function()
-					debounce[hum] = nil
-				end)
-			end
-		end
-	end))
 
 	local esp = addBodyESP(npc)
 	processedNPCs[npc] = {connections = npcConns, esp = esp}
