@@ -1,9 +1,8 @@
-
-
 --===== SERVICES =====--
 local Players = game:GetService("Players")
 local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
 
 local LocalPlayer = Players.LocalPlayer
 
@@ -25,15 +24,16 @@ local COLOR_GOOD      = Color3.fromRGB(80, 180, 120)
 local COLOR_WARN      = Color3.fromRGB(255, 170, 80)
 
 --===== STATE =====--
-local processedNPCs = {}     -- [Model] = {connections = {RBXScriptConnection,...}, esp = Instance}
+local processedNPCs = {}     -- [Model] = {connections = {RBXScriptConnection,...}, esp = Instance, mesh = Instance}
 local respawnWatchers = {}   -- [Model] = {RBXScriptConnection,...}
 local connections = {}       -- workspace listeners
 local autoHitboxEnabled = false
 local autoMeshEnabled = false
+local cleanupConnection = nil
 
 --===== GUI ROOT =====--
 local gui = Instance.new("ScreenGui")
-gui.Name = "NPC_Hitbox_GUI_Mobile"
+gui.Name = "NPC_Hitbox_GUI_Mobile_Optimized"
 gui.ResetOnSpawn = false
 gui.Parent = game.CoreGui
 
@@ -42,6 +42,12 @@ local function disconnectList(list)
 	if not list then return end
 	for _, c in ipairs(list) do
 		pcall(function() c:Disconnect() end)
+	end
+end
+
+local function safeDestroy(obj)
+	if obj and obj.Parent then
+		pcall(function() obj:Destroy() end)
 	end
 end
 
@@ -303,41 +309,69 @@ local function addBodyESP(npc)
 	return box
 end
 
--- Remove head hitbox
-local function removeHeadHitbox(npc)
+-- Cleanup NPC completely (hitbox + mesh + ESP)
+local function cleanupNPC(npc)
 	if not npc or not processedNPCs[npc] then return end
-	local head = npc:FindFirstChild("Head")
-
-	if processedNPCs[npc].connections then
-		disconnectList(processedNPCs[npc].connections)
+	
+	local data = processedNPCs[npc]
+	
+	-- Disconnect all connections
+	if data.connections then
+		disconnectList(data.connections)
 	end
-
+	
+	-- Restore head properties
+	local head = npc:FindFirstChild("Head")
 	if head and head:FindFirstChild("OriginalSize") then
 		local originalSize = head.OriginalSize.Value
 		head.Size = originalSize
-		head.OriginalSize:Destroy()
+		safeDestroy(head.OriginalSize)
 
 		head.Massless = false
 		head.CanCollide = true
 		head.Transparency = 0
 		head.Material = Enum.Material.Plastic
 
-		local mesh = head:FindFirstChild("Mesh")
-		if mesh then
-			mesh.MeshType = Enum.MeshType.Head
-			mesh.Scale = Vector3.new(1, 1, 1)
+		-- Remove custom mesh if we added it
+		if data.customMesh then
+			safeDestroy(data.customMesh)
 		end
 	end
-
-	if processedNPCs[npc].esp then
-		processedNPCs[npc].esp:Destroy()
+	
+	-- Remove ESP
+	if data.esp then
+		safeDestroy(data.esp)
 	end
-
+	
+	-- Remove from tracking
 	processedNPCs[npc] = nil
 	updateStatus()
 end
 
--- Apply head hitbox
+-- Remove head hitbox but keep mesh if it was custom
+local function removeHeadHitbox(npc)
+	cleanupNPC(npc)
+end
+
+-- Add/Update Mesh Head for any NPC with cleanup on death
+local function addOrUpdateMeshHead(npc)
+	if not isValidNPC(npc) then return nil end
+	local head = npc:FindFirstChild("Head")
+	if not head then return nil end
+
+	local mesh = head:FindFirstChild("NPCCustomMesh")
+	if not mesh then
+		mesh = Instance.new("SpecialMesh")
+		mesh.Name = "NPCCustomMesh"  -- Unique name to identify our meshes
+		mesh.MeshType = Enum.MeshType.Head
+		mesh.Scale = Vector3.new(1, 1, 1)
+		mesh.Parent = head
+	end
+	
+	return mesh
+end
+
+-- Apply head hitbox with complete cleanup system
 local function applyHeadHitbox(npc, size)
 	if not isValidNPC(npc) then return end
 	if processedNPCs[npc] then return end
@@ -366,12 +400,10 @@ local function applyHeadHitbox(npc, size)
 	if not head then return end
 	if hum and hum.Health and hum.Health <= 0 then return end
 
-	if not head:FindFirstChild("Mesh") then
-		local mesh = Instance.new("SpecialMesh")
-		mesh.MeshType = Enum.MeshType.Head
-		mesh.Scale = Vector3.new(1, 1, 1)
-		mesh.Name = "Mesh"
-		mesh.Parent = head
+	-- Add mesh if auto mesh is enabled
+	local customMesh = nil
+	if autoMeshEnabled then
+		customMesh = addOrUpdateMeshHead(npc)
 	end
 
 	if not head:FindFirstChild("OriginalSize") then
@@ -388,6 +420,8 @@ local function applyHeadHitbox(npc, size)
 	head.Material = Enum.Material.ForceField
 
 	local npcConns = {}
+	
+	-- Size protection
 	table.insert(npcConns, head:GetPropertyChangedSignal("Size"):Connect(function()
 		if processedNPCs[npc] then
 			local wanted = Vector3.new(size, size, size)
@@ -397,102 +431,159 @@ local function applyHeadHitbox(npc, size)
 		end
 	end))
 
+	-- Death cleanup
 	if hum then
 		table.insert(npcConns, hum.Died:Connect(function()
-			removeHeadHitbox(npc)
+			cleanupNPC(npc)
 		end))
 	end
+	
+	-- Model removal cleanup
+	table.insert(npcConns, npc.AncestryChanged:Connect(function(_, parent)
+		if not parent then
+			cleanupNPC(npc)
+		end
+	end))
 
 	local esp = addBodyESP(npc)
-	processedNPCs[npc] = {connections = npcConns, esp = esp}
+	processedNPCs[npc] = {
+		connections = npcConns, 
+		esp = esp, 
+		customMesh = customMesh,
+		hitboxSize = size
+	}
 	updateStatus()
 end
 
--- Add/Update Mesh Head for any NPC (even if exists)
-local function addOrUpdateMeshHead(npc)
-	if not isValidNPC(npc) then return end
-	local head = npc:FindFirstChild("Head")
-	if not head then return end
-
-	local mesh = head:FindFirstChild("SpecialMesh") or head:FindFirstChildWhichIsA("Mesh")
-	if not mesh then
-		mesh = Instance.new("SpecialMesh")
-		mesh.MeshType = Enum.MeshType.Head
-		mesh.Scale = Vector3.new(1, 1, 1)
-		mesh.Parent = head
-	else
-		mesh.MeshType = Enum.MeshType.Head
-		mesh.Scale = Vector3.new(1, 1, 1)
-	end
-end
-
--- Scan all NPCs in workspace (deep search)
+-- Scan all NPCs in workspace with optimization
 local function scanWorkspace()
 	local size = tonumber(sizeInput.Text) or DEFAULT_HITBOX_SIZE
-	for _, v in ipairs(workspace:GetDescendants()) do
-		if isValidNPC(v) then
-			applyHeadHitbox(v, size)
-		end
-	end
-end
-
--- Auto add mesh to all NPCs (recursive, non-laggy)
-local function addMeshToAllNPCs()
-	local size = tonumber(sizeInput.Text) or DEFAULT_HITBOX_SIZE
 	local processed = 0
-
+	local batchSize = 5  -- Process in smaller batches
+	
 	for _, v in ipairs(workspace:GetDescendants()) do
-		if isValidNPC(v) then
-			addOrUpdateMeshHead(v)
+		if isValidNPC(v) and not processedNPCs[v] then
 			applyHeadHitbox(v, size)
 			processed = processed + 1
+			
+			-- Yield every batch to prevent lag
+			if processed % batchSize == 0 then
+				task.wait()
+			end
+		end
+	end
+	
+	return processed
+end
 
-			-- Prevent lag: yield every 10 NPCs
-			if processed % 10 == 0 then
+-- Auto add mesh to all NPCs with cleanup tracking
+local function addMeshToAllNPCs()
+	local processed = 0
+	local batchSize = 8
+
+	for _, v in ipairs(workspace:GetDescendants()) do
+		if isValidNPC(v) then
+			local mesh = addOrUpdateMeshHead(v)
+			
+			-- Track the mesh for cleanup
+			if mesh and processedNPCs[v] then
+				processedNPCs[v].customMesh = mesh
+			end
+			
+			processed = processed + 1
+
+			-- Yield every batch
+			if processed % batchSize == 0 then
 				task.wait()
 			end
 		end
 	end
 
 	flashStatus(true, "Mesh added to " .. processed .. " NPCs")
+	return processed
 end
 
--- Clear all mesh heads
+-- Clear all mesh heads we created
 local function clearAllMesh()
 	local cleared = 0
 	for _, v in ipairs(workspace:GetDescendants()) do
-		if isValidNPC(v) then
-			local head = v:FindFirstChild("Head")
-			if head then
-				local mesh = head:FindFirstChild("Mesh") or head:FindFirstChild("SpecialMesh")
-				if mesh and mesh.Name == "Mesh" then
-					mesh:Destroy()
-					cleared = cleared + 1
+		local head = v:FindFirstChild("Head")
+		if head then
+			local mesh = head:FindFirstChild("NPCCustomMesh")
+			if mesh then
+				mesh:Destroy()
+				cleared = cleared + 1
+				
+				-- Update tracking
+				if processedNPCs[v] then
+					processedNPCs[v].customMesh = nil
 				end
 			end
 		end
 	end
-	flashStatus(true, "Cleared " .. cleared .. " meshes")
+	flashStatus(true, "Cleared " .. cleared .. " custom meshes")
+	return cleared
 end
 
+-- Optimized model application with debounce
+local lastProcessTime = {}
 local function tryApplyModel(model)
-	task.delay(0.2, function()
-		if isValidNPC(model) then
+	local now = tick()
+	if lastProcessTime[model] and now - lastProcessTime[model] < 1 then
+		return  -- Debounce: don't process same model within 1 second
+	end
+	lastProcessTime[model] = now
+	
+	task.delay(0.1, function()  -- Small delay for stability
+		if isValidNPC(model) and not processedNPCs[model] then
 			local size = tonumber(sizeInput.Text) or DEFAULT_HITBOX_SIZE
 			applyHeadHitbox(model, size)
 		end
 	end)
 end
 
+-- Global cleanup function
 local function clearAll()
 	for npc, _ in pairs(processedNPCs) do
-		removeHeadHitbox(npc)
+		cleanupNPC(npc)
 	end
+	
 	for npc, conns in pairs(respawnWatchers) do
 		disconnectList(conns)
 		respawnWatchers[npc] = nil
 	end
-	flashStatus(true, "Cleared all.")
+	
+	flashStatus(true, "Cleared all hitboxes and meshes")
+end
+
+-- Auto-cleanup system for destroyed NPCs
+local function startCleanupSystem()
+	if cleanupConnection then
+		cleanupConnection:Disconnect()
+	end
+	
+	cleanupConnection = RunService.Heartbeat:Connect(function()
+		-- Clean up any NPCs that no longer exist
+		for npc, data in pairs(processedNPCs) do
+			if not npc or not npc.Parent then
+				cleanupNPC(npc)
+			end
+		end
+	end)
+end
+
+-- Update hitbox sizes for all processed NPCs
+local function updateAllHitboxSizes(newSize)
+	local updated = 0
+	for npc, data in pairs(processedNPCs) do
+		local head = npc:FindFirstChild("Head")
+		if head then
+			head.Size = Vector3.new(newSize, newSize, newSize)
+			data.hitboxSize = newSize
+			updated = updated + 1
+		end
+	end
+	return updated
 end
 
 --===== BUTTON EVENTS =====--
@@ -501,6 +592,7 @@ autoToggle.MouseButton1Click:Connect(function()
 	autoToggle.Text = autoHitboxEnabled and "Auto Hitbox: ON" or "Auto Hitbox: OFF"
 	autoToggle.BackgroundColor3 = autoHitboxEnabled and COLOR_GOOD or COLOR_PRIMARY_D
 
+	-- Cleanup existing connections
 	for _, conn in ipairs(connections) do
 		pcall(function() conn:Disconnect() end)
 	end
@@ -508,14 +600,23 @@ autoToggle.MouseButton1Click:Connect(function()
 
 	if autoHitboxEnabled then
 		flashStatus(true, "Auto ON → Scanning...")
-		scanWorkspace()
+		local count = scanWorkspace()
+		
+		-- Optimized event listeners
 		table.insert(connections, workspace.DescendantAdded:Connect(function(desc)
 			local model = desc:FindFirstAncestorOfClass("Model")
-			if model then tryApplyModel(model) end
+			if model and model:IsA("Model") then 
+				tryApplyModel(model) 
+			end
 		end))
+		
 		table.insert(connections, workspace.ChildAdded:Connect(function(child)
-			if child:IsA("Model") then tryApplyModel(child) end
+			if child:IsA("Model") then 
+				tryApplyModel(child) 
+			end
 		end))
+		
+		flashStatus(true, string.format("Auto ON → %d NPCs processed", count))
 	else
 		flashStatus(false, "Auto OFF")
 	end
@@ -528,7 +629,10 @@ autoMeshToggle.MouseButton1Click:Connect(function()
 
 	if autoMeshEnabled then
 		flashStatus(true, "Auto Mesh ON → Adding to all...")
-		task.spawn(addMeshToAllNPCs)
+		task.spawn(function()
+			local count = addMeshToAllNPCs()
+			flashStatus(true, string.format("Auto Mesh ON → %d meshes added", count))
+		end)
 	else
 		flashStatus(false, "Auto Mesh OFF")
 	end
@@ -542,13 +646,54 @@ clearMeshBtn.MouseButton1Click:Connect(function()
 	clearAllMesh()
 end)
 
---===== PLAYER RELOAD =====--
-LocalPlayer.CharacterAdded:Connect(function()
-	task.wait(2)
-	if autoHitboxEnabled then
-		scanWorkspace()
-	end
-	if autoMeshEnabled then
-		task.spawn(addMeshToAllNPCs)
+-- Size input change handler
+sizeInput.FocusLost:Connect(function()
+	local newSize = tonumber(sizeInput.Text)
+	if newSize and newSize > 0 and newSize <= 50 then
+		local updated = updateAllHitboxSizes(newSize)
+		flashStatus(true, string.format("Updated %d hitboxes to size %d", updated, newSize))
+	else
+		sizeInput.Text = tostring(DEFAULT_HITBOX_SIZE)
+		flashStatus(false, "Invalid size, reset to default")
 	end
 end)
+
+--===== INITIALIZATION =====--
+-- Start cleanup system
+startCleanupSystem()
+
+-- Player respawn handler
+LocalPlayer.CharacterAdded:Connect(function()
+	task.wait(2)  -- Wait for character to fully load
+	
+	if autoHitboxEnabled then
+		task.spawn(function()
+			local count = scanWorkspace()
+			flashStatus(true, string.format("Rescanned: %d NPCs", count))
+		end)
+	end
+	
+	if autoMeshEnabled then
+		task.spawn(function()
+			local count = addMeshToAllNPCs()
+			flashStatus(true, string.format("Mesh updated: %d NPCs", count))
+		end)
+	end
+end)
+
+-- Script cleanup when GUI is destroyed
+gui.Destroying:Connect(function()
+	-- Cleanup all connections
+	if cleanupConnection then
+		cleanupConnection:Disconnect()
+	end
+	
+	for _, conn in ipairs(connections) do
+		pcall(function() conn:Disconnect() end)
+	end
+	
+	-- Cleanup all NPCs
+	clearAll()
+end)
+
+flashStatus(true, "NPC Hitbox Mobile Ready!")
