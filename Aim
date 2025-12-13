@@ -1,35 +1,19 @@
--- Aim Assist System with Toggle Button
+-- Aim Assist Toggle Button GUI
 local Players = game:GetService("Players")
+local StarterGui = game:GetService("StarterGui")
 local UserInputService = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
-local Workspace = game:GetService("Workspace")
-local StarterGui = game:GetService("StarterGui")
 
--- Configuration
-local AIM_ASSIST_CONFIG = {
-	enabled = false,
-	maxDistance = 100,
-	assistStrength = 0.3, -- 0.1 to 1.0, higher = stronger assist
-	fieldOfView = 30, -- degrees
-	targetPart = "HumanoidRootPart",
-	teamCheck = true, -- false to target everyone
-	showVisualIndicator = true,
-	indicatorColor = Color3.new(1, 0, 0),
-	indicatorSize = 0.5
-}
-
--- Player and Camera
 local player = Players.LocalPlayer
-local camera = Workspace.CurrentCamera
-local mouse = player:GetMouse()
+local playerGui = player:WaitForChild("PlayerGui")
 
--- UI Elements
+-- Create ScreenGui
 local screenGui = Instance.new("ScreenGui")
-screenGui.Name = "AimAssistGUI"
-screenGui.Parent = StarterGui
-screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+screenGui.Name = "AimAssistGui"
+screenGui.Parent = playerGui
+screenGui.ResetOnSpawn = false
 
--- Toggle Button
+-- Create Toggle Button
 local toggleButton = Instance.new("TextButton")
 toggleButton.Name = "AimAssistToggle"
 toggleButton.Parent = screenGui
@@ -43,75 +27,72 @@ toggleButton.Text = "Aim Assist: OFF"
 toggleButton.TextColor3 = Color3.new(1, 1, 1)
 toggleButton.TextSize = 14
 
--- Visual Indicator (optional)
-local indicator = Instance.new("Frame")
-indicator.Name = "TargetIndicator"
-indicator.Parent = screenGui
-indicator.Size = UDim2.new(0, 20, 0, 20)
-indicator.Position = UDim2.new(0.5, -10, 0.5, -10)
-indicator.BackgroundColor3 = AIM_ASSIST_CONFIG.indicatorColor
-indicator.BorderSizePixel = 0
-indicator.BackgroundTransparency = 1
-indicator.Visible = false
-
--- Make indicator circular
+-- Add corner rounding
 local corner = Instance.new("UICorner")
-corner.Parent = indicator
-corner.CornerRadius = UDim.new(0.5, 0)
+corner.Parent = toggleButton
+corner.CornerRadius = UDim.new(0, 8)
 
--- Current target
-local currentTarget = nil
-local lastTargetTime = 0
+-- Create aim assist value to track state
+local aimAssistEnabled = false
 
--- Function to check if a character is valid target
-local function isValidTarget(character)
-	if not character or not character.Parent then return false end
-	
-	local humanoid = character:FindFirstChildOfClass("Humanoid")
-	if not humanoid or humanoid.Health <= 0 then return false end
-	
-	local targetPlayer = Players:GetPlayerFromCharacter(character)
-	if not targetPlayer then return false end
-	
-	-- Team check
-	if AIM_ASSIST_CONFIG.teamCheck and targetPlayer.Team == player.Team then
-		return false
+-- Toggle function
+local function toggleAimAssist()
+	aimAssistEnabled = not aimAssistEnabled
+	if aimAssistEnabled then
+		toggleButton.Text = "Aim Assist: ON"
+		toggleButton.BackgroundColor3 = Color3.new(0.2, 0.6, 0.2)
+	else
+		toggleButton.Text = "Aim Assist: OFF"
+		toggleButton.BackgroundColor3 = Color3.new(0.2, 0.2, 0.2)
 	end
-	
-	-- Don't target self
-	if targetPlayer == player then return false end
-	
-	return true
 end
 
--- Function to find best target
-local function findTarget()
-	local bestTarget = nil
-	local bestScore = math.huge
-	local cameraPos = camera.CFrame.Position
+-- Button click event
+toggleButton.MouseButton1Click:Connect(toggleAimAssist)
+
+-- Keyboard shortcut (optional - can be changed)
+UserInputService.InputBegan:Connect(function(input, gameProcessed)
+	if gameProcessed then return end
+	if input.KeyCode == Enum.KeyCode.F then
+		toggleAimAssist()
+	end
+end)
+
+-- Aim Assist Logic
+local camera = workspace.CurrentCamera
+local target = nil
+local aimAssistStrength = 0.15 -- How strong the aim assist is (0.1 to 0.5 recommended)
+local maxAimDistance = 200 -- Maximum distance to target
+
+-- Function to find closest target
+local function findClosestTarget()
+	local closestTarget = nil
+	local closestDistance = maxAimDistance
+	local character = player.Character
+	if not character or not character:FindFirstChild("HumanoidRootPart") then return nil end
 	
-	for _, targetPlayer in pairs(Players:GetPlayers()) do
-		if targetPlayer ~= player then
-			local character = targetPlayer.Character
-			if isValidTarget(character) then
-				local targetPart = character:FindFirstChild(AIM_ASSIST_CONFIG.targetPart)
-				if targetPart then
-					local distance = (targetPart.Position - cameraPos).Magnitude
+	local hrp = character.HumanoidRootPart
+	local lookVector = camera.CFrame.LookVector
+	
+	-- Check all characters in workspace
+	for _, obj in workspace:GetDescendants() do
+		if obj:IsA("Model") and obj ~= character then
+			local humanoid = obj:FindFirstChildOfClass("Humanoid")
+			local targetHrp = obj:FindFirstChild("HumanoidRootPart")
+			
+			if humanoid and targetHrp and humanoid.Health > 0 then
+				-- Calculate distance to target
+				local distance = (hrp.Position - targetHrp.Position).Magnitude
+				
+				if distance <= maxAimDistance then
+					-- Check if target is in front of player (within 60 degree cone)
+					local toTarget = (targetHrp.Position - hrp.Position).Unit
+					local dotProduct = lookVector:Dot(toTarget)
 					
-					if distance <= AIM_ASSIST_CONFIG.maxDistance then
-						-- Calculate angle from camera center
-						local lookVector = camera.CFrame.LookVector
-						local toTarget = (targetPart.Position - cameraPos).Unit
-						local angle = math.deg(math.acos(lookVector:Dot(toTarget)))
-						
-						if angle <= AIM_ASSIST_CONFIG.fieldOfView then
-							-- Score based on distance and angle (closer and more centered = better)
-							local score = distance + angle * 2
-							
-							if score < bestScore then
-								bestScore = score
-								bestTarget = targetPart
-							end
+					if dotProduct > 0.5 then -- 60 degree cone
+						if distance < closestDistance then
+							closestDistance = distance
+							closestTarget = obj
 						end
 					end
 				end
@@ -119,99 +100,46 @@ local function findTarget()
 		end
 	end
 	
-	return bestTarget
+	return closestTarget
 end
 
--- Function to apply aim assist
-local function applyAimAssist(targetPosition)
-	if not targetPosition then return end
+-- Aim assist update function
+local function updateAimAssist()
+	if not aimAssistEnabled then return end
 	
-	local currentLook = camera.CFrame.LookVector
-	local toTarget = (targetPosition - camera.CFrame.Position).Unit
+	local character = player.Character
+	if not character or not character:FindFirstChild("HumanoidRootPart") then return end
 	
-	-- Calculate the rotation needed
-	local rotation = CFrame.new(Vector3.new(), currentLook:Cross(toTarget))
-	local angle = math.acos(math.clamp(currentLook:Dot(toTarget), -1, 1))
-	
-	-- Apply smooth assist
-	local assistAngle = angle * AIM_ASSIST_CONFIG.assistStrength
-	local assistRotation = CFrame.Angles(0, 0, assistAngle)
-	
-	-- Update camera CFrame with assist
-	local newCFrame = camera.CFrame:ToWorldSpace(assistRotation)
-	camera.CFrame = CFrame.new(camera.CFrame.Position, camera.CFrame.Position + newCFrame.LookVector)
-end
-
--- Toggle button functionality
-local function toggleAimAssist()
-	AIM_ASSIST_CONFIG.enabled = not AIM_ASSIST_CONFIG.enabled
-	
-	if AIM_ASSIST_CONFIG.enabled then
-		toggleButton.BackgroundColor3 = Color3.new(0, 0.5, 0)
-		toggleButton.Text = "Aim Assist: ON"
-		indicator.Visible = AIM_ASSIST_CONFIG.showVisualIndicator
-	else
-		toggleButton.BackgroundColor3 = Color3.new(0.2, 0.2, 0.2)
-		toggleButton.Text = "Aim Assist: OFF"
-		indicator.Visible = false
-		currentTarget = nil
-	end
-end
-
--- Button click event
-toggleButton.MouseButton1Click:Connect(toggleAimAssist)
-
--- Keyboard shortcut (optional)
-UserInputService.InputBegan:Connect(function(input, gameProcessed)
-	if gameProcessed then return end
-	
-	if input.KeyCode == Enum.KeyCode.F1 then
-		toggleAimAssist()
-	end
-end)
-
--- Main aim assist loop
-RunService.RenderStepped:Connect(function(deltaTime)
-	if not AIM_ASSIST_CONFIG.enabled then
-		currentTarget = nil
-		return
+	-- Find or update target
+	if not target or not target:FindFirstChildOfClass("Humanoid") or target:FindFirstChildOfClass("Humanoid").Health <= 0 then
+		target = findClosestTarget()
 	end
 	
-	-- Find new target periodically
-	local currentTime = tick()
-	if currentTime - lastTargetTime > 0.1 then -- Check every 100ms
-		currentTarget = findTarget()
-		lastTargetTime = currentTime
-	end
-	
-	-- Apply aim assist if we have a target
-	if currentTarget and currentTarget.Parent then
-		applyAimAssist(currentTarget.Position)
+	if target and target:FindFirstChild("HumanoidRootPart") then
+		local targetHrp = target.HumanoidRootPart
+		local currentCFrame = camera.CFrame
 		
-		-- Update visual indicator
-		if AIM_ASSIST_CONFIG.showVisualIndicator then
-			local screenPos = camera:WorldToScreenPoint(currentTarget.Position)
-			if screenPos.Z > 0 then -- Target is in front of camera
-				indicator.Position = UDim2.new(0, screenPos.X - 10, 0, screenPos.Y - 10)
-				indicator.Visible = true
-			else
-				indicator.Visible = false
-			end
-		end
-	else
-		-- Lost target
-		currentTarget = nil
-		if AIM_ASSIST_CONFIG.showVisualIndicator then
-			indicator.Visible = false
-		end
+		-- Calculate target position (aim at head/torso area)
+		local targetPosition = targetHrp.Position + Vector3.new(0, 2, 0) -- Aim slightly above center
+		
+		-- Calculate desired look direction
+		local desiredLookDirection = (targetPosition - currentCFrame.Position).Unit
+		
+		-- Smoothly interpolate current look direction to desired direction
+		local currentLookDirection = currentCFrame.LookVector
+		local newLookDirection = currentLookDirection:Lerp(desiredLookDirection, aimAssistStrength)
+		
+		-- Update camera CFrame
+		camera.CFrame = CFrame.new(currentCFrame.Position, currentCFrame.Position + newLookDirection)
+	end
+end
+
+-- Connect to render stepped for smooth aim assist
+RunService.RenderStepped:Connect(updateAimAssist)
+
+-- Clean up target when it dies
+workspace.DescendantRemoving:Connect(function(obj)
+	if obj == target then
+		target = nil
 	end
 end)
-
--- Cleanup when player leaves
-player.CharacterRemoving:Connect(function()
-	if screenGui then
-		screenGui:Destroy()
-	end
-end)
-
-print("Aim Assist System Loaded! Press F1 or click the button to toggle.")
