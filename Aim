@@ -1,335 +1,217 @@
-local _={}
-local a=game:GetService("Players")
-local b=game:GetService("StarterGui")
-local c=game:GetService("RunService")
-local d=game:GetService("Teams")
-local e=a.LocalPlayer
+-- Aim Assist System with Toggle Button
+local Players = game:GetService("Players")
+local UserInputService = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
+local Workspace = game:GetService("Workspace")
+local StarterGui = game:GetService("StarterGui")
 
-local function f(g,h,i)
-    b:SetCore("SendNotification",{Title=g;Text=h;Duration=i})
-end
+-- Configuration
+local AIM_ASSIST_CONFIG = {
+	enabled = false,
+	maxDistance = 100,
+	assistStrength = 0.3, -- 0.1 to 1.0, higher = stronger assist
+	fieldOfView = 30, -- degrees
+	targetPart = "HumanoidRootPart",
+	teamCheck = true, -- false to target everyone
+	showVisualIndicator = true,
+	indicatorColor = Color3.new(1, 0, 0),
+	indicatorSize = 0.5
+}
 
-f("Made By Phongpro","haxcz😎",5)
-task.wait()
+-- Player and Camera
+local player = Players.LocalPlayer
+local camera = Workspace.CurrentCamera
+local mouse = player:GetMouse()
 
-local j=game.Players.LocalPlayer
-local k=game:GetService("UserInputService")
-local l=game:GetService("RunService")
+-- UI Elements
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "AimAssistGUI"
+screenGui.Parent = StarterGui
+screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 
--- Biến để lưu mục tiêu hiện tại
+-- Toggle Button
+local toggleButton = Instance.new("TextButton")
+toggleButton.Name = "AimAssistToggle"
+toggleButton.Parent = screenGui
+toggleButton.Size = UDim2.new(0, 120, 0, 40)
+toggleButton.Position = UDim2.new(0, 10, 0, 10)
+toggleButton.BackgroundColor3 = Color3.new(0.2, 0.2, 0.2)
+toggleButton.BorderSizePixel = 2
+toggleButton.BorderColor3 = Color3.new(0.5, 0.5, 0.5)
+toggleButton.Font = Enum.Font.SourceSansBold
+toggleButton.Text = "Aim Assist: OFF"
+toggleButton.TextColor3 = Color3.new(1, 1, 1)
+toggleButton.TextSize = 14
+
+-- Visual Indicator (optional)
+local indicator = Instance.new("Frame")
+indicator.Name = "TargetIndicator"
+indicator.Parent = screenGui
+indicator.Size = UDim2.new(0, 20, 0, 20)
+indicator.Position = UDim2.new(0.5, -10, 0.5, -10)
+indicator.BackgroundColor3 = AIM_ASSIST_CONFIG.indicatorColor
+indicator.BorderSizePixel = 0
+indicator.BackgroundTransparency = 1
+indicator.Visible = false
+
+-- Make indicator circular
+local corner = Instance.new("UICorner")
+corner.Parent = indicator
+corner.CornerRadius = UDim.new(0.5, 0)
+
+-- Current target
 local currentTarget = nil
-local targetAlive = false
-local isMoving = false
-local lastMoveTime = 0
+local lastTargetTime = 0
 
-local m=Instance.new("ScreenGui")
-m.Parent=j:WaitForChild("PlayerGui")
-m.ResetOnSpawn=false
-
-local n=Instance.new("Frame")
-n.Size=UDim2.new(0,99,0,44)
-n.Position=UDim2.new(0,115,0,49)
-n.AnchorPoint=Vector2.new(0.5,1)
-n.BackgroundColor3=Color3.fromRGB(0,0,0)
-n.BackgroundTransparency=0.2
-n.Active=true
-n.Parent=m
-
-local o=Instance.new("UICorner")
-o.CornerRadius=UDim.new(0.8,0)
-o.Parent=n
-
-local p=Instance.new("TextButton")
-p.Size=UDim2.new(1,0,1,0)
-p.Text="Aim Assist"
-p.BackgroundTransparency=1
-p.TextColor3=Color3.fromRGB(255,255,255)
-p.TextSize=10
-p.Parent=n
-
-local q=Instance.new("UIStroke")
-q.Thickness=2
-q.Color=Color3.fromRGB(255,255,0)
-q.Enabled=false
-q.Parent=n
-
-local aimCircle=Instance.new("Frame")
-aimCircle.Size=UDim2.new(0,144,0,144)
-aimCircle.Position=UDim2.new(0.5,-1,0.5,-20)
-aimCircle.AnchorPoint=Vector2.new(0.5,0.5)
-aimCircle.BackgroundTransparency=1
-aimCircle.Parent=m
-
-local aimOutline=Instance.new("UIStroke")
-aimOutline.Thickness=2
-aimOutline.Color=Color3.fromRGB(1,0,0)
-aimOutline.Parent=aimCircle
-
-local aimCorner=Instance.new("UICorner")
-aimCorner.CornerRadius=UDim.new(1,0)
-aimCorner.Parent=aimCircle
-
--- Hàm kiểm tra nếu mục tiêu là enemy
-local function s(t)
-    if game:GetService("Teams") and #game:GetService("Teams"):GetTeams()>1 then
-        local u=j.Team
-        local v=t.Team
-        return u~=nil and v~=nil and u~=v
-    else
-        return t~=j
-    end
+-- Function to check if a character is valid target
+local function isValidTarget(character)
+	if not character or not character.Parent then return false end
+	
+	local humanoid = character:FindFirstChildOfClass("Humanoid")
+	if not humanoid or humanoid.Health <= 0 then return false end
+	
+	local targetPlayer = Players:GetPlayerFromCharacter(character)
+	if not targetPlayer then return false end
+	
+	-- Team check
+	if AIM_ASSIST_CONFIG.teamCheck and targetPlayer.Team == player.Team then
+		return false
+	end
+	
+	-- Don't target self
+	if targetPlayer == player then return false end
+	
+	return true
 end
 
--- Hàm kiểm tra mục tiêu còn sống không
-local function isTargetAlive(target)
-    if not target then return false end
-    if not target.Character then return false end
-    local humanoid = target.Character:FindFirstChild("Humanoid")
-    return humanoid and humanoid.Health > 0
+-- Function to find best target
+local function findTarget()
+	local bestTarget = nil
+	local bestScore = math.huge
+	local cameraPos = camera.CFrame.Position
+	
+	for _, targetPlayer in pairs(Players:GetPlayers()) do
+		if targetPlayer ~= player then
+			local character = targetPlayer.Character
+			if isValidTarget(character) then
+				local targetPart = character:FindFirstChild(AIM_ASSIST_CONFIG.targetPart)
+				if targetPart then
+					local distance = (targetPart.Position - cameraPos).Magnitude
+					
+					if distance <= AIM_ASSIST_CONFIG.maxDistance then
+						-- Calculate angle from camera center
+						local lookVector = camera.CFrame.LookVector
+						local toTarget = (targetPart.Position - cameraPos).Unit
+						local angle = math.deg(math.acos(lookVector:Dot(toTarget)))
+						
+						if angle <= AIM_ASSIST_CONFIG.fieldOfView then
+							-- Score based on distance and angle (closer and more centered = better)
+							local score = distance + angle * 2
+							
+							if score < bestScore then
+								bestScore = score
+								bestTarget = targetPart
+							end
+						end
+					end
+				end
+			end
+		end
+	end
+	
+	return bestTarget
 end
 
--- Hàm chọn mục tiêu mới (bỏ kiểm tra line of sight)
-local function selectNewTarget()
-    local F=nil
-    local G=math.huge
-    local H=j.Character
-    
-    if not H then return nil end
-    
-    local I=H:FindFirstChild("HumanoidRootPart")
-    if not I then return nil end
-    
-    local cam=workspace.CurrentCamera
-    local aimCenter=aimCircle.AbsolutePosition+(aimCircle.AbsoluteSize/2)
-    local aimRadius=aimCircle.AbsoluteSize.X/2
-    
-    for J,K in pairs(game.Players:GetPlayers()) do
-        if s(K) and isTargetAlive(K) then
-            local L=K.Character
-            local M=L:FindFirstChild("HumanoidRootPart")
-            if M then
-                local screenPos,onScreen=cam:WorldToScreenPoint(M.Position)
-                if screenPos.Z > 0 then -- Đảm bảo mục tiêu ở phía trước camera
-                    local dist=(Vector2.new(screenPos.X,screenPos.Y)-aimCenter).Magnitude
-                    
-                    if onScreen and dist<=aimRadius and dist<G then
-                        G=dist
-                        F=K
-                    end
-                end
-            end
-        end
-    end
-    
-    return F
+-- Function to apply aim assist
+local function applyAimAssist(targetPosition)
+	if not targetPosition then return end
+	
+	local currentLook = camera.CFrame.LookVector
+	local toTarget = (targetPosition - camera.CFrame.Position).Unit
+	
+	-- Calculate the rotation needed
+	local rotation = CFrame.new(Vector3.new(), currentLook:Cross(toTarget))
+	local angle = math.acos(math.clamp(currentLook:Dot(toTarget), -1, 1))
+	
+	-- Apply smooth assist
+	local assistAngle = angle * AIM_ASSIST_CONFIG.assistStrength
+	local assistRotation = CFrame.Angles(0, 0, assistAngle)
+	
+	-- Update camera CFrame with assist
+	local newCFrame = camera.CFrame:ToWorldSpace(assistRotation)
+	camera.CFrame = CFrame.new(camera.CFrame.Position, camera.CFrame.Position + newCFrame.LookVector)
 end
 
--- Hàm reset khi mục tiêu chết
-local function resetAimAssist()
-    currentTarget = nil
-    targetAlive = false
-    q.Enabled = false
-    p.Text = "Aim Assist"
+-- Toggle button functionality
+local function toggleAimAssist()
+	AIM_ASSIST_CONFIG.enabled = not AIM_ASSIST_CONFIG.enabled
+	
+	if AIM_ASSIST_CONFIG.enabled then
+		toggleButton.BackgroundColor3 = Color3.new(0, 0.5, 0)
+		toggleButton.Text = "Aim Assist: ON"
+		indicator.Visible = AIM_ASSIST_CONFIG.showVisualIndicator
+	else
+		toggleButton.BackgroundColor3 = Color3.new(0.2, 0.2, 0.2)
+		toggleButton.Text = "Aim Assist: OFF"
+		indicator.Visible = false
+		currentTarget = nil
+	end
 end
 
--- Hàm quay camera về mục tiêu kể cả khi ở sau lưng
-local function aimAtTarget(target)
-    if not target or not target.Character then return end
-    
-    local targetChar = target.Character
-    local targetRoot = targetChar:FindFirstChild("HumanoidRootPart")
-    local humanoid = targetChar:FindFirstChild("Humanoid")
-    
-    if not targetRoot or not humanoid or humanoid.Health <= 0 then
-        resetAimAssist()
-        return
-    end
-    
-    local localChar = j.Character
-    if not localChar then return end
-    
-    local localRoot = localChar:FindFirstChild("HumanoidRootPart")
-    if not localRoot then return end
-    
-    local cam = workspace.CurrentCamera
-    if not cam then return end
-    
-    -- Kiểm tra nếu người chơi đang di chuyển (mobile joystick)
-    local currentTime = tick()
-    if isMoving and (currentTime - lastMoveTime) < 0.5 then
-        -- Nếu đang di chuyển, không can thiệp camera
-        return
-    end
-    
-    -- Tính toán hướng đến mục tiêu
-    local targetPosition = targetRoot.Position
-    
-    -- Điều chỉnh cho mục tiêu ở sau lưng
-    -- Nếu mục tiêu ở phía sau, quay 180 độ
-    local toTarget = (targetPosition - localRoot.Position).Unit
-    local lookVector = cam.CFrame.LookVector
-    
-    -- Kiểm tra góc giữa hướng nhìn và hướng đến mục tiêu
-    local dot = lookVector:Dot(toTarget)
-    
-    -- Nếu mục tiêu ở phía sau (góc > 90 độ)
-    if dot < 0 then
-        -- Quay camera về phía mục tiêu nhanh hơn
-        local rotationSpeed = 0.5 -- Tăng tốc độ quay khi mục tiêu ở sau
-        local targetCFrame = CFrame.new(cam.CFrame.Position, targetPosition)
-        cam.CFrame = cam.CFrame:Lerp(targetCFrame, rotationSpeed)
-    else
-        -- Mục tiêu ở phía trước, aim bình thường
-        local targetCFrame = CFrame.new(cam.CFrame.Position, targetPosition)
-        cam.CFrame = cam.CFrame:Lerp(targetCFrame, 0.3)
-    end
-end
+-- Button click event
+toggleButton.MouseButton1Click:Connect(toggleAimAssist)
 
--- Khi click button
-local r=false
-p.MouseButton1Click:Connect(function()
-    if not r then
-        -- Bật aim assist
-        r = true
-        q.Enabled = true
-        p.Text = "Aim Assist: ON"
-        
-        -- Chọn mục tiêu mới
-        currentTarget = selectNewTarget()
-        
-        if not currentTarget then
-            -- Nếu không tìm thấy mục tiêu, tìm lại trong phạm vi lớn hơn
-            -- Tìm người chơi gần nhất không phân biệt trong vòng tròn
-            local closestTarget = nil
-            local closestDist = math.huge
-            local localChar = j.Character
-            local localRoot = localChar and localChar:FindFirstChild("HumanoidRootPart")
-            
-            if localRoot then
-                for _, player in pairs(game.Players:GetPlayers()) do
-                    if s(player) and isTargetAlive(player) then
-                        local targetChar = player.Character
-                        local targetRoot = targetChar and targetChar:FindFirstChild("HumanoidRootPart")
-                        
-                        if targetRoot then
-                            local dist = (targetRoot.Position - localRoot.Position).Magnitude
-                            if dist < closestDist then
-                                closestDist = dist
-                                closestTarget = player
-                            end
-                        end
-                    end
-                end
-            end
-            
-            currentTarget = closestTarget
-        end
-        
-        if currentTarget then
-            targetAlive = isTargetAlive(currentTarget)
-            f("Aim Assist", "Đã ghim: " .. currentTarget.Name, 2)
-            f("Thông tin", "Ghim xuyên tường & tự quay camera", 3)
-        else
-            -- Nếu vẫn không tìm thấy mục tiêu, tắt luôn
-            r = false
-            q.Enabled = false
-            p.Text = "Aim Assist"
-            f("Aim Assist", "Không tìm thấy mục tiêu!", 2)
-        end
-    else
-        -- Tắt aim assist
-        r = false
-        resetAimAssist()
-    end
+-- Keyboard shortcut (optional)
+UserInputService.InputBegan:Connect(function(input, gameProcessed)
+	if gameProcessed then return end
+	
+	if input.KeyCode == Enum.KeyCode.F1 then
+		toggleAimAssist()
+	end
 end)
 
--- Render loop
-l.RenderStepped:Connect(function()
-    if r and currentTarget then
-        -- Kiểm tra mục tiêu còn sống không
-        if not isTargetAlive(currentTarget) then
-            resetAimAssist()
-            f("Aim Assist", "Mục tiêu đã chết!", 2)
-            
-            -- Tự động tìm mục tiêu mới
-            local newTarget = selectNewTarget()
-            if newTarget then
-                currentTarget = newTarget
-                targetAlive = true
-                f("Aim Assist", "Đã chuyển sang: " .. newTarget.Name, 2)
-            end
-            return
-        end
-        
-        -- Aim vào mục tiêu (xuyên vật cản và tự quay khi ở sau lưng)
-        aimAtTarget(currentTarget)
-    end
+-- Main aim assist loop
+RunService.RenderStepped:Connect(function(deltaTime)
+	if not AIM_ASSIST_CONFIG.enabled then
+		currentTarget = nil
+		return
+	end
+	
+	-- Find new target periodically
+	local currentTime = tick()
+	if currentTime - lastTargetTime > 0.1 then -- Check every 100ms
+		currentTarget = findTarget()
+		lastTargetTime = currentTime
+	end
+	
+	-- Apply aim assist if we have a target
+	if currentTarget and currentTarget.Parent then
+		applyAimAssist(currentTarget.Position)
+		
+		-- Update visual indicator
+		if AIM_ASSIST_CONFIG.showVisualIndicator then
+			local screenPos = camera:WorldToScreenPoint(currentTarget.Position)
+			if screenPos.Z > 0 then -- Target is in front of camera
+				indicator.Position = UDim2.new(0, screenPos.X - 10, 0, screenPos.Y - 10)
+				indicator.Visible = true
+			else
+				indicator.Visible = false
+			end
+		end
+	else
+		-- Lost target
+		currentTarget = nil
+		if AIM_ASSIST_CONFIG.showVisualIndicator then
+			indicator.Visible = false
+		end
+	end
 end)
 
--- Di chuyển UI
-local U=false
-local V=Vector2.new(0,0)
-local W=UDim2.new(0,0,0,0)
-
-n.InputBegan:Connect(function(X)
-    if X.UserInputType==Enum.UserInputType.MouseButton1 or X.UserInputType==Enum.UserInputType.Touch then
-        U=true
-        V=X.Position
-        W=n.Position
-    end
+-- Cleanup when player leaves
+player.CharacterRemoving:Connect(function()
+	if screenGui then
+		screenGui:Destroy()
+	end
 end)
 
-n.InputChanged:Connect(function(X)
-    if (X.UserInputType==Enum.UserInputType.MouseMovement or X.UserInputType==Enum.UserInputType.Touch) and U then
-        local Y=X.Position-V
-        n.Position=UDim2.new(W.X.Scale, W.X.Offset+Y.X, W.Y.Scale, W.Y.Offset+Y.Y)
-    end
-end)
-
-k.InputEnded:Connect(function(X)
-    if X.UserInputType==Enum.UserInputType.MouseButton1 or X.UserInputType==Enum.UserInputType.Touch then
-        U=false
-    end
-end)
-
--- Tự động reset nếu người chơi chết
-game:GetService("Players").LocalPlayer.CharacterAdded:Connect(function()
-    resetAimAssist()
-end)
-
--- Thêm phím tắt để chuyển mục tiêu (Ví dụ: phím T)
-k.InputBegan:Connect(function(input)
-    if input.KeyCode == Enum.KeyCode.T and r then
-        local newTarget = selectNewTarget()
-        if newTarget and newTarget ~= currentTarget then
-            currentTarget = newTarget
-            f("Aim Assist", "Chuyển sang: " .. newTarget.Name, 1)
-        end
-    end
-end)
-
--- Phát hiện di chuyển trên mobile
-k.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.Touch then
-        isMoving = true
-        lastMoveTime = tick()
-    end
-end)
-
-k.InputChanged:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.Touch then
-        isMoving = true
-        lastMoveTime = tick()
-    end
-end)
-
-k.InputEnded:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.Touch then
-        isMoving = false
-    end
-end)
-
--- Hiển thị thông báo hướng dẫn
-task.wait(1)
-f("Hướng dẫn", "Click nút để bật/tắt aim", 3)
-f("Phím tắt", "Nhấn T để chuyển mục tiêu", 3)
+print("Aim Assist System Loaded! Press F1 or click the button to toggle.")
