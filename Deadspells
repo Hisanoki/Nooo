@@ -190,9 +190,6 @@ for bossName, bossInfo in pairs(BOSS_DATA) do
             -- Teleport
             humanoidRootPart.CFrame = CFrame.new(bossInfo.position)
             
-            -- Thông báo
-            print("✅ Đã teleport đến: " .. bossName)
-            
             -- Khôi phục nút sau 0.5s
             task.wait(0.5)
             teleButton.Text = bossName
