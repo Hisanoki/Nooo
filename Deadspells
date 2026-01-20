@@ -246,14 +246,14 @@ local function toggleAutoInteract()
     instantInteractEnabled = not instantInteractEnabled
     
     if instantInteractEnabled then
-        autoInteractLabel.Text = "Auto-Interact: ON"
+        autoInteractLabel.Text = "Mua đồ nhanh: Bật"
         autoInteractLabel.TextColor3 = Color3.fromRGB(0, 255, 0)
-        toggleAutoButton.Text = "Tắt Auto-Interact"
+        toggleAutoButton.Text = "Tắt mua đồ nhanh"
         print("Mua đồ nhanh: Bật")
     else
-        autoInteractLabel.Text = "Auto-Interact: OFF"
+        autoInteractLabel.Text = "Mua đồ nhanh: Tắt"
         autoInteractLabel.TextColor3 = Color3.fromRGB(255, 50, 50)
-        toggleAutoButton.Text = "Bật Auto-Interact"
+        toggleAutoButton.Text = "Bật mua đồ nhanh"
         print("Mua đồ nhanh: Tắt")
     end
 end
