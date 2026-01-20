@@ -16,7 +16,7 @@ end)
 
 local BOSS_DATA = {
     ["Goblin"] = {
-        position = Vector3.new(819, 12, -40431),
+        position = Vector3.new(945, 35, -40376),
         color = Color3.fromRGB(0, 128, 0),      -- Xanh lá cây
         textColor = Color3.fromRGB(255, 255, 255)
     },
@@ -114,7 +114,7 @@ autoInteractLabel.Name = "AutoInteractLabel"
 autoInteractLabel.Size = UDim2.new(1, -20, 0, 20)
 autoInteractLabel.Position = UDim2.new(0, 10, 0, 75)
 autoInteractLabel.BackgroundTransparency = 1
-autoInteractLabel.Text = "Auto-Interact: ON"
+autoInteractLabel.Text = "Mua đồ nhanh: Bật"
 autoInteractLabel.TextColor3 = Color3.fromRGB(0, 255, 0)
 autoInteractLabel.Font = Enum.Font.Gotham
 autoInteractLabel.TextSize = 12
@@ -123,13 +123,13 @@ autoInteractLabel.Parent = mainFrame
 
 -- Nút toggle auto-interact
 local toggleAutoButton = Instance.new("TextButton")
-toggleAutoButton.Name = "ToggleAutoButton"
+toggleAutoButton.Name = "Tự động"
 toggleAutoButton.Size = UDim2.new(0, 120, 0, 25)
 toggleAutoButton.Position = UDim2.new(0.5, -60, 0, 100)
 toggleAutoButton.BackgroundColor3 = Color3.fromRGB(60, 60, 80)
 toggleAutoButton.BorderSizePixel = 1
 toggleAutoButton.BorderColor3 = Color3.fromRGB(80, 80, 100)
-toggleAutoButton.Text = "Tắt Auto-Interact"
+toggleAutoButton.Text = "Tắt mua đồ nhanh"
 toggleAutoButton.TextColor3 = Color3.fromRGB(255, 255, 255)
 toggleAutoButton.Font = Enum.Font.Gotham
 toggleAutoButton.TextSize = 12
