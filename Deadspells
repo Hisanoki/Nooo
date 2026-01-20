@@ -6,6 +6,7 @@ local humanoidRootPart = character:WaitForChild("HumanoidRootPart")
 
 -- Tọa độ các boss
 local BOSS_DATA = {
+    ["Cặc"] = Vector3.new(833, 3, -40141),
 	["Điểm xuất phát"] = Vector3.new(22, 11, -40001),
 	["Samurai"] = Vector3.new(-198, 38, -3561),
 	["Vam"] = Vector3.new(114, 54, 5126),
