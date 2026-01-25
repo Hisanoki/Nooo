@@ -1,0 +1,394 @@
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+local LocalPlayer = Players.LocalPlayer
+
+-- --- CẤU HÌNH ---
+local CONFIG = {
+    Range = 40,
+    AllyName = "GrahamScyther",
+    BubbleColor = Color3.fromRGB(0, 170, 255),
+    BubbleTransparency = 0.6,
+    SkillName = "Kamen Rider Chalice",
+    SpamDuration = 2,
+    TeleportDelay = 0.3,
+    TeleportCooldown = 5,
+}
+
+-- --- BIẾN TRẠNG THÁI ---
+local isAiming = false
+local isAntiRunner = false
+local isTeleportEnabled = false
+local currentTarget = nil
+local isSpamming = false
+local lastTeleportTime = 0
+local teleportCooldownRemaining = 0
+
+-- --- TẠO GUI HIỆN ĐẠI ---
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "ModernAimGUI"
+ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
+ScreenGui.ResetOnSpawn = false
+
+-- Main Frame (có thể kéo)
+local MainFrame = Instance.new("Frame")
+MainFrame.Name = "MainFrame"
+MainFrame.Parent = ScreenGui
+MainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
+MainFrame.Position = UDim2.new(0.5, -160, 0.3, 0)
+MainFrame.Size = UDim2.new(0, 320, 0, 420)
+MainFrame.Active = true
+MainFrame.Draggable = true
+
+local MainCorner = Instance.new("UICorner")
+MainCorner.CornerRadius = UDim.new(0, 12)
+MainCorner.Parent = MainFrame
+
+local MainStroke = Instance.new("UIStroke")
+MainStroke.Color = Color3.fromRGB(0, 170, 255)
+MainStroke.Thickness = 2
+MainStroke.Parent = MainFrame
+
+-- Header
+local Header = Instance.new("TextLabel")
+Header.Parent = MainFrame
+Header.BackgroundColor3 = Color3.fromRGB(0, 170, 255)
+Header.Size = UDim2.new(1, 0, 0, 45)
+Header.Font = Enum.Font.GothamBold
+Header.Text = "🎯 AIM ASSIST PRO"
+Header.TextColor3 = Color3.fromRGB(255, 255, 255)
+Header.TextSize = 18
+
+local HeaderCorner = Instance.new("UICorner")
+HeaderCorner.CornerRadius = UDim.new(0, 12)
+HeaderCorner.Parent = Header
+
+-- Nút đóng/mở GUI
+local ToggleBtn = Instance.new("TextButton")
+ToggleBtn.Parent = ScreenGui
+ToggleBtn.BackgroundColor3 = Color3.fromRGB(0, 170, 255)
+ToggleBtn.Position = UDim2.new(0.02, 0, 0.5, 0)
+ToggleBtn.Size = UDim2.new(0, 50, 0, 50)
+ToggleBtn.Font = Enum.Font.GothamBold
+ToggleBtn.Text = "☰"
+ToggleBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+ToggleBtn.TextSize = 24
+
+local ToggleCorner = Instance.new("UICorner")
+ToggleCorner.CornerRadius = UDim.new(0, 25)
+ToggleCorner.Parent = ToggleBtn
+
+local guiVisible = true
+ToggleBtn.MouseButton1Click:Connect(function()
+    guiVisible = not guiVisible
+    MainFrame.Visible = guiVisible
+    ToggleBtn.Text = guiVisible and "☰" or "+"
+end)
+
+-- Cooldown Timer Display
+local CooldownFrame = Instance.new("Frame")
+CooldownFrame.Parent = ScreenGui
+CooldownFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
+CooldownFrame.Position = UDim2.new(0.02, 0, 0.1, 0)
+CooldownFrame.Size = UDim2.new(0, 100, 0, 60)
+CooldownFrame.Visible = false
+
+local CooldownCorner = Instance.new("UICorner")
+CooldownCorner.CornerRadius = UDim.new(0, 10)
+CooldownCorner.Parent = CooldownFrame
+
+local CooldownLabel = Instance.new("TextLabel")
+CooldownLabel.Parent = CooldownFrame
+CooldownLabel.BackgroundTransparency = 1
+CooldownLabel.Size = UDim2.new(1, 0, 0.5, 0)
+CooldownLabel.Font = Enum.Font.GothamBold
+CooldownLabel.Text = "DASH CD"
+CooldownLabel.TextColor3 = Color3.fromRGB(255, 170, 0)
+CooldownLabel.TextSize = 14
+
+local CooldownTimer = Instance.new("TextLabel")
+CooldownTimer.Parent = CooldownFrame
+CooldownTimer.BackgroundTransparency = 1
+CooldownTimer.Position = UDim2.new(0, 0, 0.5, 0)
+CooldownTimer.Size = UDim2.new(1, 0, 0.5, 0)
+CooldownTimer.Font = Enum.Font.GothamBold
+CooldownTimer.Text = "0.0s"
+CooldownTimer.TextColor3 = Color3.fromRGB(255, 255, 255)
+CooldownTimer.TextSize = 20
+
+-- Hàm tạo Toggle Button
+local function CreateToggle(name, text, position, color)
+    local frame = Instance.new("Frame")
+    frame.Parent = MainFrame
+    frame.BackgroundColor3 = Color3.fromRGB(30, 30, 35)
+    frame.Position = position
+    frame.Size = UDim2.new(0.9, 0, 0, 50)
+    
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0, 8)
+    corner.Parent = frame
+    
+    local label = Instance.new("TextLabel")
+    label.Parent = frame
+    label.BackgroundTransparency = 1
+    label.Position = UDim2.new(0.05, 0, 0, 0)
+    label.Size = UDim2.new(0.65, 0, 1, 0)
+    label.Font = Enum.Font.GothamBold
+    label.Text = text
+    label.TextColor3 = Color3.fromRGB(255, 255, 255)
+    label.TextSize = 14
+    label.TextXAlignment = Enum.TextXAlignment.Left
+    
+    local toggle = Instance.new("TextButton")
+    toggle.Parent = frame
+    toggle.BackgroundColor3 = Color3.fromRGB(60, 60, 65)
+    toggle.Position = UDim2.new(0.72, 0, 0.2, 0)
+    toggle.Size = UDim2.new(0.23, 0, 0.6, 0)
+    toggle.Font = Enum.Font.GothamBold
+    toggle.Text = "OFF"
+    toggle.TextColor3 = Color3.fromRGB(255, 80, 80)
+    toggle.TextSize = 12
+    
+    local toggleCorner = Instance.new("UICorner")
+    toggleCorner.CornerRadius = UDim.new(0, 6)
+    toggleCorner.Parent = toggle
+    
+    return toggle, label
+end
+
+-- Hàm tạo Input Box
+local function CreateInput(name, labelText, position, defaultValue)
+    local frame = Instance.new("Frame")
+    frame.Parent = MainFrame
+    frame.BackgroundColor3 = Color3.fromRGB(30, 30, 35)
+    frame.Position = position
+    frame.Size = UDim2.new(0.9, 0, 0, 50)
+    
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0, 8)
+    corner.Parent = frame
+    
+    local label = Instance.new("TextLabel")
+    label.Parent = frame
+    label.BackgroundTransparency = 1
+    label.Position = UDim2.new(0.05, 0, 0, 0)
+    label.Size = UDim2.new(0.55, 0, 1, 0)
+    label.Font = Enum.Font.GothamBold
+    label.Text = labelText
+    label.TextColor3 = Color3.fromRGB(255, 255, 255)
+    label.TextSize = 13
+    label.TextXAlignment = Enum.TextXAlignment.Left
+    
+    local input = Instance.new("TextBox")
+    input.Parent = frame
+    input.BackgroundColor3 = Color3.fromRGB(50, 50, 55)
+    input.Position = UDim2.new(0.62, 0, 0.2, 0)
+    input.Size = UDim2.new(0.33, 0, 0.6, 0)
+    input.Font = Enum.Font.Gotham
+    input.Text = tostring(defaultValue)
+    input.TextColor3 = Color3.fromRGB(255, 255, 255)
+    input.TextSize = 14
+    input.ClearTextOnFocus = false
+    
+    local inputCorner = Instance.new("UICorner")
+    inputCorner.CornerRadius = UDim.new(0, 6)
+    inputCorner.Parent = input
+    
+    return input
+end
+
+-- Tạo các controls
+local AimToggle = CreateToggle("AimToggle", "🎯 Aim Assist", UDim2.new(0.05, 0, 0, 60))
+local AntiToggle = CreateToggle("AntiToggle", "⚡ Khắc Runner", UDim2.new(0.05, 0, 0, 120))
+local TeleToggle = CreateToggle("TeleToggle", "👻 Biến Ảo", UDim2.new(0.05, 0, 0, 180))
+
+local RangeInput = CreateInput("RangeInput", "📏 Range:", UDim2.new(0.05, 0, 0, 250), CONFIG.Range)
+local BubbleInput = CreateInput("BubbleInput", "💧 Bubble Alpha:", UDim2.new(0.05, 0, 0, 310), CONFIG.BubbleTransparency)
+
+-- Credit
+local Credit = Instance.new("TextLabel")
+Credit.Parent = MainFrame
+Credit.BackgroundTransparency = 1
+Credit.Position = UDim2.new(0, 0, 1, -30)
+Credit.Size = UDim2.new(1, 0, 0, 25)
+Credit.Font = Enum.Font.GothamBold
+Credit.Text = "Made for Mobile 📱"
+Credit.TextColor3 = Color3.fromRGB(150, 150, 155)
+Credit.TextSize = 11
+
+-- --- HÀM TÌM REMOTE ---
+local function GetSkillRemote()
+    local tool = LocalPlayer.Backpack:FindFirstChild(CONFIG.SkillName) or LocalPlayer.Character:FindFirstChild(CONFIG.SkillName)
+    if tool then
+        return tool:FindFirstChild("Remote")
+    end
+    return nil
+end
+
+-- --- HÀM SPAM CHIÊU R ---
+local function SpamSkillR()
+    if isSpamming then return end
+    isSpamming = true
+    
+    local remote = GetSkillRemote()
+    if remote then
+        local startTime = tick()
+        while tick() - startTime < CONFIG.SpamDuration and isAntiRunner do
+            remote:FireServer("R")
+            task.wait(0.1)
+        end
+    end
+    
+    isSpamming = false
+end
+
+-- --- TẠO VISUAL BUBBLE ---
+local BubblePart = Instance.new("Part")
+BubblePart.Name = "AimRangeBubble"
+BubblePart.Shape = Enum.PartType.Ball
+BubblePart.Material = Enum.Material.ForceField
+BubblePart.Size = Vector3.new(CONFIG.Range * 2, CONFIG.Range * 2, CONFIG.Range * 2)
+BubblePart.Color = CONFIG.BubbleColor
+BubblePart.Transparency = 1
+BubblePart.CanCollide = false
+BubblePart.Anchored = true
+BubblePart.CastShadow = false
+BubblePart.Parent = workspace
+
+-- --- HÀM TÌM MỤC TIÊU ---
+local function GetClosestEnemy()
+    local closestPlayer = nil
+    local shortestDistance = CONFIG.Range
+    local myCharacter = LocalPlayer.Character
+    if not myCharacter or not myCharacter:FindFirstChild("HumanoidRootPart") then return nil end
+    
+    for _, player in pairs(Players:GetPlayers()) do
+        if player ~= LocalPlayer and player.Name ~= CONFIG.AllyName and player.Character and player.Character:FindFirstChild("Humanoid") and player.Character.Humanoid.Health > 0 then
+            local root = player.Character:FindFirstChild("HumanoidRootPart")
+            if root then
+                local distance = (root.Position - myCharacter.HumanoidRootPart.Position).Magnitude
+                if distance < shortestDistance then
+                    shortestDistance = distance
+                    closestPlayer = player.Character
+                end
+            end
+        end
+    end
+    return closestPlayer
+end
+
+-- --- TELEPORT KHI DASH ---
+local function OnDashUsed()
+    if not isTeleportEnabled then return end
+    
+    local currentTime = tick()
+    if currentTime - lastTeleportTime < CONFIG.TeleportCooldown then
+        return -- Còn cooldown
+    end
+    
+    task.wait(CONFIG.TeleportDelay)
+    
+    local target = GetClosestEnemy()
+    if target and target:FindFirstChild("HumanoidRootPart") then
+        local myChar = LocalPlayer.Character
+        if myChar and myChar:FindFirstChild("HumanoidRootPart") then
+            myChar.HumanoidRootPart.CFrame = target.HumanoidRootPart.CFrame * CFrame.new(0, 0, 3)
+            lastTeleportTime = tick()
+            teleportCooldownRemaining = CONFIG.TeleportCooldown
+            CooldownFrame.Visible = true
+        end
+    end
+end
+
+-- Hook vào Dash
+local oldNamecall
+oldNamecall = hookmetamethod(game, "__namecall", function(self, ...)
+    local args = {...}
+    local method = getnamecallmethod()
+    
+    if method == "FireServer" and self.Name == "Remote" and args[1] == "Dash" then
+        task.spawn(OnDashUsed)
+    end
+    
+    return oldNamecall(self, ...)
+end)
+
+-- --- LOGIC NÚT BẤM ---
+AimToggle.MouseButton1Click:Connect(function()
+    isAiming = not isAiming
+    AimToggle.Text = isAiming and "ON" or "OFF"
+    AimToggle.TextColor3 = isAiming and Color3.fromRGB(80, 255, 80) or Color3.fromRGB(255, 80, 80)
+    AimToggle.BackgroundColor3 = isAiming and Color3.fromRGB(40, 100, 40) or Color3.fromRGB(60, 60, 65)
+    BubblePart.Transparency = isAiming and CONFIG.BubbleTransparency or 1
+end)
+
+AntiToggle.MouseButton1Click:Connect(function()
+    isAntiRunner = not isAntiRunner
+    AntiToggle.Text = isAntiRunner and "ON" or "OFF"
+    AntiToggle.TextColor3 = isAntiRunner and Color3.fromRGB(80, 255, 80) or Color3.fromRGB(255, 80, 80)
+    AntiToggle.BackgroundColor3 = isAntiRunner and Color3.fromRGB(40, 100, 40) or Color3.fromRGB(60, 60, 65)
+end)
+
+TeleToggle.MouseButton1Click:Connect(function()
+    isTeleportEnabled = not isTeleportEnabled
+    TeleToggle.Text = isTeleportEnabled and "ON" or "OFF"
+    TeleToggle.TextColor3 = isTeleportEnabled and Color3.fromRGB(80, 255, 80) or Color3.fromRGB(255, 80, 80)
+    TeleToggle.BackgroundColor3 = isTeleportEnabled and Color3.fromRGB(40, 100, 40) or Color3.fromRGB(60, 60, 65)
+end)
+
+-- Cập nhật Range
+RangeInput.FocusLost:Connect(function()
+    local newRange = tonumber(RangeInput.Text)
+    if newRange and newRange > 0 then
+        CONFIG.Range = newRange
+        BubblePart.Size = Vector3.new(newRange * 2, newRange * 2, newRange * 2)
+    else
+        RangeInput.Text = tostring(CONFIG.Range)
+    end
+end)
+
+-- Cập nhật Bubble Transparency
+BubbleInput.FocusLost:Connect(function()
+    local newTrans = tonumber(BubbleInput.Text)
+    if newTrans and newTrans >= 0 and newTrans <= 1 then
+        CONFIG.BubbleTransparency = newTrans
+        if isAiming then
+            BubblePart.Transparency = newTrans
+        end
+    else
+        BubbleInput.Text = tostring(CONFIG.BubbleTransparency)
+    end
+end)
+
+-- --- VÒNG LẶP CHÍNH ---
+RunService.RenderStepped:Connect(function()
+    local char = LocalPlayer.Character
+    if not char or not char:FindFirstChild("HumanoidRootPart") then
+        BubblePart.Position = Vector3.new(0, -1000, 0)
+        return
+    end
+    
+    BubblePart.Position = char.HumanoidRootPart.Position
+    
+    -- Cập nhật cooldown timer
+    if teleportCooldownRemaining > 0 then
+        teleportCooldownRemaining = math.max(0, teleportCooldownRemaining - RunService.RenderStepped:Wait())
+        CooldownTimer.Text = string.format("%.1fs", teleportCooldownRemaining)
+        if teleportCooldownRemaining <= 0 then
+            CooldownFrame.Visible = false
+        end
+    end
+    
+    if isAiming then
+        local target = GetClosestEnemy()
+        if target and target:FindFirstChild("HumanoidRootPart") then
+            local targetPos = target.HumanoidRootPart.Position
+            local myPos = char.HumanoidRootPart.Position
+            char.HumanoidRootPart.CFrame = CFrame.lookAt(myPos, Vector3.new(targetPos.X, myPos.Y, targetPos.Z))
+            
+            if isAntiRunner and not isSpamming then
+                task.spawn(SpamSkillR)
+            end
+        end
+    end
+end)
