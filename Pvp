@@ -292,7 +292,12 @@ local function OnDashUsed()
     if target and target:FindFirstChild("HumanoidRootPart") then
         local myChar = LocalPlayer.Character
         if myChar and myChar:FindFirstChild("HumanoidRootPart") then
-            myChar.HumanoidRootPart.CFrame = target.HumanoidRootPart.CFrame * CFrame.new(0, 0, 3)
+            -- Teleport về TRƯỚC MẶT đối thủ, cách 5 studs
+            local targetCFrame = target.HumanoidRootPart.CFrame
+            local frontPosition = targetCFrame * CFrame.new(0, 0, -5) -- -5 = trước mặt, cách 5 studs
+            
+            myChar.HumanoidRootPart.CFrame = CFrame.new(frontPosition.Position, target.HumanoidRootPart.Position)
+            
             lastTeleportTime = tick()
             teleportCooldownRemaining = CONFIG.TeleportCooldown
             CooldownFrame.Visible = true
