@@ -9,10 +9,17 @@ local CONFIG = {
     AllyName = "GrahamScyther",
     BubbleColor = Color3.fromRGB(0, 170, 255),
     BubbleTransparency = 0.6,
-    SkillName = "Kamen Rider Chalice",
-    SpamDuration = 2,
+    SkillPrefix = "Kamen Rider",
+    SkillSuffix = "Chalice",
+    DashDelay = 0.2,
     TeleportDelay = 0.3,
     TeleportCooldown = 5,
+    SelectedSkills = {
+        R = true,
+        T = false,
+        X = false,
+        G = false
+    }
 }
 
 -- --- BIẾN TRẠNG THÁI ---
@@ -20,7 +27,6 @@ local isAiming = false
 local isAntiRunner = false
 local isTeleportEnabled = false
 local currentTarget = nil
-local isSpamming = false
 local lastTeleportTime = 0
 local teleportCooldownRemaining = 0
 
@@ -30,13 +36,13 @@ ScreenGui.Name = "ModernAimGUI"
 ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
 ScreenGui.ResetOnSpawn = false
 
--- Main Frame (có thể kéo)
+-- Main Frame (có thể kéo) - Tăng chiều cao để chứa thêm UI
 local MainFrame = Instance.new("Frame")
 MainFrame.Name = "MainFrame"
 MainFrame.Parent = ScreenGui
 MainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
-MainFrame.Position = UDim2.new(0.5, -160, 0.3, 0)
-MainFrame.Size = UDim2.new(0, 320, 0, 420)
+MainFrame.Position = UDim2.new(0.5, -160, 0.2, 0)
+MainFrame.Size = UDim2.new(0, 320, 0, 550) -- Tăng từ 420 lên 550
 MainFrame.Active = true
 MainFrame.Draggable = true
 
@@ -197,13 +203,53 @@ local function CreateInput(name, labelText, position, defaultValue)
     return input
 end
 
+-- Hàm tạo Skill Toggle (nhỏ hơn, để 4 nút cạnh nhau)
+local function CreateSkillToggle(skillKey, position)
+    local toggle = Instance.new("TextButton")
+    toggle.Parent = MainFrame
+    toggle.BackgroundColor3 = CONFIG.SelectedSkills[skillKey] and Color3.fromRGB(40, 100, 40) or Color3.fromRGB(60, 60, 65)
+    toggle.Position = position
+    toggle.Size = UDim2.new(0.2, 0, 0, 40)
+    toggle.Font = Enum.Font.GothamBold
+    toggle.Text = skillKey
+    toggle.TextColor3 = CONFIG.SelectedSkills[skillKey] and Color3.fromRGB(80, 255, 80) or Color3.fromRGB(255, 80, 80)
+    toggle.TextSize = 16
+    
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0, 8)
+    corner.Parent = toggle
+    
+    return toggle
+end
+
 -- Tạo các controls
 local AimToggle = CreateToggle("AimToggle", "🎯 Aim Assist", UDim2.new(0.05, 0, 0, 60))
 local AntiToggle = CreateToggle("AntiToggle", "⚡ Khắc Runner", UDim2.new(0.05, 0, 0, 120))
 local TeleToggle = CreateToggle("TeleToggle", "👻 Biến Ảo", UDim2.new(0.05, 0, 0, 180))
 
-local RangeInput = CreateInput("RangeInput", "📏 Range:", UDim2.new(0.05, 0, 0, 250), CONFIG.Range)
-local BubbleInput = CreateInput("BubbleInput", "💧 Bubble Alpha:", UDim2.new(0.05, 0, 0, 310), CONFIG.BubbleTransparency)
+-- Thêm Label cho Skill Selection
+local SkillLabel = Instance.new("TextLabel")
+SkillLabel.Parent = MainFrame
+SkillLabel.BackgroundTransparency = 1
+SkillLabel.Position = UDim2.new(0.05, 0, 0, 240)
+SkillLabel.Size = UDim2.new(0.9, 0, 0, 25)
+SkillLabel.Font = Enum.Font.GothamBold
+SkillLabel.Text = "⚔️ Chọn Skill Auto Dash:"
+SkillLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
+SkillLabel.TextSize = 13
+SkillLabel.TextXAlignment = Enum.TextXAlignment.Left
+
+-- Tạo các nút chọn skill (4 nút cạnh nhau)
+local SkillR = CreateSkillToggle("R", UDim2.new(0.05, 0, 0, 270))
+local SkillT = CreateSkillToggle("T", UDim2.new(0.28, 0, 0, 270))
+local SkillX = CreateSkillToggle("X", UDim2.new(0.51, 0, 0, 270))
+local SkillG = CreateSkillToggle("G", UDim2.new(0.74, 0, 0, 270))
+
+-- Thêm TextBox để nhập tên tướng
+local CharacterInput = CreateInput("CharacterInput", "🎭 Tên Tướng:", UDim2.new(0.05, 0, 0, 330), CONFIG.SkillSuffix)
+
+local RangeInput = CreateInput("RangeInput", "📏 Range:", UDim2.new(0.05, 0, 0, 390), CONFIG.Range)
+local BubbleInput = CreateInput("BubbleInput", "💧 Bubble Alpha:", UDim2.new(0.05, 0, 0, 450), CONFIG.BubbleTransparency)
 
 -- Credit
 local Credit = Instance.new("TextLabel")
@@ -218,28 +264,12 @@ Credit.TextSize = 11
 
 -- --- HÀM TÌM REMOTE ---
 local function GetSkillRemote()
-    local tool = LocalPlayer.Backpack:FindFirstChild(CONFIG.SkillName) or LocalPlayer.Character:FindFirstChild(CONFIG.SkillName)
+    local fullName = CONFIG.SkillPrefix .. " " .. CONFIG.SkillSuffix
+    local tool = LocalPlayer.Backpack:FindFirstChild(fullName) or LocalPlayer.Character:FindFirstChild(fullName)
     if tool then
         return tool:FindFirstChild("Remote")
     end
     return nil
-end
-
--- --- HÀM SPAM CHIÊU R ---
-local function SpamSkillR()
-    if isSpamming then return end
-    isSpamming = true
-    
-    local remote = GetSkillRemote()
-    if remote then
-        local startTime = tick()
-        while tick() - startTime < CONFIG.SpamDuration and isAntiRunner do
-            remote:FireServer("R")
-            task.wait(0.1)
-        end
-    end
-    
-    isSpamming = false
 end
 
 -- --- TẠO VISUAL BUBBLE ---
@@ -283,7 +313,7 @@ local function OnDashUsed()
     
     local currentTime = tick()
     if currentTime - lastTeleportTime < CONFIG.TeleportCooldown then
-        return -- Còn cooldown
+        return
     end
     
     task.wait(CONFIG.TeleportDelay)
@@ -292,9 +322,8 @@ local function OnDashUsed()
     if target and target:FindFirstChild("HumanoidRootPart") then
         local myChar = LocalPlayer.Character
         if myChar and myChar:FindFirstChild("HumanoidRootPart") then
-            -- Teleport về TRƯỚC MẶT đối thủ, cách 5 studs
             local targetCFrame = target.HumanoidRootPart.CFrame
-            local frontPosition = targetCFrame * CFrame.new(0, 0, -5) -- -5 = trước mặt, cách 5 studs
+            local frontPosition = targetCFrame * CFrame.new(0, 0, -5)
             
             myChar.HumanoidRootPart.CFrame = CFrame.new(frontPosition.Position, target.HumanoidRootPart.Position)
             
@@ -305,14 +334,30 @@ local function OnDashUsed()
     end
 end
 
--- Hook vào Dash
+-- --- AUTO DASH SAU KHI DÙNG SKILL ---
+local function AutoDashAfterSkill()
+    task.wait(CONFIG.DashDelay)
+    local remote = GetSkillRemote()
+    if remote then
+        remote:FireServer("Dash")
+    end
+end
+
+-- Hook vào Remote
 local oldNamecall
 oldNamecall = hookmetamethod(game, "__namecall", function(self, ...)
     local args = {...}
     local method = getnamecallmethod()
     
-    if method == "FireServer" and self.Name == "Remote" and args[1] == "Dash" then
-        task.spawn(OnDashUsed)
+    if method == "FireServer" and self.Name == "Remote" then
+        if args[1] == "Dash" then
+            task.spawn(OnDashUsed)
+        end
+        
+        -- Kiểm tra nếu skill được chọn và Anti-Runner đang bật
+        if isAntiRunner and CONFIG.SelectedSkills[args[1]] then
+            task.spawn(AutoDashAfterSkill)
+        end
     end
     
     return oldNamecall(self, ...)
@@ -339,6 +384,43 @@ TeleToggle.MouseButton1Click:Connect(function()
     TeleToggle.Text = isTeleportEnabled and "ON" or "OFF"
     TeleToggle.TextColor3 = isTeleportEnabled and Color3.fromRGB(80, 255, 80) or Color3.fromRGB(255, 80, 80)
     TeleToggle.BackgroundColor3 = isTeleportEnabled and Color3.fromRGB(40, 100, 40) or Color3.fromRGB(60, 60, 65)
+end)
+
+-- Logic cho các nút skill
+local function SetupSkillToggle(button, skillKey)
+    button.MouseButton1Click:Connect(function()
+        CONFIG.SelectedSkills[skillKey] = not CONFIG.SelectedSkills[skillKey]
+        button.Text = skillKey
+        button.TextColor3 = CONFIG.SelectedSkills[skillKey] and Color3.fromRGB(80, 255, 80) or Color3.fromRGB(255, 80, 80)
+        button.BackgroundColor3 = CONFIG.SelectedSkills[skillKey] and Color3.fromRGB(40, 100, 40) or Color3.fromRGB(60, 60, 65)
+    end)
+end
+
+SetupSkillToggle(SkillR, "R")
+SetupSkillToggle(SkillT, "T")
+SetupSkillToggle(SkillX, "X")
+SetupSkillToggle(SkillG, "G")
+
+-- Cập nhật tên tướng
+CharacterInput.FocusLost:Connect(function()
+    local newName = CharacterInput.Text:gsub("^%s*(.-)%s*$", "%1") -- Trim whitespace
+    
+    if newName == "" then
+        CharacterInput.Text = CONFIG.SkillSuffix
+        return
+    end
+    
+    -- Kiểm tra xem có chứa "Kamen Rider" không
+    if not newName:find("Kamen Rider") then
+        -- Nếu không có, thì chỉ lấy phần sau (tên tướng)
+        CONFIG.SkillSuffix = newName
+    else
+        -- Nếu có "Kamen Rider", tách ra
+        CONFIG.SkillSuffix = newName:gsub("Kamen Rider ", "")
+    end
+    
+    CharacterInput.Text = CONFIG.SkillSuffix
+    print("✅ Đã đổi tướng thành: " .. CONFIG.SkillPrefix .. " " .. CONFIG.SkillSuffix)
 end)
 
 -- Cập nhật Range
@@ -375,7 +457,6 @@ RunService.RenderStepped:Connect(function()
     
     BubblePart.Position = char.HumanoidRootPart.Position
     
-    -- Cập nhật cooldown timer
     if teleportCooldownRemaining > 0 then
         teleportCooldownRemaining = math.max(0, teleportCooldownRemaining - RunService.RenderStepped:Wait())
         CooldownTimer.Text = string.format("%.1fs", teleportCooldownRemaining)
@@ -390,10 +471,6 @@ RunService.RenderStepped:Connect(function()
             local targetPos = target.HumanoidRootPart.Position
             local myPos = char.HumanoidRootPart.Position
             char.HumanoidRootPart.CFrame = CFrame.lookAt(myPos, Vector3.new(targetPos.X, myPos.Y, targetPos.Z))
-            
-            if isAntiRunner and not isSpamming then
-                task.spawn(SpamSkillR)
-            end
         end
     end
 end)
