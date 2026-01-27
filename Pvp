@@ -11,13 +11,13 @@ local CONFIG = {
     BubbleTransparency = 0.6,
     SkillPrefix = "Kamen Rider",
     SkillSuffix = "Chalice",
-    DashDelay = 0.2,
     TeleportDelay = 0.3,
     TeleportCooldown = 5,
+    SkillDelay = 0.2,
     SelectedSkills = {
         R = true,
         T = false,
-        X = false,
+        F = false,
         G = false
     }
 }
@@ -25,29 +25,28 @@ local CONFIG = {
 -- --- BIẾN TRẠNG THÁI ---
 local isAiming = false
 local isAntiRunner = false
-local isTeleportEnabled = false
 local currentTarget = nil
 local lastTeleportTime = 0
 local teleportCooldownRemaining = 0
 
--- --- TẠO GUI HIỆN ĐẠI ---
+-- --- TẠO GUI HIỆN ĐẠI (COMPACT) ---
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "ModernAimGUI"
 ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
 ScreenGui.ResetOnSpawn = false
 
--- Main Frame (có thể kéo) - Tăng chiều cao để chứa thêm UI
+-- Main Frame (có thể kéo) - Nhỏ gọn hơn
 local MainFrame = Instance.new("Frame")
 MainFrame.Name = "MainFrame"
 MainFrame.Parent = ScreenGui
 MainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
-MainFrame.Position = UDim2.new(0.5, -160, 0.2, 0)
-MainFrame.Size = UDim2.new(0, 320, 0, 550) -- Tăng từ 420 lên 550
+MainFrame.Position = UDim2.new(0.5, -140, 0.1, 0)
+MainFrame.Size = UDim2.new(0, 280, 0, 460)
 MainFrame.Active = true
 MainFrame.Draggable = true
 
 local MainCorner = Instance.new("UICorner")
-MainCorner.CornerRadius = UDim.new(0, 12)
+MainCorner.CornerRadius = UDim.new(0, 10)
 MainCorner.Parent = MainFrame
 
 local MainStroke = Instance.new("UIStroke")
@@ -59,14 +58,14 @@ MainStroke.Parent = MainFrame
 local Header = Instance.new("TextLabel")
 Header.Parent = MainFrame
 Header.BackgroundColor3 = Color3.fromRGB(0, 170, 255)
-Header.Size = UDim2.new(1, 0, 0, 45)
+Header.Size = UDim2.new(1, 0, 0, 40)
 Header.Font = Enum.Font.GothamBold
-Header.Text = "🎯 AIM ASSIST PRO"
+Header.Text = "🎯 AIM PRO"
 Header.TextColor3 = Color3.fromRGB(255, 255, 255)
-Header.TextSize = 18
+Header.TextSize = 16
 
 local HeaderCorner = Instance.new("UICorner")
-HeaderCorner.CornerRadius = UDim.new(0, 12)
+HeaderCorner.CornerRadius = UDim.new(0, 10)
 HeaderCorner.Parent = Header
 
 -- Nút đóng/mở GUI
@@ -74,14 +73,14 @@ local ToggleBtn = Instance.new("TextButton")
 ToggleBtn.Parent = ScreenGui
 ToggleBtn.BackgroundColor3 = Color3.fromRGB(0, 170, 255)
 ToggleBtn.Position = UDim2.new(0.02, 0, 0.5, 0)
-ToggleBtn.Size = UDim2.new(0, 50, 0, 50)
+ToggleBtn.Size = UDim2.new(0, 45, 0, 45)
 ToggleBtn.Font = Enum.Font.GothamBold
 ToggleBtn.Text = "☰"
 ToggleBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-ToggleBtn.TextSize = 24
+ToggleBtn.TextSize = 22
 
 local ToggleCorner = Instance.new("UICorner")
-ToggleCorner.CornerRadius = UDim.new(0, 25)
+ToggleCorner.CornerRadius = UDim.new(0, 22)
 ToggleCorner.Parent = ToggleBtn
 
 local guiVisible = true
@@ -96,7 +95,7 @@ local CooldownFrame = Instance.new("Frame")
 CooldownFrame.Parent = ScreenGui
 CooldownFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
 CooldownFrame.Position = UDim2.new(0.02, 0, 0.1, 0)
-CooldownFrame.Size = UDim2.new(0, 100, 0, 60)
+CooldownFrame.Size = UDim2.new(0, 90, 0, 55)
 CooldownFrame.Visible = false
 
 local CooldownCorner = Instance.new("UICorner")
@@ -108,9 +107,9 @@ CooldownLabel.Parent = CooldownFrame
 CooldownLabel.BackgroundTransparency = 1
 CooldownLabel.Size = UDim2.new(1, 0, 0.5, 0)
 CooldownLabel.Font = Enum.Font.GothamBold
-CooldownLabel.Text = "DASH CD"
+CooldownLabel.Text = "TP CD"
 CooldownLabel.TextColor3 = Color3.fromRGB(255, 170, 0)
-CooldownLabel.TextSize = 14
+CooldownLabel.TextSize = 13
 
 local CooldownTimer = Instance.new("TextLabel")
 CooldownTimer.Parent = CooldownFrame
@@ -120,147 +119,190 @@ CooldownTimer.Size = UDim2.new(1, 0, 0.5, 0)
 CooldownTimer.Font = Enum.Font.GothamBold
 CooldownTimer.Text = "0.0s"
 CooldownTimer.TextColor3 = Color3.fromRGB(255, 255, 255)
-CooldownTimer.TextSize = 20
+CooldownTimer.TextSize = 18
 
--- Hàm tạo Toggle Button
-local function CreateToggle(name, text, position, color)
+-- ScrollingFrame để chứa tất cả controls
+local ScrollFrame = Instance.new("ScrollingFrame")
+ScrollFrame.Parent = MainFrame
+ScrollFrame.BackgroundTransparency = 1
+ScrollFrame.Position = UDim2.new(0, 0, 0, 45)
+ScrollFrame.Size = UDim2.new(1, 0, 1, -45)
+ScrollFrame.CanvasSize = UDim2.new(0, 0, 0, 650)
+ScrollFrame.ScrollBarThickness = 4
+
+-- Hàm tạo Toggle Button (compact)
+local function CreateToggle(name, text, position)
     local frame = Instance.new("Frame")
-    frame.Parent = MainFrame
+    frame.Parent = ScrollFrame
     frame.BackgroundColor3 = Color3.fromRGB(30, 30, 35)
     frame.Position = position
-    frame.Size = UDim2.new(0.9, 0, 0, 50)
+    frame.Size = UDim2.new(0.9, 0, 0, 42)
     
     local corner = Instance.new("UICorner")
-    corner.CornerRadius = UDim.new(0, 8)
+    corner.CornerRadius = UDim.new(0, 7)
     corner.Parent = frame
     
     local label = Instance.new("TextLabel")
     label.Parent = frame
     label.BackgroundTransparency = 1
     label.Position = UDim2.new(0.05, 0, 0, 0)
-    label.Size = UDim2.new(0.65, 0, 1, 0)
+    label.Size = UDim2.new(0.62, 0, 1, 0)
     label.Font = Enum.Font.GothamBold
     label.Text = text
     label.TextColor3 = Color3.fromRGB(255, 255, 255)
-    label.TextSize = 14
+    label.TextSize = 13
     label.TextXAlignment = Enum.TextXAlignment.Left
     
     local toggle = Instance.new("TextButton")
     toggle.Parent = frame
     toggle.BackgroundColor3 = Color3.fromRGB(60, 60, 65)
-    toggle.Position = UDim2.new(0.72, 0, 0.2, 0)
-    toggle.Size = UDim2.new(0.23, 0, 0.6, 0)
+    toggle.Position = UDim2.new(0.69, 0, 0.18, 0)
+    toggle.Size = UDim2.new(0.26, 0, 0.64, 0)
     toggle.Font = Enum.Font.GothamBold
     toggle.Text = "OFF"
     toggle.TextColor3 = Color3.fromRGB(255, 80, 80)
-    toggle.TextSize = 12
+    toggle.TextSize = 11
     
     local toggleCorner = Instance.new("UICorner")
-    toggleCorner.CornerRadius = UDim.new(0, 6)
+    toggleCorner.CornerRadius = UDim.new(0, 5)
     toggleCorner.Parent = toggle
     
     return toggle, label
 end
 
--- Hàm tạo Input Box
+-- Hàm tạo Input Box (compact)
 local function CreateInput(name, labelText, position, defaultValue)
     local frame = Instance.new("Frame")
-    frame.Parent = MainFrame
+    frame.Parent = ScrollFrame
     frame.BackgroundColor3 = Color3.fromRGB(30, 30, 35)
     frame.Position = position
-    frame.Size = UDim2.new(0.9, 0, 0, 50)
+    frame.Size = UDim2.new(0.9, 0, 0, 42)
     
     local corner = Instance.new("UICorner")
-    corner.CornerRadius = UDim.new(0, 8)
+    corner.CornerRadius = UDim.new(0, 7)
     corner.Parent = frame
     
     local label = Instance.new("TextLabel")
     label.Parent = frame
     label.BackgroundTransparency = 1
     label.Position = UDim2.new(0.05, 0, 0, 0)
-    label.Size = UDim2.new(0.55, 0, 1, 0)
+    label.Size = UDim2.new(0.52, 0, 1, 0)
     label.Font = Enum.Font.GothamBold
     label.Text = labelText
     label.TextColor3 = Color3.fromRGB(255, 255, 255)
-    label.TextSize = 13
+    label.TextSize = 12
     label.TextXAlignment = Enum.TextXAlignment.Left
     
     local input = Instance.new("TextBox")
     input.Parent = frame
     input.BackgroundColor3 = Color3.fromRGB(50, 50, 55)
-    input.Position = UDim2.new(0.62, 0, 0.2, 0)
-    input.Size = UDim2.new(0.33, 0, 0.6, 0)
+    input.Position = UDim2.new(0.59, 0, 0.18, 0)
+    input.Size = UDim2.new(0.36, 0, 0.64, 0)
     input.Font = Enum.Font.Gotham
     input.Text = tostring(defaultValue)
     input.TextColor3 = Color3.fromRGB(255, 255, 255)
-    input.TextSize = 14
+    input.TextSize = 13
     input.ClearTextOnFocus = false
     
     local inputCorner = Instance.new("UICorner")
-    inputCorner.CornerRadius = UDim.new(0, 6)
+    inputCorner.CornerRadius = UDim.new(0, 5)
     inputCorner.Parent = input
     
     return input
 end
 
--- Hàm tạo Skill Toggle (nhỏ hơn, để 4 nút cạnh nhau)
+-- Hàm tạo Section Label
+local function CreateSectionLabel(text, position)
+    local label = Instance.new("TextLabel")
+    label.Parent = ScrollFrame
+    label.BackgroundTransparency = 1
+    label.Position = position
+    label.Size = UDim2.new(0.9, 0, 0, 22)
+    label.Font = Enum.Font.GothamBold
+    label.Text = text
+    label.TextColor3 = Color3.fromRGB(0, 170, 255)
+    label.TextSize = 12
+    label.TextXAlignment = Enum.TextXAlignment.Left
+    return label
+end
+
+-- Hàm tạo Skill Toggle (4 nút cạnh nhau, nhỏ gọn)
 local function CreateSkillToggle(skillKey, position)
     local toggle = Instance.new("TextButton")
-    toggle.Parent = MainFrame
+    toggle.Parent = ScrollFrame
     toggle.BackgroundColor3 = CONFIG.SelectedSkills[skillKey] and Color3.fromRGB(40, 100, 40) or Color3.fromRGB(60, 60, 65)
     toggle.Position = position
-    toggle.Size = UDim2.new(0.2, 0, 0, 40)
+    toggle.Size = UDim2.new(0.2, 0, 0, 36)
     toggle.Font = Enum.Font.GothamBold
     toggle.Text = skillKey
     toggle.TextColor3 = CONFIG.SelectedSkills[skillKey] and Color3.fromRGB(80, 255, 80) or Color3.fromRGB(255, 80, 80)
-    toggle.TextSize = 16
+    toggle.TextSize = 15
     
     local corner = Instance.new("UICorner")
-    corner.CornerRadius = UDim.new(0, 8)
+    corner.CornerRadius = UDim.new(0, 7)
     corner.Parent = toggle
     
     return toggle
 end
 
 -- Tạo các controls
-local AimToggle = CreateToggle("AimToggle", "🎯 Aim Assist", UDim2.new(0.05, 0, 0, 60))
-local AntiToggle = CreateToggle("AntiToggle", "⚡ Khắc Runner", UDim2.new(0.05, 0, 0, 120))
-local TeleToggle = CreateToggle("TeleToggle", "👻 Biến Ảo", UDim2.new(0.05, 0, 0, 180))
+local yPos = 10
 
--- Thêm Label cho Skill Selection
-local SkillLabel = Instance.new("TextLabel")
-SkillLabel.Parent = MainFrame
-SkillLabel.BackgroundTransparency = 1
-SkillLabel.Position = UDim2.new(0.05, 0, 0, 240)
-SkillLabel.Size = UDim2.new(0.9, 0, 0, 25)
-SkillLabel.Font = Enum.Font.GothamBold
-SkillLabel.Text = "⚔️ Chọn Skill Auto Dash:"
-SkillLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
-SkillLabel.TextSize = 13
-SkillLabel.TextXAlignment = Enum.TextXAlignment.Left
+-- Section: Tính năng chính
+CreateSectionLabel("⚙️ TÍNH NĂNG", UDim2.new(0.05, 0, 0, yPos))
+yPos = yPos + 28
 
--- Tạo các nút chọn skill (4 nút cạnh nhau)
-local SkillR = CreateSkillToggle("R", UDim2.new(0.05, 0, 0, 270))
-local SkillT = CreateSkillToggle("T", UDim2.new(0.28, 0, 0, 270))
-local SkillX = CreateSkillToggle("X", UDim2.new(0.51, 0, 0, 270))
-local SkillG = CreateSkillToggle("G", UDim2.new(0.74, 0, 0, 270))
+local AimToggle = CreateToggle("AimToggle", "🎯 Aim Assist", UDim2.new(0.05, 0, 0, yPos))
+yPos = yPos + 48
 
--- Thêm TextBox để nhập tên tướng
-local CharacterInput = CreateInput("CharacterInput", "🎭 Tên Tướng:", UDim2.new(0.05, 0, 0, 330), CONFIG.SkillSuffix)
+local AntiToggle = CreateToggle("AntiToggle", "⚡ Khắc Runner", UDim2.new(0.05, 0, 0, yPos))
+yPos = yPos + 58
 
-local RangeInput = CreateInput("RangeInput", "📏 Range:", UDim2.new(0.05, 0, 0, 390), CONFIG.Range)
-local BubbleInput = CreateInput("BubbleInput", "💧 Bubble Alpha:", UDim2.new(0.05, 0, 0, 450), CONFIG.BubbleTransparency)
+-- Section: Chọn Skill
+CreateSectionLabel("⚔️ CHỌN SKILL AUTO TP:", UDim2.new(0.05, 0, 0, yPos))
+yPos = yPos + 28
+
+local SkillR = CreateSkillToggle("R", UDim2.new(0.05, 0, 0, yPos))
+local SkillT = CreateSkillToggle("T", UDim2.new(0.28, 0, 0, yPos))
+local SkillF = CreateSkillToggle("F", UDim2.new(0.51, 0, 0, yPos))
+local SkillG = CreateSkillToggle("G", UDim2.new(0.74, 0, 0, yPos))
+yPos = yPos + 48
+
+-- Section: Cài đặt
+CreateSectionLabel("🔧 CÀI ĐẶT", UDim2.new(0.05, 0, 0, yPos))
+yPos = yPos + 28
+
+local CharacterInput = CreateInput("CharacterInput", "🎭 Tướng:", UDim2.new(0.05, 0, 0, yPos), CONFIG.SkillSuffix)
+yPos = yPos + 48
+
+local RangeInput = CreateInput("RangeInput", "📏 Range:", UDim2.new(0.05, 0, 0, yPos), CONFIG.Range)
+yPos = yPos + 48
+
+local TPDelayInput = CreateInput("TPDelayInput", "⏱️ TP Delay:", UDim2.new(0.05, 0, 0, yPos), CONFIG.TeleportDelay)
+yPos = yPos + 48
+
+local TPCooldownInput = CreateInput("TPCooldownInput", "⏳ TP CD:", UDim2.new(0.05, 0, 0, yPos), CONFIG.TeleportCooldown)
+yPos = yPos + 48
+
+local SkillDelayInput = CreateInput("SkillDelayInput", "⚡ Skill Delay:", UDim2.new(0.05, 0, 0, yPos), CONFIG.SkillDelay)
+yPos = yPos + 48
+
+local BubbleInput = CreateInput("BubbleInput", "💧 Bubble:", UDim2.new(0.05, 0, 0, yPos), CONFIG.BubbleTransparency)
+yPos = yPos + 58
 
 -- Credit
 local Credit = Instance.new("TextLabel")
-Credit.Parent = MainFrame
+Credit.Parent = ScrollFrame
 Credit.BackgroundTransparency = 1
-Credit.Position = UDim2.new(0, 0, 1, -30)
-Credit.Size = UDim2.new(1, 0, 0, 25)
+Credit.Position = UDim2.new(0, 0, 0, yPos)
+Credit.Size = UDim2.new(1, 0, 0, 22)
 Credit.Font = Enum.Font.GothamBold
 Credit.Text = "Made for Mobile 📱"
 Credit.TextColor3 = Color3.fromRGB(150, 150, 155)
-Credit.TextSize = 11
+Credit.TextSize = 10
+
+-- Cập nhật canvas size
+ScrollFrame.CanvasSize = UDim2.new(0, 0, 0, yPos + 30)
 
 -- --- HÀM TÌM REMOTE ---
 local function GetSkillRemote()
@@ -307,10 +349,8 @@ local function GetClosestEnemy()
     return closestPlayer
 end
 
--- --- TELEPORT KHI DASH ---
-local function OnDashUsed()
-    if not isTeleportEnabled then return end
-    
+-- --- TELEPORT KHI DÙNG SKILL ---
+local function TeleportToTarget()
     local currentTime = tick()
     if currentTime - lastTeleportTime < CONFIG.TeleportCooldown then
         return
@@ -334,15 +374,6 @@ local function OnDashUsed()
     end
 end
 
--- --- AUTO DASH SAU KHI DÙNG SKILL ---
-local function AutoDashAfterSkill()
-    task.wait(CONFIG.DashDelay)
-    local remote = GetSkillRemote()
-    if remote then
-        remote:FireServer("Dash")
-    end
-end
-
 -- Hook vào Remote
 local oldNamecall
 oldNamecall = hookmetamethod(game, "__namecall", function(self, ...)
@@ -350,13 +381,9 @@ oldNamecall = hookmetamethod(game, "__namecall", function(self, ...)
     local method = getnamecallmethod()
     
     if method == "FireServer" and self.Name == "Remote" then
-        if args[1] == "Dash" then
-            task.spawn(OnDashUsed)
-        end
-        
         -- Kiểm tra nếu skill được chọn và Anti-Runner đang bật
         if isAntiRunner and CONFIG.SelectedSkills[args[1]] then
-            task.spawn(AutoDashAfterSkill)
+            task.spawn(TeleportToTarget)
         end
     end
     
@@ -379,13 +406,6 @@ AntiToggle.MouseButton1Click:Connect(function()
     AntiToggle.BackgroundColor3 = isAntiRunner and Color3.fromRGB(40, 100, 40) or Color3.fromRGB(60, 60, 65)
 end)
 
-TeleToggle.MouseButton1Click:Connect(function()
-    isTeleportEnabled = not isTeleportEnabled
-    TeleToggle.Text = isTeleportEnabled and "ON" or "OFF"
-    TeleToggle.TextColor3 = isTeleportEnabled and Color3.fromRGB(80, 255, 80) or Color3.fromRGB(255, 80, 80)
-    TeleToggle.BackgroundColor3 = isTeleportEnabled and Color3.fromRGB(40, 100, 40) or Color3.fromRGB(60, 60, 65)
-end)
-
 -- Logic cho các nút skill
 local function SetupSkillToggle(button, skillKey)
     button.MouseButton1Click:Connect(function()
@@ -398,24 +418,21 @@ end
 
 SetupSkillToggle(SkillR, "R")
 SetupSkillToggle(SkillT, "T")
-SetupSkillToggle(SkillX, "X")
+SetupSkillToggle(SkillF, "F")
 SetupSkillToggle(SkillG, "G")
 
 -- Cập nhật tên tướng
 CharacterInput.FocusLost:Connect(function()
-    local newName = CharacterInput.Text:gsub("^%s*(.-)%s*$", "%1") -- Trim whitespace
+    local newName = CharacterInput.Text:gsub("^%s*(.-)%s*$", "%1")
     
     if newName == "" then
         CharacterInput.Text = CONFIG.SkillSuffix
         return
     end
     
-    -- Kiểm tra xem có chứa "Kamen Rider" không
     if not newName:find("Kamen Rider") then
-        -- Nếu không có, thì chỉ lấy phần sau (tên tướng)
         CONFIG.SkillSuffix = newName
     else
-        -- Nếu có "Kamen Rider", tách ra
         CONFIG.SkillSuffix = newName:gsub("Kamen Rider ", "")
     end
     
@@ -431,6 +448,36 @@ RangeInput.FocusLost:Connect(function()
         BubblePart.Size = Vector3.new(newRange * 2, newRange * 2, newRange * 2)
     else
         RangeInput.Text = tostring(CONFIG.Range)
+    end
+end)
+
+-- Cập nhật TP Delay
+TPDelayInput.FocusLost:Connect(function()
+    local newDelay = tonumber(TPDelayInput.Text)
+    if newDelay and newDelay >= 0 then
+        CONFIG.TeleportDelay = newDelay
+    else
+        TPDelayInput.Text = tostring(CONFIG.TeleportDelay)
+    end
+end)
+
+-- Cập nhật TP Cooldown
+TPCooldownInput.FocusLost:Connect(function()
+    local newCD = tonumber(TPCooldownInput.Text)
+    if newCD and newCD >= 0 then
+        CONFIG.TeleportCooldown = newCD
+    else
+        TPCooldownInput.Text = tostring(CONFIG.TeleportCooldown)
+    end
+end)
+
+-- Cập nhật Skill Delay
+SkillDelayInput.FocusLost:Connect(function()
+    local newDelay = tonumber(SkillDelayInput.Text)
+    if newDelay and newDelay >= 0 then
+        CONFIG.SkillDelay = newDelay
+    else
+        SkillDelayInput.Text = tostring(CONFIG.SkillDelay)
     end
 end)
 
