@@ -36,28 +36,26 @@ ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
 ScreenGui.ResetOnSpawn = false
 
 -- Main Frame (có thể kéo) - Nhỏ gọn hơn
-local MainFrame = Instance.new("Frame")
+local MainFrame = Instance.new("ImageLabel")
 MainFrame.Name = "MainFrame"
 MainFrame.Parent = ScreenGui
-MainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
+MainFrame.Image = "rbxassetid://122727189017649"
+MainFrame.ScaleType = Enum.ScaleType.Stretch
+MainFrame.BackgroundTransparency = 1
 MainFrame.Position = UDim2.new(0.5, -140, 0.1, 0)
 MainFrame.Size = UDim2.new(0, 280, 0, 460)
 MainFrame.Active = true
 MainFrame.Draggable = true
 
-local MainCorner = Instance.new("UICorner")
-MainCorner.CornerRadius = UDim.new(0, 10)
-MainCorner.Parent = MainFrame
-
 local MainStroke = Instance.new("UIStroke")
-MainStroke.Color = Color3.fromRGB(0, 170, 255)
+MainStroke.Color = Color3.fromRGB(0, 120, 215)
 MainStroke.Thickness = 2
 MainStroke.Parent = MainFrame
 
 -- Header
 local Header = Instance.new("TextLabel")
 Header.Parent = MainFrame
-Header.BackgroundColor3 = Color3.fromRGB(0, 170, 255)
+Header.BackgroundColor3 = Color3.fromRGB(0, 120, 215)
 Header.Size = UDim2.new(1, 0, 0, 40)
 Header.Font = Enum.Font.GothamBold
 Header.Text = "🎯 AIM PRO"
@@ -68,32 +66,46 @@ local HeaderCorner = Instance.new("UICorner")
 HeaderCorner.CornerRadius = UDim.new(0, 10)
 HeaderCorner.Parent = Header
 
--- Nút đóng/mở GUI
-local ToggleBtn = Instance.new("TextButton")
+-- Nút đóng/mở GUI (có thể kéo)
+local ToggleBtn = Instance.new("ImageButton")
 ToggleBtn.Parent = ScreenGui
-ToggleBtn.BackgroundColor3 = Color3.fromRGB(0, 170, 255)
+ToggleBtn.Image = "rbxassetid://122727189017649"
+ToggleBtn.ScaleType = Enum.ScaleType.Stretch
+ToggleBtn.BackgroundTransparency = 1
 ToggleBtn.Position = UDim2.new(0.02, 0, 0.5, 0)
 ToggleBtn.Size = UDim2.new(0, 45, 0, 45)
-ToggleBtn.Font = Enum.Font.GothamBold
-ToggleBtn.Text = "☰"
-ToggleBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-ToggleBtn.TextSize = 22
+ToggleBtn.Active = true
+ToggleBtn.Draggable = true
+
+local ToggleBtnStroke = Instance.new("UIStroke")
+ToggleBtnStroke.Color = Color3.fromRGB(0, 120, 215)
+ToggleBtnStroke.Thickness = 2
+ToggleBtnStroke.Parent = ToggleBtn
 
 local ToggleCorner = Instance.new("UICorner")
 ToggleCorner.CornerRadius = UDim.new(0, 22)
 ToggleCorner.Parent = ToggleBtn
 
+local ToggleBtnText = Instance.new("TextLabel")
+ToggleBtnText.Parent = ToggleBtn
+ToggleBtnText.BackgroundTransparency = 1
+ToggleBtnText.Size = UDim2.new(1, 0, 1, 0)
+ToggleBtnText.Font = Enum.Font.GothamBold
+ToggleBtnText.Text = "☰"
+ToggleBtnText.TextColor3 = Color3.fromRGB(255, 255, 255)
+ToggleBtnText.TextSize = 22
+
 local guiVisible = true
 ToggleBtn.MouseButton1Click:Connect(function()
     guiVisible = not guiVisible
     MainFrame.Visible = guiVisible
-    ToggleBtn.Text = guiVisible and "☰" or "+"
+    ToggleBtnText.Text = guiVisible and "☰" or "+"
 end)
 
 -- Cooldown Timer Display
 local CooldownFrame = Instance.new("Frame")
 CooldownFrame.Parent = ScreenGui
-CooldownFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
+CooldownFrame.BackgroundColor3 = Color3.fromRGB(0, 90, 160)
 CooldownFrame.Position = UDim2.new(0.02, 0, 0.1, 0)
 CooldownFrame.Size = UDim2.new(0, 90, 0, 55)
 CooldownFrame.Visible = false
@@ -108,7 +120,7 @@ CooldownLabel.BackgroundTransparency = 1
 CooldownLabel.Size = UDim2.new(1, 0, 0.5, 0)
 CooldownLabel.Font = Enum.Font.GothamBold
 CooldownLabel.Text = "TP CD"
-CooldownLabel.TextColor3 = Color3.fromRGB(255, 170, 0)
+CooldownLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
 CooldownLabel.TextSize = 13
 
 local CooldownTimer = Instance.new("TextLabel")
@@ -129,12 +141,13 @@ ScrollFrame.Position = UDim2.new(0, 0, 0, 45)
 ScrollFrame.Size = UDim2.new(1, 0, 1, -45)
 ScrollFrame.CanvasSize = UDim2.new(0, 0, 0, 650)
 ScrollFrame.ScrollBarThickness = 4
+ScrollFrame.ScrollBarImageColor3 = Color3.fromRGB(0, 120, 215)
 
 -- Hàm tạo Toggle Button (compact)
 local function CreateToggle(name, text, position)
     local frame = Instance.new("Frame")
     frame.Parent = ScrollFrame
-    frame.BackgroundColor3 = Color3.fromRGB(30, 30, 35)
+    frame.BackgroundColor3 = Color3.fromRGB(0, 80, 140)
     frame.Position = position
     frame.Size = UDim2.new(0.9, 0, 0, 42)
     
@@ -155,7 +168,7 @@ local function CreateToggle(name, text, position)
     
     local toggle = Instance.new("TextButton")
     toggle.Parent = frame
-    toggle.BackgroundColor3 = Color3.fromRGB(60, 60, 65)
+    toggle.BackgroundColor3 = Color3.fromRGB(0, 60, 110)
     toggle.Position = UDim2.new(0.69, 0, 0.18, 0)
     toggle.Size = UDim2.new(0.26, 0, 0.64, 0)
     toggle.Font = Enum.Font.GothamBold
@@ -174,7 +187,7 @@ end
 local function CreateInput(name, labelText, position, defaultValue)
     local frame = Instance.new("Frame")
     frame.Parent = ScrollFrame
-    frame.BackgroundColor3 = Color3.fromRGB(30, 30, 35)
+    frame.BackgroundColor3 = Color3.fromRGB(0, 80, 140)
     frame.Position = position
     frame.Size = UDim2.new(0.9, 0, 0, 42)
     
@@ -195,7 +208,7 @@ local function CreateInput(name, labelText, position, defaultValue)
     
     local input = Instance.new("TextBox")
     input.Parent = frame
-    input.BackgroundColor3 = Color3.fromRGB(50, 50, 55)
+    input.BackgroundColor3 = Color3.fromRGB(0, 100, 180)
     input.Position = UDim2.new(0.59, 0, 0.18, 0)
     input.Size = UDim2.new(0.36, 0, 0.64, 0)
     input.Font = Enum.Font.Gotham
@@ -220,7 +233,7 @@ local function CreateSectionLabel(text, position)
     label.Size = UDim2.new(0.9, 0, 0, 22)
     label.Font = Enum.Font.GothamBold
     label.Text = text
-    label.TextColor3 = Color3.fromRGB(0, 170, 255)
+    label.TextColor3 = Color3.fromRGB(100, 200, 255)
     label.TextSize = 12
     label.TextXAlignment = Enum.TextXAlignment.Left
     return label
@@ -230,7 +243,7 @@ end
 local function CreateSkillToggle(skillKey, position)
     local toggle = Instance.new("TextButton")
     toggle.Parent = ScrollFrame
-    toggle.BackgroundColor3 = CONFIG.SelectedSkills[skillKey] and Color3.fromRGB(40, 100, 40) or Color3.fromRGB(60, 60, 65)
+    toggle.BackgroundColor3 = CONFIG.SelectedSkills[skillKey] and Color3.fromRGB(0, 120, 80) or Color3.fromRGB(0, 60, 110)
     toggle.Position = position
     toggle.Size = UDim2.new(0.2, 0, 0, 36)
     toggle.Font = Enum.Font.GothamBold
@@ -298,7 +311,7 @@ Credit.Position = UDim2.new(0, 0, 0, yPos)
 Credit.Size = UDim2.new(1, 0, 0, 22)
 Credit.Font = Enum.Font.GothamBold
 Credit.Text = "Made for Mobile 📱"
-Credit.TextColor3 = Color3.fromRGB(150, 150, 155)
+Credit.TextColor3 = Color3.fromRGB(150, 200, 255)
 Credit.TextSize = 10
 
 -- Cập nhật canvas size
@@ -395,7 +408,7 @@ AimToggle.MouseButton1Click:Connect(function()
     isAiming = not isAiming
     AimToggle.Text = isAiming and "ON" or "OFF"
     AimToggle.TextColor3 = isAiming and Color3.fromRGB(80, 255, 80) or Color3.fromRGB(255, 80, 80)
-    AimToggle.BackgroundColor3 = isAiming and Color3.fromRGB(40, 100, 40) or Color3.fromRGB(60, 60, 65)
+    AimToggle.BackgroundColor3 = isAiming and Color3.fromRGB(0, 120, 80) or Color3.fromRGB(0, 60, 110)
     BubblePart.Transparency = isAiming and CONFIG.BubbleTransparency or 1
 end)
 
@@ -403,7 +416,7 @@ AntiToggle.MouseButton1Click:Connect(function()
     isAntiRunner = not isAntiRunner
     AntiToggle.Text = isAntiRunner and "ON" or "OFF"
     AntiToggle.TextColor3 = isAntiRunner and Color3.fromRGB(80, 255, 80) or Color3.fromRGB(255, 80, 80)
-    AntiToggle.BackgroundColor3 = isAntiRunner and Color3.fromRGB(40, 100, 40) or Color3.fromRGB(60, 60, 65)
+    AntiToggle.BackgroundColor3 = isAntiRunner and Color3.fromRGB(0, 120, 80) or Color3.fromRGB(0, 60, 110)
 end)
 
 -- Logic cho các nút skill
@@ -412,7 +425,7 @@ local function SetupSkillToggle(button, skillKey)
         CONFIG.SelectedSkills[skillKey] = not CONFIG.SelectedSkills[skillKey]
         button.Text = skillKey
         button.TextColor3 = CONFIG.SelectedSkills[skillKey] and Color3.fromRGB(80, 255, 80) or Color3.fromRGB(255, 80, 80)
-        button.BackgroundColor3 = CONFIG.SelectedSkills[skillKey] and Color3.fromRGB(40, 100, 40) or Color3.fromRGB(60, 60, 65)
+        button.BackgroundColor3 = CONFIG.SelectedSkills[skillKey] and Color3.fromRGB(0, 120, 80) or Color3.fromRGB(0, 60, 110)
     end)
 end
 
