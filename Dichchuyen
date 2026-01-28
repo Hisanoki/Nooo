@@ -2,167 +2,450 @@ local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 local RunService = game:GetService("RunService")
 
-local ScreenGui = Instance.new("ScreenGui", game.CoreGui)
+-- --- CẤU HÌNH ---
+local CONFIG = {
+    CharacterName = "Kamen Rider Diend",
+    AttackDelay = 0.2,
+    TeleportInterval = 3,
+}
 
--- Nút bật menu
-local toggleButton = Instance.new("TextButton", ScreenGui)
-toggleButton.Size = UDim2.new(0, 120, 0, 40)
-toggleButton.Position = UDim2.new(0, 20, 0, 50)
-toggleButton.Text = "Teleport Menu"
-toggleButton.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
-toggleButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-toggleButton.Font = Enum.Font.SourceSansBold
-toggleButton.TextSize = 16
-
--- Frame menu
-local Frame = Instance.new("Frame", ScreenGui)
-Frame.Position = UDim2.new(0, 20, 0, 100)
-Frame.Size = UDim2.new(0, 220, 0, 320)
-Frame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-Frame.BorderSizePixel = 0
-Frame.Visible = false
-
-local Title = Instance.new("TextLabel", Frame)
-Title.Size = UDim2.new(1, 0, 0, 30)
-Title.Text = "Teleport Menu (Kéo để di chuyển)"
-Title.TextColor3 = Color3.fromRGB(255, 255, 255)
-Title.BackgroundTransparency = 1
-Title.Font = Enum.Font.SourceSansBold
-Title.TextSize = 14
-
--- Khung cuộn danh sách người chơi
-local ScrollFrame = Instance.new("ScrollingFrame", Frame)
-ScrollFrame.Position = UDim2.new(0, 0, 0, 30)
-ScrollFrame.Size = UDim2.new(1, 0, 0, 180) -- Hiển thị tối đa khoảng 6 người
-ScrollFrame.CanvasSize = UDim2.new(0, 0, 0, 0)
-ScrollFrame.ScrollBarThickness = 6
-ScrollFrame.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
-
-local UIListLayout = Instance.new("UIListLayout", ScrollFrame)
-UIListLayout.Padding = UDim.new(0, 2)
-
-local playerButtons = {}
+-- --- BIẾN TRẠNG THÁI ---
 local selectedTarget = nil
-local autoTeleport = false
+local isAutoFarmKill = false
+local lastTeleportTime = 0
+local hasSelectedCharacter = false
+local lastHealth = 100
 
--- Nút Refresh
-local refreshButton = Instance.new("TextButton", Frame)
-refreshButton.Size = UDim2.new(1, 0, 0, 25)
-refreshButton.Position = UDim2.new(0, 0, 1, -55)
-refreshButton.Text = "Refresh Names"
-refreshButton.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
-refreshButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-refreshButton.Font = Enum.Font.SourceSans
-refreshButton.TextSize = 14
+-- --- TẠO GUI HIỆN ĐẠI ---
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "ModernAutoFarmGUI"
+ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
+ScreenGui.ResetOnSpawn = false
 
--- Nút Auto
-local autoButton = Instance.new("TextButton", Frame)
-autoButton.Size = UDim2.new(1, 0, 0, 25)
-autoButton.Position = UDim2.new(0, 0, 1, -30)
-autoButton.Text = "Auto"
-autoButton.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
-autoButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-autoButton.Font = Enum.Font.SourceSans
-autoButton.TextSize = 14
+-- Nút Toggle GUI (có thể di chuyển) - MÀU VÀNG CÁT VỚI ẢNH
+local ToggleBtn = Instance.new("ImageButton")
+ToggleBtn.Parent = ScreenGui
+ToggleBtn.BackgroundColor3 = Color3.fromRGB(218, 165, 32) -- Màu vàng cát
+ToggleBtn.Position = UDim2.new(0.02, 0, 0.3, 0)
+ToggleBtn.Size = UDim2.new(0, 70, 0, 70)
+ToggleBtn.Image = "rbxassetid://7965269366" -- ID ảnh của bạn
+ToggleBtn.ScaleType = Enum.ScaleType.Fit
+ToggleBtn.Active = true
+ToggleBtn.Draggable = true
 
--- Mở menu
-toggleButton.MouseButton1Click:Connect(function()
-    Frame.Visible = not Frame.Visible
-end)
+local ToggleCorner = Instance.new("UICorner")
+ToggleCorner.CornerRadius = UDim.new(0, 15)
+ToggleCorner.Parent = ToggleBtn
 
--- Di chuyển menu
-local dragging = false
-local startPos, startInputPos
+local ToggleStroke = Instance.new("UIStroke")
+ToggleStroke.Color = Color3.fromRGB(255, 215, 0) -- Viền vàng sáng
+ToggleStroke.Thickness = 4
+ToggleStroke.Parent = ToggleBtn
 
-Title.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-        dragging = true
-        startPos = Frame.Position
-        startInputPos = input.Position
-        input.Changed:Connect(function()
-            if input.UserInputState == Enum.UserInputState.End then
-                dragging = false
-            end
-        end)
+-- Thêm hiệu ứng shadow cho nút
+local ToggleShadow = Instance.new("ImageLabel")
+ToggleShadow.Parent = ToggleBtn
+ToggleShadow.BackgroundTransparency = 1
+ToggleShadow.Position = UDim2.new(0, -5, 0, -5)
+ToggleShadow.Size = UDim2.new(1, 10, 1, 10)
+ToggleShadow.Image = "rbxasset://textures/ui/GuiImagePlaceholder.png"
+ToggleShadow.ImageColor3 = Color3.fromRGB(0, 0, 0)
+ToggleShadow.ImageTransparency = 0.7
+ToggleShadow.ZIndex = -1
+
+-- Main Frame (có thể kéo toàn màn hình)
+local MainFrame = Instance.new("Frame")
+MainFrame.Name = "MainFrame"
+MainFrame.Parent = ScreenGui
+MainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
+MainFrame.Position = UDim2.new(0.5, -180, 0.5, -200)
+MainFrame.Size = UDim2.new(0, 360, 0, 400)
+MainFrame.Active = true
+MainFrame.Draggable = true
+MainFrame.Visible = false
+
+local MainCorner = Instance.new("UICorner")
+MainCorner.CornerRadius = UDim.new(0, 15)
+MainCorner.Parent = MainFrame
+
+local MainStroke = Instance.new("UIStroke")
+MainStroke.Color = Color3.fromRGB(255, 50, 50)
+MainStroke.Thickness = 3
+MainStroke.Parent = MainFrame
+
+-- Header
+local Header = Instance.new("TextLabel")
+Header.Parent = MainFrame
+Header.BackgroundColor3 = Color3.fromRGB(255, 50, 50)
+Header.Size = UDim2.new(1, 0, 0, 50)
+Header.Font = Enum.Font.GothamBold
+Header.Text = "⚔️ AUTO FARM KILL"
+Header.TextColor3 = Color3.fromRGB(255, 255, 255)
+Header.TextSize = 20
+
+local HeaderCorner = Instance.new("UICorner")
+HeaderCorner.CornerRadius = UDim.new(0, 15)
+HeaderCorner.Parent = Header
+
+-- Close Button
+local CloseBtn = Instance.new("TextButton")
+CloseBtn.Parent = Header
+CloseBtn.BackgroundColor3 = Color3.fromRGB(200, 0, 0)
+CloseBtn.Position = UDim2.new(1, -45, 0, 5)
+CloseBtn.Size = UDim2.new(0, 40, 0, 40)
+CloseBtn.Font = Enum.Font.GothamBold
+CloseBtn.Text = "✕"
+CloseBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+CloseBtn.TextSize = 24
+
+local CloseCorner = Instance.new("UICorner")
+CloseCorner.CornerRadius = UDim.new(0, 10)
+CloseCorner.Parent = CloseBtn
+
+-- Label Target
+local TargetLabel = Instance.new("TextLabel")
+TargetLabel.Parent = MainFrame
+TargetLabel.BackgroundTransparency = 1
+TargetLabel.Position = UDim2.new(0, 15, 0, 60)
+TargetLabel.Size = UDim2.new(1, -30, 0, 25)
+TargetLabel.Font = Enum.Font.GothamBold
+TargetLabel.Text = "🎯 Chọn mục tiêu:"
+TargetLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
+TargetLabel.TextSize = 16
+TargetLabel.TextXAlignment = Enum.TextXAlignment.Left
+
+-- ScrollFrame cho danh sách người chơi
+local ScrollFrame = Instance.new("ScrollingFrame")
+ScrollFrame.Parent = MainFrame
+ScrollFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 35)
+ScrollFrame.BorderSizePixel = 0
+ScrollFrame.Position = UDim2.new(0, 15, 0, 90)
+ScrollFrame.Size = UDim2.new(1, -30, 0, 180)
+ScrollFrame.ScrollBarThickness = 6
+ScrollFrame.ScrollBarImageColor3 = Color3.fromRGB(255, 50, 50)
+
+local ScrollCorner = Instance.new("UICorner")
+ScrollCorner.CornerRadius = UDim.new(0, 10)
+ScrollCorner.Parent = ScrollFrame
+
+local UIListLayout = Instance.new("UIListLayout")
+UIListLayout.Parent = ScrollFrame
+UIListLayout.Padding = UDim.new(0, 5)
+UIListLayout.SortOrder = Enum.SortOrder.Name
+
+-- Status Label
+local StatusLabel = Instance.new("TextLabel")
+StatusLabel.Parent = MainFrame
+StatusLabel.BackgroundTransparency = 1
+StatusLabel.Position = UDim2.new(0, 15, 0, 280)
+StatusLabel.Size = UDim2.new(1, -30, 0, 25)
+StatusLabel.Font = Enum.Font.GothamBold
+StatusLabel.Text = "⚡ Trạng thái: Chờ..."
+StatusLabel.TextColor3 = Color3.fromRGB(255, 255, 100)
+StatusLabel.TextSize = 14
+StatusLabel.TextXAlignment = Enum.TextXAlignment.Left
+
+-- Refresh Button
+local RefreshBtn = Instance.new("TextButton")
+RefreshBtn.Parent = MainFrame
+RefreshBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 55)
+RefreshBtn.Position = UDim2.new(0, 15, 0, 315)
+RefreshBtn.Size = UDim2.new(0.48, -10, 0, 40)
+RefreshBtn.Font = Enum.Font.GothamBold
+RefreshBtn.Text = "🔄 Refresh"
+RefreshBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+RefreshBtn.TextSize = 16
+
+local RefreshCorner = Instance.new("UICorner")
+RefreshCorner.CornerRadius = UDim.new(0, 10)
+RefreshCorner.Parent = RefreshBtn
+
+-- Auto Farm Kill Button
+local AutoBtn = Instance.new("TextButton")
+AutoBtn.Parent = MainFrame
+AutoBtn.BackgroundColor3 = Color3.fromRGB(70, 70, 75)
+AutoBtn.Position = UDim2.new(0.52, 0, 0, 315)
+AutoBtn.Size = UDim2.new(0.48, -15, 0, 40)
+AutoBtn.Font = Enum.Font.GothamBold
+AutoBtn.Text = "⚔️ Auto Farm Kill"
+AutoBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+AutoBtn.TextSize = 14
+
+local AutoCorner = Instance.new("UICorner")
+AutoCorner.CornerRadius = UDim.new(0, 10)
+AutoCorner.Parent = AutoBtn
+
+-- Credit
+local Credit = Instance.new("TextLabel")
+Credit.Parent = MainFrame
+Credit.BackgroundTransparency = 1
+Credit.Position = UDim2.new(0, 0, 1, -25)
+Credit.Size = UDim2.new(1, 0, 0, 20)
+Credit.Font = Enum.Font.GothamBold
+Credit.Text = "Made for Mobile 📱"
+Credit.TextColor3 = Color3.fromRGB(120, 120, 125)
+Credit.TextSize = 12
+
+-- --- HÀM CHỌN TƯỚNG ---
+local function SelectCharacter()
+    local success = pcall(function()
+        local args = {
+            "Select",
+            CONFIG.CharacterName,
+            LocalPlayer.PlayerGui:WaitForChild("Menu")
+        }
+        LocalPlayer.PlayerGui:WaitForChild("Menu"):WaitForChild("Frame"):WaitForChild("LocalScript"):WaitForChild("RemoteEvent"):FireServer(unpack(args))
+    end)
+    
+    if success then
+        hasSelectedCharacter = true
+        print("✅ Đã chọn tướng: " .. CONFIG.CharacterName)
+        StatusLabel.Text = "✅ Đã chọn tướng!"
+        StatusLabel.TextColor3 = Color3.fromRGB(100, 255, 100)
+        task.wait(1)
+    else
+        print("❌ Lỗi khi chọn tướng!")
     end
-end)
+end
 
-Title.InputChanged:Connect(function(input)
-    if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
-        local delta = input.Position - startInputPos
-        Frame.Position = startPos + UDim2.new(0, delta.X, 0, delta.Y)
+-- --- HÀM TÌM REMOTE ---
+local function GetCharacterRemote()
+    local tool = LocalPlayer.Backpack:FindFirstChild(CONFIG.CharacterName) or LocalPlayer.Character:FindFirstChild(CONFIG.CharacterName)
+    if tool then
+        return tool:FindFirstChild("Remote")
     end
-end)
+    return nil
+end
 
--- Tạo danh sách người chơi với khung cuộn
-local function createPlayerList()
+-- --- HÀM TẠO DANH SÁCH NGƯỜI CHƠI ---
+local playerButtons = {}
+
+local function CreatePlayerList()
+    -- Xóa danh sách cũ
     for _, btn in ipairs(playerButtons) do
         btn:Destroy()
     end
     playerButtons = {}
 
-    local totalHeight = 0
+    local totalHeight = 5
+    
     for _, player in ipairs(Players:GetPlayers()) do
         if player ~= LocalPlayer then
-            local button = Instance.new("TextButton", ScrollFrame)
-            button.Size = UDim2.new(1, 0, 0, 25)
-            button.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
+            local button = Instance.new("TextButton")
+            button.Parent = ScrollFrame
+            button.BackgroundColor3 = Color3.fromRGB(50, 50, 55)
+            button.Size = UDim2.new(1, -10, 0, 35)
+            button.Font = Enum.Font.GothamBold
+            button.Text = "👤 " .. player.Name
             button.TextColor3 = Color3.fromRGB(255, 255, 255)
-            button.Font = Enum.Font.SourceSans
             button.TextSize = 14
-            button.Text = player.Name
-
+            button.TextXAlignment = Enum.TextXAlignment.Left
+            button.TextTruncate = Enum.TextTruncate.AtEnd
+            
+            -- Padding cho text
+            local padding = Instance.new("UIPadding")
+            padding.PaddingLeft = UDim.new(0, 10)
+            padding.Parent = button
+            
+            local corner = Instance.new("UICorner")
+            corner.CornerRadius = UDim.new(0, 8)
+            corner.Parent = button
+            
             button.MouseButton1Click:Connect(function()
                 selectedTarget = player
+                
+                -- Reset màu tất cả nút
                 for _, btn in ipairs(playerButtons) do
-                    btn.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
+                    btn.BackgroundColor3 = Color3.fromRGB(50, 50, 55)
+                    btn.TextColor3 = Color3.fromRGB(255, 255, 255)
                 end
-                button.BackgroundColor3 = Color3.fromRGB(0, 170, 0)
+                
+                -- Highlight nút được chọn
+                button.BackgroundColor3 = Color3.fromRGB(255, 50, 50)
+                button.TextColor3 = Color3.fromRGB(255, 255, 255)
+                
+                StatusLabel.Text = "🎯 Mục tiêu: " .. player.Name
+                StatusLabel.TextColor3 = Color3.fromRGB(100, 255, 100)
             end)
-
+            
             table.insert(playerButtons, button)
-            totalHeight = totalHeight + 27
+            totalHeight = totalHeight + 40
         end
     end
-
-    -- Khoảng trống lớn ở dưới
-    totalHeight = totalHeight + 50
+    
     ScrollFrame.CanvasSize = UDim2.new(0, 0, 0, totalHeight)
 end
 
--- Nút Refresh
-refreshButton.MouseButton1Click:Connect(function()
-    createPlayerList()
-end)
-
--- Nút Auto
-autoButton.MouseButton1Click:Connect(function()
-    autoTeleport = not autoTeleport
-    if autoTeleport then
-        autoButton.Text = "ditmemay"
-        autoButton.BackgroundColor3 = Color3.fromRGB(0, 170, 0)
-    else
-        autoButton.Text = "Auto"
-        autoButton.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
-    end
-end)
-
--- Hàm Teleport
-local function teleportToTarget()
-    if selectedTarget and selectedTarget.Character and selectedTarget.Character:FindFirstChild("HumanoidRootPart") and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
-        LocalPlayer.Character.HumanoidRootPart.CFrame = selectedTarget.Character.HumanoidRootPart.CFrame + Vector3.new(0, 3, 0)
+-- --- HÀM TELEPORT ---
+local function TeleportToTarget()
+    if not selectedTarget or not selectedTarget.Character then return end
+    
+    local targetRoot = selectedTarget.Character:FindFirstChild("HumanoidRootPart")
+    local myChar = LocalPlayer.Character
+    local myRoot = myChar and myChar:FindFirstChild("HumanoidRootPart")
+    
+    if targetRoot and myRoot then
+        myRoot.CFrame = targetRoot.CFrame * CFrame.new(0, 3, -5)
+        lastTeleportTime = tick()
     end
 end
 
--- Auto Teleport liên tục
-task.spawn(function()
-    while true do
-        if autoTeleport then
-            teleportToTarget()
-        end
+-- --- HÀM TẤN CÔNG ---
+local function AttackTarget()
+    local remote = GetCharacterRemote()
+    if remote then
+        remote:FireServer("Attack")
+    end
+end
+
+-- --- THEO DÕI RESPAWN ---
+local function SetupCharacterMonitoring()
+    LocalPlayer.CharacterAdded:Connect(function(character)
+        -- Đợi character load xong
         task.wait(0.5)
+        
+        -- Nếu auto đang bật và chưa chọn tướng sau khi respawn
+        if isAutoFarmKill and not hasSelectedCharacter then
+            StatusLabel.Text = "🔄 Đang chọn tướng..."
+            StatusLabel.TextColor3 = Color3.fromRGB(255, 255, 100)
+            
+            task.wait(1) -- Đợi menu load
+            SelectCharacter()
+            
+            task.wait(1.5)
+            if isAutoFarmKill and selectedTarget then
+                StatusLabel.Text = "⚔️ Đang farm: " .. selectedTarget.Name
+                StatusLabel.TextColor3 = Color3.fromRGB(255, 100, 100)
+            end
+        end
+        
+        -- Theo dõi máu để phát hiện chết
+        local humanoid = character:WaitForChild("Humanoid")
+        lastHealth = humanoid.Health
+        
+        humanoid.Died:Connect(function()
+            hasSelectedCharacter = false -- Reset flag khi chết
+            print("💀 Nhân vật đã chết, sẽ chọn lại tướng khi respawn")
+        end)
+    end)
+end
+
+-- --- HIỆU ỨNG NÚT TOGGLE ---
+local function AddButtonAnimation()
+    local originalSize = ToggleBtn.Size
+    local hoverSize = UDim2.new(0, 75, 0, 75)
+    
+    ToggleBtn.MouseEnter:Connect(function()
+        ToggleBtn:TweenSize(hoverSize, Enum.EasingDirection.Out, Enum.EasingStyle.Quad, 0.2, true)
+        ToggleStroke.Thickness = 5
+    end)
+    
+    ToggleBtn.MouseLeave:Connect(function()
+        ToggleBtn:TweenSize(originalSize, Enum.EasingDirection.Out, Enum.EasingStyle.Quad, 0.2, true)
+        ToggleStroke.Thickness = 4
+    end)
+end
+
+-- --- LOGIC NÚT BẤM ---
+ToggleBtn.MouseButton1Click:Connect(function()
+    MainFrame.Visible = not MainFrame.Visible
+    
+    -- Hiệu ứng nhấn
+    ToggleBtn:TweenSize(UDim2.new(0, 65, 0, 65), Enum.EasingDirection.Out, Enum.EasingStyle.Quad, 0.1, true)
+    task.wait(0.1)
+    ToggleBtn:TweenSize(UDim2.new(0, 70, 0, 70), Enum.EasingDirection.Out, Enum.EasingStyle.Quad, 0.1, true)
+end)
+
+CloseBtn.MouseButton1Click:Connect(function()
+    MainFrame.Visible = false
+end)
+
+RefreshBtn.MouseButton1Click:Connect(function()
+    CreatePlayerList()
+    StatusLabel.Text = "✅ Đã làm mới danh sách!"
+    StatusLabel.TextColor3 = Color3.fromRGB(100, 255, 100)
+    
+    task.wait(2)
+    if not isAutoFarmKill then
+        StatusLabel.Text = "⚡ Trạng thái: Chờ..."
+        StatusLabel.TextColor3 = Color3.fromRGB(255, 255, 100)
     end
 end)
 
--- Khởi tạo
-createPlayerList()
+AutoBtn.MouseButton1Click:Connect(function()
+    if not selectedTarget then
+        StatusLabel.Text = "⚠️ Chưa chọn mục tiêu!"
+        StatusLabel.TextColor3 = Color3.fromRGB(255, 100, 100)
+        return
+    end
+    
+    isAutoFarmKill = not isAutoFarmKill
+    
+    if isAutoFarmKill then
+        AutoBtn.Text = "🛑 Dừng Farm"
+        AutoBtn.BackgroundColor3 = Color3.fromRGB(255, 50, 50)
+        
+        -- Chọn tướng nếu chưa chọn
+        if not hasSelectedCharacter then
+            StatusLabel.Text = "🔄 Đang chọn tướng..."
+            StatusLabel.TextColor3 = Color3.fromRGB(255, 255, 100)
+            SelectCharacter()
+            task.wait(1)
+        end
+        
+        StatusLabel.Text = "⚔️ Đang farm: " .. selectedTarget.Name
+        StatusLabel.TextColor3 = Color3.fromRGB(255, 100, 100)
+        
+        -- Teleport ngay lập tức
+        TeleportToTarget()
+    else
+        AutoBtn.Text = "⚔️ Auto Farm Kill"
+        AutoBtn.BackgroundColor3 = Color3.fromRGB(70, 70, 75)
+        StatusLabel.Text = "⏸️ Đã dừng farm"
+        StatusLabel.TextColor3 = Color3.fromRGB(255, 255, 100)
+    end
+end)
+
+-- --- VÒNG LẶP TẤN CÔNG ---
+task.spawn(function()
+    while true do
+        if isAutoFarmKill and selectedTarget then
+            -- Kiểm tra mục tiêu còn sống không
+            if selectedTarget.Character and selectedTarget.Character:FindFirstChild("Humanoid") and selectedTarget.Character.Humanoid.Health > 0 then
+                AttackTarget()
+                
+                -- Teleport mỗi 3 giây
+                if tick() - lastTeleportTime >= CONFIG.TeleportInterval then
+                    TeleportToTarget()
+                end
+            else
+                StatusLabel.Text = "💀 Mục tiêu đã chết!"
+                StatusLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
+            end
+        end
+        task.wait(CONFIG.AttackDelay)
+    end
+end)
+
+-- --- KHỞI TẠO ---
+AddButtonAnimation()
+SetupCharacterMonitoring()
+CreatePlayerList()
+
+-- Auto refresh khi có người vào/ra
+Players.PlayerAdded:Connect(function()
+    task.wait(1)
+    CreatePlayerList()
+end)
+
+Players.PlayerRemoving:Connect(function(player)
+    if selectedTarget == player then
+        selectedTarget = nil
+        isAutoFarmKill = false
+        AutoBtn.Text = "⚔️ Auto Farm Kill"
+        AutoBtn.BackgroundColor3 = Color3.fromRGB(70, 70, 75)
+        StatusLabel.Text = "⚠️ Mục tiêu đã thoát!"
+        StatusLabel.TextColor3 = Color3.fromRGB(255, 100, 100)
+    end
+    CreatePlayerList()
+end)
