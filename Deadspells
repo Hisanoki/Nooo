@@ -62,14 +62,16 @@ local screenGui = Instance.new("ScreenGui")
 screenGui.Name = "BossTeleporter"
 screenGui.ResetOnSpawn = false
 
--- Frame chính (có thể di chuyển)
-local mainFrame = Instance.new("Frame")
+-- Frame chính (có thể di chuyển) - Dùng ImageLabel
+local mainFrame = Instance.new("ImageLabel")
 mainFrame.Name = "MainFrame"
 mainFrame.Size = UDim2.new(0, 220, 0, 320)
 mainFrame.Position = UDim2.new(0, 50, 0, 50)
-mainFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
+mainFrame.Image = "rbxassetid://11437654695"
+mainFrame.ScaleType = Enum.ScaleType.Stretch
+mainFrame.BackgroundTransparency = 1
 mainFrame.BorderSizePixel = 2
-mainFrame.BorderColor3 = Color3.fromRGB(60, 60, 80)
+mainFrame.BorderColor3 = Color3.fromRGB(255, 255, 255)
 mainFrame.Active = true
 mainFrame.Draggable = true
 mainFrame.Selectable = true
@@ -79,7 +81,7 @@ mainFrame.Parent = screenGui
 local titleBar = Instance.new("Frame")
 titleBar.Name = "TitleBar"
 titleBar.Size = UDim2.new(1, 0, 0, 35)
-titleBar.BackgroundColor3 = Color3.fromRGB(35, 35, 50)
+titleBar.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
 titleBar.BorderSizePixel = 0
 titleBar.Parent = mainFrame
 
@@ -89,7 +91,7 @@ titleText.Size = UDim2.new(0.7, 0, 1, 0)
 titleText.Position = UDim2.new(0.05, 0, 0, 0)
 titleText.BackgroundTransparency = 1
 titleText.Text = "BOSS TELEPORTER"
-titleText.TextColor3 = Color3.fromRGB(255, 255, 255)
+titleText.TextColor3 = Color3.fromRGB(0, 0, 0)
 titleText.Font = Enum.Font.GothamBold
 titleText.TextSize = 16
 titleText.Parent = titleBar
@@ -99,11 +101,11 @@ local toggleButton = Instance.new("TextButton")
 toggleButton.Name = "ToggleButton"
 toggleButton.Size = UDim2.new(0, 100, 0, 30)
 toggleButton.Position = UDim2.new(0.5, -50, 0, 40)
-toggleButton.BackgroundColor3 = Color3.fromRGB(50, 50, 70)
+toggleButton.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
 toggleButton.BorderSizePixel = 1
-toggleButton.BorderColor3 = Color3.fromRGB(80, 80, 100)
+toggleButton.BorderColor3 = Color3.fromRGB(200, 200, 200)
 toggleButton.Text = "Ẩn GUI"
-toggleButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+toggleButton.TextColor3 = Color3.fromRGB(0, 0, 0)
 toggleButton.Font = Enum.Font.Gotham
 toggleButton.TextSize = 13
 toggleButton.Parent = mainFrame
@@ -126,11 +128,11 @@ local toggleAutoButton = Instance.new("TextButton")
 toggleAutoButton.Name = "Tự động"
 toggleAutoButton.Size = UDim2.new(0, 120, 0, 25)
 toggleAutoButton.Position = UDim2.new(0.5, -60, 0, 100)
-toggleAutoButton.BackgroundColor3 = Color3.fromRGB(60, 60, 80)
+toggleAutoButton.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
 toggleAutoButton.BorderSizePixel = 1
-toggleAutoButton.BorderColor3 = Color3.fromRGB(80, 80, 100)
+toggleAutoButton.BorderColor3 = Color3.fromRGB(200, 200, 200)
 toggleAutoButton.Text = "Tắt mua đồ nhanh"
-toggleAutoButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+toggleAutoButton.TextColor3 = Color3.fromRGB(0, 0, 0)
 toggleAutoButton.Font = Enum.Font.Gotham
 toggleAutoButton.TextSize = 12
 toggleAutoButton.Parent = mainFrame
@@ -140,11 +142,12 @@ local scrollFrame = Instance.new("ScrollingFrame")
 scrollFrame.Name = "ScrollFrame"
 scrollFrame.Size = UDim2.new(1, -10, 0, 140)
 scrollFrame.Position = UDim2.new(0, 5, 0, 130)
-scrollFrame.BackgroundColor3 = Color3.fromRGB(35, 35, 45)
+scrollFrame.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+scrollFrame.BackgroundTransparency = 0.2
 scrollFrame.BorderSizePixel = 1
-scrollFrame.BorderColor3 = Color3.fromRGB(50, 50, 60)
+scrollFrame.BorderColor3 = Color3.fromRGB(200, 200, 200)
 scrollFrame.ScrollBarThickness = 6
-scrollFrame.ScrollBarImageColor3 = Color3.fromRGB(80, 80, 100)
+scrollFrame.ScrollBarImageColor3 = Color3.fromRGB(200, 200, 200)
 scrollFrame.CanvasSize = UDim2.new(0, 0, 0, 0)
 scrollFrame.Parent = mainFrame
 
@@ -203,24 +206,32 @@ end
 -- Cập nhật kích thước canvas
 scrollFrame.CanvasSize = UDim2.new(0, 0, 0, (buttonHeight + padding) * buttonCount)
 
--- Nút mini trên màn hình khi GUI ẩn
-local miniButton = Instance.new("TextButton")
+-- Nút mini trên màn hình khi GUI ẩn - Dùng ImageButton
+local miniButton = Instance.new("ImageButton")
 miniButton.Name = "MiniButton"
 miniButton.Size = UDim2.new(0, 60, 0, 60)
 miniButton.Position = UDim2.new(0, 10, 0.5, -30)
-miniButton.BackgroundColor3 = Color3.fromRGB(35, 35, 50)
+miniButton.Image = "rbxassetid://11437654695"
+miniButton.ScaleType = Enum.ScaleType.Stretch
+miniButton.BackgroundTransparency = 1
 miniButton.BorderSizePixel = 2
-miniButton.BorderColor3 = Color3.fromRGB(60, 60, 80)
-miniButton.Text = "Mở\nGUI"
-miniButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-miniButton.Font = Enum.Font.Gotham
-miniButton.TextSize = 11
-miniButton.TextWrapped = true
+miniButton.BorderColor3 = Color3.fromRGB(255, 255, 255)
 miniButton.Visible = false
 miniButton.Active = true
 miniButton.Draggable = true
 miniButton.Selectable = true
 miniButton.Parent = screenGui
+
+-- Thêm TextLabel để hiện chữ "Mở GUI" trên nút mini
+local miniButtonText = Instance.new("TextLabel")
+miniButtonText.Size = UDim2.new(1, 0, 1, 0)
+miniButtonText.BackgroundTransparency = 1
+miniButtonText.Text = "Mở\nGUI"
+miniButtonText.TextColor3 = Color3.fromRGB(0, 0, 0)
+miniButtonText.Font = Enum.Font.Gotham
+miniButtonText.TextSize = 11
+miniButtonText.TextWrapped = true
+miniButtonText.Parent = miniButton
 
 -- Biến trạng thái
 local isGUIVisible = true
@@ -265,12 +276,9 @@ screenGui.Parent = player:WaitForChild("PlayerGui")
 
 -- Hiệu ứng khi mở GUI
 task.spawn(function()
-    mainFrame.BackgroundTransparency = 1
+    mainFrame.ImageTransparency = 1
     for i = 0, 1, 0.1 do
-        mainFrame.BackgroundTransparency = 1 - i
+        mainFrame.ImageTransparency = 1 - i
         task.wait(0.01)
     end
 end)
-
-loadstring(game:HttpGet("https://pastefy.app/C99C6KXA/raw"))()
-
