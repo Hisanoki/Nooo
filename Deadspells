@@ -50,6 +50,16 @@ local BOSS_DATA = {
         color = Color3.fromRGB(135, 206, 235),  -- Xanh da trời nhạt
         textColor = Color3.fromRGB(0, 0, 0)
     },
+    ["Già Noel"] = {
+        position = Vector3.new(-15, 33, 13960),
+        color = Color3.fromRGB(177, 18, 38),  
+        textColor = Color3.fromRGB(0, 0, 0)
+    },
+    ["Vua nấm"] = {
+        position = Vector3.new(-22, 30, 11820),
+        color = Color3.fromRGB(60, 176, 67),
+        textColor = Color3.fromRGB(0, 0, 0)
+    },
     ["Vua băng"] = {
         position = Vector3.new(-5, 35, 46465),
         color = Color3.fromRGB(173, 216, 230),  -- Xanh băng
