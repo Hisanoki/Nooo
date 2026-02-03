@@ -15,11 +15,6 @@ end)
 
 
 local BOSS_DATA = {
-    ["Goblin"] = {
-        position = Vector3.new(945, 35, -40376),
-        color = Color3.fromRGB(0, 128, 0),      -- Xanh lá cây
-        textColor = Color3.fromRGB(255, 255, 255)
-    },
     ["Điểm xuất phát"] = {
         position = Vector3.new(22, 11, -40001),
         color = Color3.fromRGB(100, 100, 100),  -- Xám
@@ -53,11 +48,6 @@ local BOSS_DATA = {
     ["Già Noel"] = {
         position = Vector3.new(-15, 33, 13960),
         color = Color3.fromRGB(177, 18, 38),  
-        textColor = Color3.fromRGB(0, 0, 0)
-    },
-    ["Vua nấm"] = {
-        position = Vector3.new(-22, 30, 11820),
-        color = Color3.fromRGB(60, 176, 67),
         textColor = Color3.fromRGB(0, 0, 0)
     },
     ["Vua băng"] = {
