@@ -5,7 +5,7 @@ local LocalPlayer = Players.LocalPlayer
 
 -- --- CẤU HÌNH ---
 local CONFIG = {
-    Range = 40, -- Đây là range của Bong bóng (Aim thực tế sẽ là Range + 5)
+    Range = 40,
     AllyName = "GrahamScyther",
     BubbleColor = Color3.fromRGB(0, 170, 255),
     BubbleTransparency = 0.6,
@@ -19,7 +19,10 @@ local CONFIG = {
         T = false,
         F = false,
         G = false
-    }
+    },
+    AntiStunDuration = 0.2,
+    AntiStunCooldown = 2, -- Hồi chiêu Anti-Stun
+    AntiStunEnabled = false
 }
 
 -- --- BIẾN TRẠNG THÁI ---
@@ -28,6 +31,57 @@ local isAntiRunner = false
 local currentTarget = nil
 local lastTeleportTime = 0
 local teleportCooldownRemaining = 0
+local lastAntiStunTime = 0
+local antiStunCooldownRemaining = 0
+local isAntiStunActive = false
+
+-- Cache các đối tượng thường dùng để giảm tra cứu
+local cachedCharacter = nil
+local cachedRootPart = nil
+local cachedHumanoid = nil
+
+-- --- HÀM ANTI-STUN TỐI ƯU ---
+local function ApplyAntiStun()
+    if not cachedCharacter or not cachedRootPart or not cachedHumanoid then return end
+    
+    -- Giải phóng các trạng thái bị khống chế
+    cachedRootPart.Anchored = false
+    cachedHumanoid.PlatformStand = false
+    cachedHumanoid.Sit = false
+    
+    -- Dọn dẹp các lực đẩy (tối ưu bằng cách cache)
+    for _, obj in pairs(cachedRootPart:GetChildren()) do
+        if obj:IsA("BodyMover") then
+            obj:Destroy()
+        end
+    end
+end
+
+-- --- HÀM KÍCH HOẠT ANTI-STUN VỚI COOLDOWN ---
+local function TriggerAntiStun()
+    local currentTime = tick()
+    
+    -- Kiểm tra cooldown
+    if currentTime - lastAntiStunTime < CONFIG.AntiStunCooldown then
+        return false
+    end
+    
+    isAntiStunActive = true
+    lastAntiStunTime = currentTime
+    antiStunCooldownRemaining = CONFIG.AntiStunCooldown
+    
+    -- Áp dụng Anti-Stun trong khoảng thời gian cố định
+    task.spawn(function()
+        local startTime = tick()
+        while tick() - startTime < CONFIG.AntiStunDuration do
+            ApplyAntiStun()
+            task.wait()
+        end
+        isAntiStunActive = false
+    end)
+    
+    return true
+end
 
 -- --- TẠO GUI HIỆN ĐẠI (COMPACT) ---
 local ScreenGui = Instance.new("ScreenGui")
@@ -35,12 +89,12 @@ ScreenGui.Name = "ModernAimGUI_MobileV2"
 ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
 ScreenGui.ResetOnSpawn = false
 
--- === NÚT TP DI ĐỘNG (TÍNH NĂNG MỚI) ===
+-- === NÚT TP DI ĐỘNG ===
 local MobileTPBtn = Instance.new("TextButton")
 MobileTPBtn.Name = "MobileTPButton"
 MobileTPBtn.Parent = ScreenGui
-MobileTPBtn.BackgroundColor3 = Color3.fromRGB(255, 80, 80) -- Màu đỏ nổi bật
-MobileTPBtn.Position = UDim2.new(0.85, 0, 0.6, 0) -- Vị trí mặc định bên phải
+MobileTPBtn.BackgroundColor3 = Color3.fromRGB(255, 80, 80)
+MobileTPBtn.Position = UDim2.new(0.85, 0, 0.6, 0)
 MobileTPBtn.Size = UDim2.new(0, 30, 0, 30)
 MobileTPBtn.Font = Enum.Font.GothamBold
 MobileTPBtn.Text = "⚡"
@@ -48,10 +102,10 @@ MobileTPBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 MobileTPBtn.TextSize = 30
 MobileTPBtn.AutoButtonColor = true
 MobileTPBtn.Active = true
-MobileTPBtn.Draggable = true -- Cho phép kéo di chuyển
+MobileTPBtn.Draggable = true
 
 local TPBtnCorner = Instance.new("UICorner")
-TPBtnCorner.CornerRadius = UDim.new(1, 0) -- Hình tròn
+TPBtnCorner.CornerRadius = UDim.new(1, 0)
 TPBtnCorner.Parent = MobileTPBtn
 
 local TPBtnStroke = Instance.new("UIStroke")
@@ -60,7 +114,6 @@ TPBtnStroke.Thickness = 2
 TPBtnStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
 TPBtnStroke.Parent = MobileTPBtn
 
--- Hiệu ứng bóng đổ cho nút TP
 local TPShadow = Instance.new("ImageLabel")
 TPShadow.Name = "Shadow"
 TPShadow.Parent = MobileTPBtn
@@ -72,9 +125,8 @@ TPShadow.Image = "rbxassetid://1316045217"
 TPShadow.ImageColor3 = Color3.fromRGB(0, 0, 0)
 TPShadow.ImageTransparency = 0.6
 TPShadow.ZIndex = -1
--- =======================================
 
--- Main Frame (Giữ nguyên như cũ)
+-- Main Frame
 local MainFrame = Instance.new("ImageLabel")
 MainFrame.Name = "MainFrame"
 MainFrame.Parent = ScreenGui
@@ -82,7 +134,7 @@ MainFrame.Image = "rbxassetid://122727189017649"
 MainFrame.ScaleType = Enum.ScaleType.Stretch
 MainFrame.BackgroundTransparency = 1
 MainFrame.Position = UDim2.new(0.5, -140, 0.1, 0)
-MainFrame.Size = UDim2.new(0, 280, 0, 460)
+MainFrame.Size = UDim2.new(0, 280, 0, 520)
 MainFrame.Active = true
 MainFrame.Draggable = true
 
@@ -141,7 +193,7 @@ ToggleBtn.MouseButton1Click:Connect(function()
     ToggleBtnText.Text = guiVisible and "☰" or "+"
 end)
 
--- Cooldown Timer Display
+-- TP Cooldown Timer Display
 local CooldownFrame = Instance.new("Frame")
 CooldownFrame.Parent = ScreenGui
 CooldownFrame.BackgroundColor3 = Color3.fromRGB(0, 90, 160)
@@ -172,13 +224,44 @@ CooldownTimer.Text = "0.0s"
 CooldownTimer.TextColor3 = Color3.fromRGB(255, 255, 255)
 CooldownTimer.TextSize = 18
 
+-- === ANTI-STUN COOLDOWN DISPLAY (MỚI) ===
+local AntiStunFrame = Instance.new("Frame")
+AntiStunFrame.Parent = ScreenGui
+AntiStunFrame.BackgroundColor3 = Color3.fromRGB(160, 90, 0)
+AntiStunFrame.Position = UDim2.new(0.02, 0, 0.18, 0) -- Dưới TP CD
+AntiStunFrame.Size = UDim2.new(0, 90, 0, 55)
+AntiStunFrame.Visible = false
+
+local AntiStunCorner = Instance.new("UICorner")
+AntiStunCorner.CornerRadius = UDim.new(0, 10)
+AntiStunCorner.Parent = AntiStunFrame
+
+local AntiStunLabel = Instance.new("TextLabel")
+AntiStunLabel.Parent = AntiStunFrame
+AntiStunLabel.BackgroundTransparency = 1
+AntiStunLabel.Size = UDim2.new(1, 0, 0.5, 0)
+AntiStunLabel.Font = Enum.Font.GothamBold
+AntiStunLabel.Text = "Anti-Stun"
+AntiStunLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+AntiStunLabel.TextSize = 12
+
+local AntiStunTimer = Instance.new("TextLabel")
+AntiStunTimer.Parent = AntiStunFrame
+AntiStunTimer.BackgroundTransparency = 1
+AntiStunTimer.Position = UDim2.new(0, 0, 0.5, 0)
+AntiStunTimer.Size = UDim2.new(1, 0, 0.5, 0)
+AntiStunTimer.Font = Enum.Font.GothamBold
+AntiStunTimer.Text = "0.0s"
+AntiStunTimer.TextColor3 = Color3.fromRGB(255, 255, 255)
+AntiStunTimer.TextSize = 18
+
 -- ScrollingFrame
 local ScrollFrame = Instance.new("ScrollingFrame")
 ScrollFrame.Parent = MainFrame
 ScrollFrame.BackgroundTransparency = 1
 ScrollFrame.Position = UDim2.new(0, 0, 0, 45)
 ScrollFrame.Size = UDim2.new(1, 0, 1, -45)
-ScrollFrame.CanvasSize = UDim2.new(0, 0, 0, 650)
+ScrollFrame.CanvasSize = UDim2.new(0, 0, 0, 800)
 ScrollFrame.ScrollBarThickness = 4
 ScrollFrame.ScrollBarImageColor3 = Color3.fromRGB(0, 120, 215)
 
@@ -220,7 +303,8 @@ end
 local yPos = 10
 CreateSectionLabel("⚙️ TÍNH NĂNG", UDim2.new(0.05, 0, 0, yPos)) yPos = yPos + 28
 local AimToggle = CreateToggle("AimToggle", "🎯 Aim Assist", UDim2.new(0.05, 0, 0, yPos)) yPos = yPos + 48
-local AntiToggle = CreateToggle("AntiToggle", "⚡ Khắc Runner", UDim2.new(0.05, 0, 0, yPos)) yPos = yPos + 58
+local AntiToggle = CreateToggle("AntiToggle", "⚡ Khắc Runner", UDim2.new(0.05, 0, 0, yPos)) yPos = yPos + 48
+local DashAntiStunToggle = CreateToggle("DashAntiStunToggle", "💨 Dash Anti-Stun", UDim2.new(0.05, 0, 0, yPos)) yPos = yPos + 58
 CreateSectionLabel("⚔️ CHỌN SKILL AUTO TP:", UDim2.new(0.05, 0, 0, yPos)) yPos = yPos + 28
 local SkillR = CreateSkillToggle("R", UDim2.new(0.05, 0, 0, yPos))
 local SkillT = CreateSkillToggle("T", UDim2.new(0.28, 0, 0, yPos))
@@ -232,8 +316,10 @@ local RangeInput = CreateInput("RangeInput", "📏 Bubble Size:", UDim2.new(0.05
 local TPDelayInput = CreateInput("TPDelayInput", "⏱️ TP Delay:", UDim2.new(0.05, 0, 0, yPos), CONFIG.TeleportDelay) yPos = yPos + 48
 local TPCooldownInput = CreateInput("TPCooldownInput", "⏳ TP CD:", UDim2.new(0.05, 0, 0, yPos), CONFIG.TeleportCooldown) yPos = yPos + 48
 local SkillDelayInput = CreateInput("SkillDelayInput", "⚡ Skill Delay:", UDim2.new(0.05, 0, 0, yPos), CONFIG.SkillDelay) yPos = yPos + 48
-local BubbleInput = CreateInput("BubbleInput", "💧 Bubble:", UDim2.new(0.05, 0, 0, yPos), CONFIG.BubbleTransparency) yPos = yPos + 58
-local Credit = Instance.new("TextLabel") Credit.Parent = ScrollFrame Credit.BackgroundTransparency = 1 Credit.Position = UDim2.new(0, 0, 0, yPos) Credit.Size = UDim2.new(1, 0, 0, 22) Credit.Font = Enum.Font.GothamBold Credit.Text = "Added Mobile TP Button ⚡" Credit.TextColor3 = Color3.fromRGB(150, 200, 255) Credit.TextSize = 10
+local BubbleInput = CreateInput("BubbleInput", "💧 Bubble:", UDim2.new(0.05, 0, 0, yPos), CONFIG.BubbleTransparency) yPos = yPos + 48
+local AntiStunDurationInput = CreateInput("AntiStunDuration", "⏳ Anti-Stun Time:", UDim2.new(0.05, 0, 0, yPos), CONFIG.AntiStunDuration) yPos = yPos + 48
+local AntiStunCooldownInput = CreateInput("AntiStunCooldown", "🔄 Anti-Stun CD:", UDim2.new(0.05, 0, 0, yPos), CONFIG.AntiStunCooldown) yPos = yPos + 58
+local Credit = Instance.new("TextLabel") Credit.Parent = ScrollFrame Credit.BackgroundTransparency = 1 Credit.Position = UDim2.new(0, 0, 0, yPos) Credit.Size = UDim2.new(1, 0, 0, 22) Credit.Font = Enum.Font.GothamBold Credit.Text = "Optimized + Anti-Stun CD ⚡" Credit.TextColor3 = Color3.fromRGB(150, 200, 255) Credit.TextSize = 10
 ScrollFrame.CanvasSize = UDim2.new(0, 0, 0, yPos + 30)
 
 -- --- TẠO VISUAL BUBBLE ---
@@ -249,22 +335,27 @@ BubblePart.Anchored = true
 BubblePart.CastShadow = false
 BubblePart.Parent = workspace
 
--- --- HÀM TÌM MỤC TIÊU CẢI TIẾN ---
--- Nhận tham số searchRange để có thể chỉnh Aim xa hơn Bubble
+-- --- HÀM TÌM MỤC TIÊU CẢI TIẾN (TỐI ƯU) ---
 local function GetClosestEnemy(searchRange)
+    if not cachedCharacter or not cachedRootPart then return nil end
+    
     local closestPlayer = nil
-    local shortestDistance = searchRange -- Dùng range được truyền vào
-    local myCharacter = LocalPlayer.Character
-    if not myCharacter or not myCharacter:FindFirstChild("HumanoidRootPart") then return nil end
+    local shortestDistance = searchRange
+    local myPosition = cachedRootPart.Position
     
     for _, player in pairs(Players:GetPlayers()) do
-        if player ~= LocalPlayer and player.Name ~= CONFIG.AllyName and player.Character and player.Character:FindFirstChild("Humanoid") and player.Character.Humanoid.Health > 0 then
-            local root = player.Character:FindFirstChild("HumanoidRootPart")
-            if root then
-                local distance = (root.Position - myCharacter.HumanoidRootPart.Position).Magnitude
-                if distance < shortestDistance then
-                    shortestDistance = distance
-                    closestPlayer = player.Character
+        if player ~= LocalPlayer and player.Name ~= CONFIG.AllyName then
+            local char = player.Character
+            if char then
+                local humanoid = char:FindFirstChild("Humanoid")
+                local root = char:FindFirstChild("HumanoidRootPart")
+                
+                if humanoid and humanoid.Health > 0 and root then
+                    local distance = (root.Position - myPosition).Magnitude
+                    if distance < shortestDistance then
+                        shortestDistance = distance
+                        closestPlayer = char
+                    end
                 end
             end
         end
@@ -272,72 +363,75 @@ local function GetClosestEnemy(searchRange)
     return closestPlayer
 end
 
--- --- HÀM THỰC HIỆN TELEPORT (Core Logic) ---
+-- --- HÀM THỰC HIỆN TELEPORT ---
 local function ExecuteTeleport(target)
     if not target or not target:FindFirstChild("HumanoidRootPart") then return end
+    if not cachedCharacter or not cachedRootPart then return end
     
-    local myChar = LocalPlayer.Character
-    if myChar and myChar:FindFirstChild("HumanoidRootPart") then
-        local targetCFrame = target.HumanoidRootPart.CFrame
-        -- Teleport ra sau lưng (Back) thay vì trước mặt (-5 là trước, 5 là sau)
-        -- Chỉnh lại thành 3 stud phía sau lưng địch để dễ combo
-        local backPosition = targetCFrame * CFrame.new(0, 0, 3) 
-        
-        myChar.HumanoidRootPart.CFrame = CFrame.lookAt(backPosition.Position, target.HumanoidRootPart.Position)
-        
-        lastTeleportTime = tick()
-        teleportCooldownRemaining = CONFIG.TeleportCooldown
-        CooldownFrame.Visible = true
-    end
+    local targetCFrame = target.HumanoidRootPart.CFrame
+    local backPosition = targetCFrame * CFrame.new(0, 0, 3)
+    
+    cachedRootPart.CFrame = CFrame.lookAt(backPosition.Position, target.HumanoidRootPart.Position)
+    
+    lastTeleportTime = tick()
+    teleportCooldownRemaining = CONFIG.TeleportCooldown
+    CooldownFrame.Visible = true
 end
 
--- --- TELEPORT TỰ ĐỘNG (Auto Anti-Runner) ---
+-- --- TELEPORT TỰ ĐỘNG ---
 local function AutoTeleportToTarget()
     local currentTime = tick()
     if currentTime - lastTeleportTime < CONFIG.TeleportCooldown then return end
     
     task.wait(CONFIG.TeleportDelay)
     
-    -- Anti-Runner dùng range rộng hơn bong bóng (Range + 5)
     local target = GetClosestEnemy(CONFIG.Range + 5)
     if target then
         ExecuteTeleport(target)
     end
 end
 
--- --- TELEPORT THỦ CÔNG (NÚT BẤM DI ĐỘNG) ---
+-- --- TELEPORT THỦ CÔNG ---
 MobileTPBtn.MouseButton1Click:Connect(function()
-    -- Nút thủ công bỏ qua Cooldown hoặc dùng Cooldown riêng tuỳ bạn.
-    -- Ở đây tôi để nó tuân theo Cooldown chung để tránh bị kick
     local currentTime = tick()
     if currentTime - lastTeleportTime < CONFIG.TeleportCooldown then 
-        -- Nếu đang cooldown, tạo hiệu ứng rung hoặc đỏ nút (optional)
         return 
     end
     
-    -- Tìm địch trong range Aim (Range + 5)
     local target = GetClosestEnemy(CONFIG.Range + 5)
     if target then
         ExecuteTeleport(target)
-    else
-        print("Không tìm thấy địch trong range!")
     end
 end)
 
--- Hook vào Remote (Giữ nguyên logic cũ)
-local oldNamecall
-oldNamecall = hookmetamethod(game, "__namecall", function(self, ...)
-    local args = {...}
-    local method = getnamecallmethod()
+-- --- TỐI ƯU: CHỈ HOOK KHI CẦN THIẾT ---
+local dashConnection = nil
+
+local function SetupDashHook()
+    if dashConnection then return end -- Tránh hook nhiều lần
     
-    if method == "FireServer" and self.Name == "Remote" then
-        if isAntiRunner and CONFIG.SelectedSkills[args[1]] then
-            task.spawn(AutoTeleportToTarget)
+    local oldNamecall
+    oldNamecall = hookmetamethod(game, "__namecall", function(self, ...)
+        local args = {...}
+        local method = getnamecallmethod()
+        
+        -- Chỉ xử lý khi Anti-Stun được bật
+        if CONFIG.AntiStunEnabled and method == "FireServer" and self.Name == "Remote" and args[1] == "Dash" then
+            TriggerAntiStun()
         end
-    end
+        
+        -- Auto Teleport Logic
+        if method == "FireServer" and self.Name == "Remote" then
+            if isAntiRunner and CONFIG.SelectedSkills[args[1]] then
+                task.spawn(AutoTeleportToTarget)
+            end
+        end
+        
+        return oldNamecall(self, ...)
+    end)
     
-    return oldNamecall(self, ...)
-end)
+    dashConnection = true
+end
 
 -- Logic Toggle Buttons
 AimToggle.MouseButton1Click:Connect(function()
@@ -355,6 +449,18 @@ AntiToggle.MouseButton1Click:Connect(function()
     AntiToggle.BackgroundColor3 = isAntiRunner and Color3.fromRGB(0, 120, 80) or Color3.fromRGB(0, 60, 110)
 end)
 
+DashAntiStunToggle.MouseButton1Click:Connect(function()
+    CONFIG.AntiStunEnabled = not CONFIG.AntiStunEnabled
+    DashAntiStunToggle.Text = CONFIG.AntiStunEnabled and "ON" or "OFF"
+    DashAntiStunToggle.TextColor3 = CONFIG.AntiStunEnabled and Color3.fromRGB(80, 255, 80) or Color3.fromRGB(255, 80, 80)
+    DashAntiStunToggle.BackgroundColor3 = CONFIG.AntiStunEnabled and Color3.fromRGB(0, 120, 80) or Color3.fromRGB(0, 60, 110)
+    
+    -- Chỉ setup hook khi bật Anti-Stun
+    if CONFIG.AntiStunEnabled then
+        SetupDashHook()
+    end
+end)
+
 local function SetupSkillToggle(button, skillKey)
     button.MouseButton1Click:Connect(function()
         CONFIG.SelectedSkills[skillKey] = not CONFIG.SelectedSkills[skillKey]
@@ -365,6 +471,7 @@ local function SetupSkillToggle(button, skillKey)
 end
 SetupSkillToggle(SkillR, "R") SetupSkillToggle(SkillT, "T") SetupSkillToggle(SkillF, "F") SetupSkillToggle(SkillG, "G")
 
+-- Input Handlers
 CharacterInput.FocusLost:Connect(function()
     local newName = CharacterInput.Text:gsub("^%s*(.-)%s*$", "%1")
     if newName == "" then CharacterInput.Text = CONFIG.SkillSuffix return end
@@ -372,47 +479,125 @@ CharacterInput.FocusLost:Connect(function()
     CharacterInput.Text = CONFIG.SkillSuffix
 end)
 
--- Cập nhật Range và Bubble
 RangeInput.FocusLost:Connect(function()
     local newRange = tonumber(RangeInput.Text)
     if newRange and newRange > 0 then
         CONFIG.Range = newRange
-        -- Bong bóng chỉ to bằng Range nhập vào
         BubblePart.Size = Vector3.new(newRange * 2, newRange * 2, newRange * 2)
-        print("✅ Bubble Range: " .. newRange .. " | Aim Range: " .. (newRange + 5))
     else
         RangeInput.Text = tostring(CONFIG.Range)
     end
 end)
 
-TPDelayInput.FocusLost:Connect(function() local v = tonumber(TPDelayInput.Text) if v and v>=0 then CONFIG.TeleportDelay = v else TPDelayInput.Text = tostring(CONFIG.TeleportDelay) end end)
-TPCooldownInput.FocusLost:Connect(function() local v = tonumber(TPCooldownInput.Text) if v and v>=0 then CONFIG.TeleportCooldown = v else TPCooldownInput.Text = tostring(CONFIG.TeleportCooldown) end end)
-SkillDelayInput.FocusLost:Connect(function() local v = tonumber(SkillDelayInput.Text) if v and v>=0 then CONFIG.SkillDelay = v else SkillDelayInput.Text = tostring(CONFIG.SkillDelay) end end)
-BubbleInput.FocusLost:Connect(function() local v = tonumber(BubbleInput.Text) if v and v>=0 and v<=1 then CONFIG.BubbleTransparency = v if isAiming then BubblePart.Transparency = v end else BubbleInput.Text = tostring(CONFIG.BubbleTransparency) end end)
+TPDelayInput.FocusLost:Connect(function() 
+    local v = tonumber(TPDelayInput.Text) 
+    if v and v >= 0 then CONFIG.TeleportDelay = v else TPDelayInput.Text = tostring(CONFIG.TeleportDelay) end 
+end)
 
--- --- VÒNG LẶP CHÍNH ---
-RunService.RenderStepped:Connect(function()
-    local char = LocalPlayer.Character
-    if not char or not char:FindFirstChild("HumanoidRootPart") then
-        BubblePart.Position = Vector3.new(0, -1000, 0)
-        return
+TPCooldownInput.FocusLost:Connect(function() 
+    local v = tonumber(TPCooldownInput.Text) 
+    if v and v >= 0 then CONFIG.TeleportCooldown = v else TPCooldownInput.Text = tostring(CONFIG.TeleportCooldown) end 
+end)
+
+SkillDelayInput.FocusLost:Connect(function() 
+    local v = tonumber(SkillDelayInput.Text) 
+    if v and v >= 0 then CONFIG.SkillDelay = v else SkillDelayInput.Text = tostring(CONFIG.SkillDelay) end 
+end)
+
+BubbleInput.FocusLost:Connect(function() 
+    local v = tonumber(BubbleInput.Text) 
+    if v and v >= 0 and v <= 1 then 
+        CONFIG.BubbleTransparency = v 
+        if isAiming then BubblePart.Transparency = v end 
+    else 
+        BubbleInput.Text = tostring(CONFIG.BubbleTransparency) 
+    end 
+end)
+
+AntiStunDurationInput.FocusLost:Connect(function() 
+    local v = tonumber(AntiStunDurationInput.Text) 
+    if v and v > 0 then CONFIG.AntiStunDuration = v else AntiStunDurationInput.Text = tostring(CONFIG.AntiStunDuration) end 
+end)
+
+AntiStunCooldownInput.FocusLost:Connect(function() 
+    local v = tonumber(AntiStunCooldownInput.Text) 
+    if v and v > 0 then CONFIG.AntiStunCooldown = v else AntiStunCooldownInput.Text = tostring(CONFIG.AntiStunCooldown) end 
+end)
+
+-- --- CẬP NHẬT CACHE CHARACTER ---
+local function UpdateCharacterCache()
+    cachedCharacter = LocalPlayer.Character
+    if cachedCharacter then
+        cachedRootPart = cachedCharacter:FindFirstChild("HumanoidRootPart")
+        cachedHumanoid = cachedCharacter:FindFirstChildOfClass("Humanoid")
+    else
+        cachedRootPart = nil
+        cachedHumanoid = nil
+    end
+end
+
+-- Cập nhật cache khi character thay đổi
+LocalPlayer.CharacterAdded:Connect(function()
+    task.wait(0.1)
+    UpdateCharacterCache()
+end)
+
+UpdateCharacterCache()
+
+-- --- VÒNG LẶP CHÍNH (TỐI ƯU) ---
+local lastUpdate = tick()
+local updateInterval = 0.016 -- ~60 FPS
+
+RunService.RenderStepped:Connect(function(deltaTime)
+    local currentTime = tick()
+    
+    -- Cập nhật cache nếu cần
+    if not cachedCharacter or not cachedRootPart then
+        UpdateCharacterCache()
+        if not cachedRootPart then
+            BubblePart.Position = Vector3.new(0, -1000, 0)
+            return
+        end
     end
     
-    BubblePart.Position = char.HumanoidRootPart.Position
+    -- Cập nhật vị trí bubble
+    BubblePart.Position = cachedRootPart.Position
     
+    -- Cập nhật TP Cooldown
     if teleportCooldownRemaining > 0 then
-        teleportCooldownRemaining = math.max(0, teleportCooldownRemaining - RunService.RenderStepped:Wait())
+        teleportCooldownRemaining = math.max(0, teleportCooldownRemaining - deltaTime)
         CooldownTimer.Text = string.format("%.1fs", teleportCooldownRemaining)
-        if teleportCooldownRemaining <= 0 then CooldownFrame.Visible = false end
+        if teleportCooldownRemaining <= 0 then 
+            CooldownFrame.Visible = false 
+        end
     end
     
-    if isAiming then
-        -- QUAN TRỌNG: Aim sử dụng Range + 5
+    -- Cập nhật Anti-Stun Cooldown
+    if antiStunCooldownRemaining > 0 then
+        antiStunCooldownRemaining = math.max(0, antiStunCooldownRemaining - deltaTime)
+        AntiStunTimer.Text = string.format("%.1fs", antiStunCooldownRemaining)
+        AntiStunFrame.Visible = true
+        
+        -- Đổi màu khi active
+        if isAntiStunActive then
+            AntiStunFrame.BackgroundColor3 = Color3.fromRGB(0, 160, 90) -- Xanh lá khi đang hoạt động
+        else
+            AntiStunFrame.BackgroundColor3 = Color3.fromRGB(160, 90, 0) -- Cam khi đang cooldown
+        end
+        
+        if antiStunCooldownRemaining <= 0 then 
+            AntiStunFrame.Visible = false 
+        end
+    end
+    
+    -- Aim Assist (throttle để giảm lag)
+    if isAiming and currentTime - lastUpdate >= updateInterval then
+        lastUpdate = currentTime
         local target = GetClosestEnemy(CONFIG.Range + 5)
         if target and target:FindFirstChild("HumanoidRootPart") then
             local targetPos = target.HumanoidRootPart.Position
-            local myPos = char.HumanoidRootPart.Position
-            char.HumanoidRootPart.CFrame = CFrame.lookAt(myPos, Vector3.new(targetPos.X, myPos.Y, targetPos.Z))
+            local myPos = cachedRootPart.Position
+            cachedRootPart.CFrame = CFrame.lookAt(myPos, Vector3.new(targetPos.X, myPos.Y, targetPos.Z))
         end
     end
 end)
