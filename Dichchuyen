@@ -1,6 +1,7 @@
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 local RunService = game:GetService("RunService")
+local VirtualUser = game:GetService("VirtualUser")
 
 -- --- CẤU HÌNH ---
 local CONFIG = {
@@ -12,9 +13,19 @@ local CONFIG = {
 -- --- BIẾN TRẠNG THÁI ---
 local selectedTarget = nil
 local isAutoFarmKill = false
+local isAntiAFK = true -- Mặc định bật
 local lastTeleportTime = 0
 local hasSelectedCharacter = false
 local lastHealth = 100
+
+-- --- ANTI AFK ---
+LocalPlayer.Idled:Connect(function()
+    if isAntiAFK then
+        VirtualUser:CaptureController()
+        VirtualUser:ClickButton2(Vector2.new())
+        print("🔄 Anti-AFK đã kích hoạt!")
+    end
+end)
 
 -- --- TẠO GUI HIỆN ĐẠI ---
 local ScreenGui = Instance.new("ScreenGui")
@@ -53,13 +64,13 @@ ToggleShadow.ImageColor3 = Color3.fromRGB(0, 0, 0)
 ToggleShadow.ImageTransparency = 0.7
 ToggleShadow.ZIndex = -1
 
--- Main Frame (có thể kéo toàn màn hình)
+-- Main Frame (có thể kéo toàn màn hình) - TĂNG CHIỀU CAO
 local MainFrame = Instance.new("Frame")
 MainFrame.Name = "MainFrame"
 MainFrame.Parent = ScreenGui
 MainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
-MainFrame.Position = UDim2.new(0.5, -180, 0.5, -200)
-MainFrame.Size = UDim2.new(0, 360, 0, 400)
+MainFrame.Position = UDim2.new(0.5, -180, 0.5, -225)
+MainFrame.Size = UDim2.new(0, 360, 0, 450) -- Tăng từ 400 lên 450
 MainFrame.Active = true
 MainFrame.Draggable = true
 MainFrame.Visible = false
@@ -145,11 +156,38 @@ StatusLabel.TextColor3 = Color3.fromRGB(255, 255, 100)
 StatusLabel.TextSize = 14
 StatusLabel.TextXAlignment = Enum.TextXAlignment.Left
 
+-- Anti-AFK Status Label
+local AntiAFKLabel = Instance.new("TextLabel")
+AntiAFKLabel.Parent = MainFrame
+AntiAFKLabel.BackgroundTransparency = 1
+AntiAFKLabel.Position = UDim2.new(0, 15, 0, 305)
+AntiAFKLabel.Size = UDim2.new(1, -30, 0, 25)
+AntiAFKLabel.Font = Enum.Font.GothamBold
+AntiAFKLabel.Text = "🛡️ Anti-AFK: BẬT"
+AntiAFKLabel.TextColor3 = Color3.fromRGB(100, 255, 100)
+AntiAFKLabel.TextSize = 14
+AntiAFKLabel.TextXAlignment = Enum.TextXAlignment.Left
+
+-- Anti-AFK Toggle Button
+local AntiAFKBtn = Instance.new("TextButton")
+AntiAFKBtn.Parent = MainFrame
+AntiAFKBtn.BackgroundColor3 = Color3.fromRGB(50, 150, 50)
+AntiAFKBtn.Position = UDim2.new(0, 15, 0, 340)
+AntiAFKBtn.Size = UDim2.new(1, -30, 0, 40)
+AntiAFKBtn.Font = Enum.Font.GothamBold
+AntiAFKBtn.Text = "🛡️ Anti-AFK: BẬT"
+AntiAFKBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+AntiAFKBtn.TextSize = 16
+
+local AntiAFKCorner = Instance.new("UICorner")
+AntiAFKCorner.CornerRadius = UDim.new(0, 10)
+AntiAFKCorner.Parent = AntiAFKBtn
+
 -- Refresh Button
 local RefreshBtn = Instance.new("TextButton")
 RefreshBtn.Parent = MainFrame
 RefreshBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 55)
-RefreshBtn.Position = UDim2.new(0, 15, 0, 315)
+RefreshBtn.Position = UDim2.new(0, 15, 0, 390)
 RefreshBtn.Size = UDim2.new(0.48, -10, 0, 40)
 RefreshBtn.Font = Enum.Font.GothamBold
 RefreshBtn.Text = "🔄 Refresh"
@@ -164,7 +202,7 @@ RefreshCorner.Parent = RefreshBtn
 local AutoBtn = Instance.new("TextButton")
 AutoBtn.Parent = MainFrame
 AutoBtn.BackgroundColor3 = Color3.fromRGB(70, 70, 75)
-AutoBtn.Position = UDim2.new(0.52, 0, 0, 315)
+AutoBtn.Position = UDim2.new(0.52, 0, 0, 390)
 AutoBtn.Size = UDim2.new(0.48, -15, 0, 40)
 AutoBtn.Font = Enum.Font.GothamBold
 AutoBtn.Text = "⚔️ Auto Farm Kill"
@@ -369,6 +407,25 @@ RefreshBtn.MouseButton1Click:Connect(function()
     if not isAutoFarmKill then
         StatusLabel.Text = "⚡ Trạng thái: Chờ..."
         StatusLabel.TextColor3 = Color3.fromRGB(255, 255, 100)
+    end
+end)
+
+-- Anti-AFK Button Logic
+AntiAFKBtn.MouseButton1Click:Connect(function()
+    isAntiAFK = not isAntiAFK
+    
+    if isAntiAFK then
+        AntiAFKBtn.Text = "🛡️ Anti-AFK: BẬT"
+        AntiAFKBtn.BackgroundColor3 = Color3.fromRGB(50, 150, 50)
+        AntiAFKLabel.Text = "🛡️ Anti-AFK: BẬT"
+        AntiAFKLabel.TextColor3 = Color3.fromRGB(100, 255, 100)
+        print("✅ Anti-AFK đã BẬT")
+    else
+        AntiAFKBtn.Text = "🛡️ Anti-AFK: TẮT"
+        AntiAFKBtn.BackgroundColor3 = Color3.fromRGB(150, 50, 50)
+        AntiAFKLabel.Text = "🛡️ Anti-AFK: TẮT"
+        AntiAFKLabel.TextColor3 = Color3.fromRGB(255, 100, 100)
+        print("❌ Anti-AFK đã TẮT")
     end
 end)
 
