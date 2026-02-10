@@ -9,15 +9,15 @@ local Humanoid = Character:WaitForChild("Humanoid")
 local HumanoidRootPart = Character:WaitForChild("HumanoidRootPart")
 
 -- Cấu hình
-local ANTI_STUN_ENABLED = false
-local MANUAL_ANTI_STUN_DURATION = 0.2
-local COOLDOWN_TIME = 3
-local KEYBIND = Enum.KeyCode.NumberOne
-local TOGGLE_GUI_KEY = Enum.KeyCode.RightControl -- Phím toggle GUI
+local ANTI_STUN_ENABLED = false -- Tắt auto anti-stun
+local MANUAL_ANTI_STUN_DURATION = 0.2 -- Thời gian anti-stun khi bấm 1
+local COOLDOWN_TIME = 2 -- Thời gian hồi chiêu
+local KEYBIND = Enum.KeyCode.One -- Phím kích hoạt (số 1)
+local TOGGLE_GUI_KEY = Enum.KeyCode.LeftControl -- Phím bật/tắt GUI
 
 local isOnCooldown = false
 local isManualAntiStunActive = false
-local guiVisible = true
+local isGUIVisible = true
 
 -- Tạo GUI
 local ScreenGui = Instance.new("ScreenGui")
@@ -25,28 +25,6 @@ ScreenGui.Name = "AntiStunGUI"
 ScreenGui.ResetOnSpawn = false
 ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
-
--- Nút Toggle GUI (nhỏ, có thể di chuyển)
-local ToggleGUIButton = Instance.new("TextButton")
-ToggleGUIButton.Name = "ToggleGUIButton"
-ToggleGUIButton.Size = UDim2.new(0, 50, 0, 50)
-ToggleGUIButton.Position = UDim2.new(0, 10, 0.5, -25)
-ToggleGUIButton.BackgroundColor3 = Color3.fromRGB(45, 45, 55)
-ToggleGUIButton.BorderSizePixel = 0
-ToggleGUIButton.Font = Enum.Font.GothamBold
-ToggleGUIButton.Text = "AS"
-ToggleGUIButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-ToggleGUIButton.TextSize = 18
-ToggleGUIButton.Parent = ScreenGui
-
-local ToggleGUICorner = Instance.new("UICorner")
-ToggleGUICorner.CornerRadius = UDim.new(0, 25)
-ToggleGUICorner.Parent = ToggleGUIButton
-
-local ToggleGUIStroke = Instance.new("UIStroke")
-ToggleGUIStroke.Color = Color3.fromRGB(100, 100, 255)
-ToggleGUIStroke.Thickness = 2
-ToggleGUIStroke.Parent = ToggleGUIButton
 
 -- Frame chính
 local MainFrame = Instance.new("Frame")
@@ -107,26 +85,14 @@ local CooldownCorner = Instance.new("UICorner")
 CooldownCorner.CornerRadius = UDim.new(0, 8)
 CooldownCorner.Parent = CooldownFrame
 
-local CooldownBar = Instance.new("Frame")
-CooldownBar.Name = "CooldownBar"
-CooldownBar.Size = UDim2.new(1, 0, 1, 0)
-CooldownBar.BackgroundColor3 = Color3.fromRGB(100, 255, 100)
-CooldownBar.BorderSizePixel = 0
-CooldownBar.Parent = CooldownFrame
-
-local CooldownBarCorner = Instance.new("UICorner")
-CooldownBarCorner.CornerRadius = UDim.new(0, 8)
-CooldownBarCorner.Parent = CooldownBar
-
 local CooldownLabel = Instance.new("TextLabel")
 CooldownLabel.Name = "CooldownLabel"
 CooldownLabel.Size = UDim2.new(1, 0, 1, 0)
 CooldownLabel.BackgroundTransparency = 1
 CooldownLabel.Font = Enum.Font.GothamBold
-CooldownLabel.Text = "Ready (Press B)"
-CooldownLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+CooldownLabel.Text = "Ready (Press 1)"
+CooldownLabel.TextColor3 = Color3.fromRGB(100, 255, 100)
 CooldownLabel.TextSize = 14
-CooldownLabel.ZIndex = 2
 CooldownLabel.Parent = CooldownFrame
 
 -- Settings
@@ -164,23 +130,7 @@ local CooldownInputCorner = Instance.new("UICorner")
 CooldownInputCorner.CornerRadius = UDim.new(0, 6)
 CooldownInputCorner.Parent = CooldownInput
 
--- Hàm toggle GUI
-local function ToggleGUI()
-    guiVisible = not guiVisible
-    MainFrame.Visible = guiVisible
-    
-    if guiVisible then
-        ToggleGUIButton.BackgroundColor3 = Color3.fromRGB(45, 45, 55)
-        ToggleGUIStroke.Color = Color3.fromRGB(100, 100, 255)
-    else
-        ToggleGUIButton.BackgroundColor3 = Color3.fromRGB(35, 35, 45)
-        ToggleGUIStroke.Color = Color3.fromRGB(70, 70, 120)
-    end
-end
-
-ToggleGUIButton.MouseButton1Click:Connect(ToggleGUI)
-
--- Draggable cho MainFrame
+-- Draggable
 local dragging, dragInput, dragStart, startPos
 
 local function update(input)
@@ -214,37 +164,13 @@ UserInputService.InputChanged:Connect(function(input)
     end
 end)
 
--- Draggable cho ToggleGUIButton
-local draggingToggle, dragInputToggle, dragStartToggle, startPosToggle
-
-local function updateToggle(input)
-    local delta = input.Position - dragStartToggle
-    ToggleGUIButton.Position = UDim2.new(startPosToggle.X.Scale, startPosToggle.X.Offset + delta.X, startPosToggle.Y.Scale, startPosToggle.Y.Offset + delta.Y)
-end
-
-ToggleGUIButton.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 then
-        draggingToggle = true
-        dragStartToggle = input.Position
-        startPosToggle = ToggleGUIButton.Position
-        
-        input.Changed:Connect(function()
-            if input.UserInputState == Enum.UserInputState.End then
-                draggingToggle = false
-            end
-        end)
-    end
-end)
-
-ToggleGUIButton.InputChanged:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseMovement then
-        dragInputToggle = input
-    end
-end)
-
-UserInputService.InputChanged:Connect(function(input)
-    if input == dragInputToggle and draggingToggle then
-        updateToggle(input)
+-- Toggle GUI Visibility (Left Ctrl)
+UserInputService.InputBegan:Connect(function(input, gameProcessed)
+    if gameProcessed then return end
+    
+    if input.KeyCode == TOGGLE_GUI_KEY then
+        isGUIVisible = not isGUIVisible
+        MainFrame.Visible = isGUIVisible
     end
 end)
 
@@ -306,7 +232,7 @@ local function AntiStun()
     end)
 end
 
--- Manual Anti-Stun (Press B) với visual feedback
+-- Manual Anti-Stun (Press 1)
 UserInputService.InputBegan:Connect(function(input, gameProcessed)
     if gameProcessed then return end
     
@@ -314,44 +240,23 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
         isOnCooldown = true
         isManualAntiStunActive = true
         
-        -- Active state
-        CooldownLabel.Text = "ANTI-STUN ACTIVE!"
-        CooldownBar.BackgroundColor3 = Color3.fromRGB(255, 255, 100)
+        CooldownLabel.Text = "ACTIVE!"
+        CooldownLabel.TextColor3 = Color3.fromRGB(255, 255, 100)
         
         -- Anti-stun trong duration
         task.wait(MANUAL_ANTI_STUN_DURATION)
         isManualAntiStunActive = false
         
-        -- Cooldown với thanh tiến trình
-        local startTime = tick()
-        local endTime = startTime + COOLDOWN_TIME
-        
-        CooldownBar.BackgroundColor3 = Color3.fromRGB(255, 100, 100)
-        
-        while tick() < endTime do
-            local remaining = endTime - tick()
-            local progress = remaining / COOLDOWN_TIME
-            
-            CooldownLabel.Text = string.format("Cooldown: %.1fs", remaining)
-            CooldownBar.Size = UDim2.new(progress, 0, 1, 0)
-            
-            task.wait(0.05)
+        -- Đếm ngược cooldown (chắc chắn hiện)
+        for i = COOLDOWN_TIME * 10, 1, -1 do
+            CooldownLabel.Text = string.format("Cooldown: %.1fs", i / 10)
+            CooldownLabel.TextColor3 = Color3.fromRGB(255, 100, 100)
+            task.wait(0.1)
         end
         
-        -- Ready state
         isOnCooldown = false
-        CooldownLabel.Text = "Ready (Press B)"
-        CooldownBar.BackgroundColor3 = Color3.fromRGB(100, 255, 100)
-        CooldownBar.Size = UDim2.new(1, 0, 1, 0)
-    end
-end)
-
--- Toggle GUI bằng phím
-UserInputService.InputBegan:Connect(function(input, gameProcessed)
-    if gameProcessed then return end
-    
-    if input.KeyCode == TOGGLE_GUI_KEY then
-        ToggleGUI()
+        CooldownLabel.Text = "Ready (Press 1)"
+        CooldownLabel.TextColor3 = Color3.fromRGB(100, 255, 100)
     end
 end)
 
