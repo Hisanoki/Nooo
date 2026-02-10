@@ -12,7 +12,7 @@ local HumanoidRootPart = Character:WaitForChild("HumanoidRootPart")
 local ANTI_STUN_ENABLED = false
 local MANUAL_ANTI_STUN_DURATION = 0.2
 local COOLDOWN_TIME = 3
-local KEYBIND = Enum.KeyCode.B
+local KEYBIND = Enum.KeyCode.NumberOne
 local TOGGLE_GUI_KEY = Enum.KeyCode.RightControl -- Phím toggle GUI
 
 local isOnCooldown = false
