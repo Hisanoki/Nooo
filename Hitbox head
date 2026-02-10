@@ -14,7 +14,7 @@ local ESP_OUTLINE_TRANSPARENCY = 0
 local TEXT_ESP_COLOR = Color3.fromRGB(255, 255, 255)
 
 local INVIS_CONFIG = {
-    TOGGLE_KEY = Enum.KeyCode.X,
+    TOGGLE_KEY = Enum.KeyCode.C,
     SOUND_ID = "rbxassetid://942127495",
     INVISIBILITY_POSITION = Vector3.new(-25.95, 84, 3537.55),
     NOTIFICATION_DURATION = 3,
@@ -57,14 +57,17 @@ local function getTeamColor(player)
 end
 
 local function createNotification(title, text)
-    StarterGui:SetCore("SendNotification", {
-        Title = title,
-        Text = text,
-        Duration = INVIS_CONFIG.NOTIFICATION_DURATION,
-    })
+    pcall(function()
+        StarterGui:SetCore("SendNotification", {
+            Title = title,
+            Text = text,
+            Duration = INVIS_CONFIG.NOTIFICATION_DURATION,
+        })
+    end)
 end
 
 local function setCharacterTransparency(character, transparency)
+    if not character then return end
     for _, descendant in character:GetDescendants() do
         if descendant:IsA("BasePart") or descendant:IsA("Decal") then
             descendant.Transparency = transparency
@@ -74,9 +77,7 @@ end
 
 local function getHumanoidRootPart()
     local character = LocalPlayer.Character
-    if not character then
-        return nil
-    end
+    if not character then return nil end
     return character:FindFirstChild("HumanoidRootPart")
 end
 
@@ -86,9 +87,16 @@ local function playInvisSound()
     end
 end
 
+-- Hàm kiểm tra xem nhân vật còn sống hay không
+local function isAlive(character)
+    if not character then return false end
+    local humanoid = character:FindFirstChildOfClass("Humanoid")
+    if not humanoid then return false end
+    return humanoid.Health > 0
+end
+
 local function toggleInvisibility()
     if not LocalPlayer.Character then
-        warn("Character not found")
         return
     end
 
@@ -129,8 +137,10 @@ local function toggleInvisibility()
 
         setCharacterTransparency(LocalPlayer.Character, 0.5)
 
-        invisButton.BackgroundColor3 = INVIS_CONFIG.SUCCESS_COLOR
-        invisButton.Text = "VISIBLE"
+        if invisButton then
+            invisButton.BackgroundColor3 = INVIS_CONFIG.SUCCESS_COLOR
+            invisButton.Text = "VISIBLE"
+        end
 
         createNotification("Invisibility ON", "You are now invisible")
     else
@@ -143,8 +153,10 @@ local function toggleInvisibility()
             setCharacterTransparency(LocalPlayer.Character, 0)
         end
 
-        invisButton.BackgroundColor3 = INVIS_CONFIG.PRIMARY_COLOR
-        invisButton.Text = "INVISIBLE"
+        if invisButton then
+            invisButton.BackgroundColor3 = INVIS_CONFIG.PRIMARY_COLOR
+            invisButton.Text = "INVISIBLE"
+        end
 
         createNotification("Invisibility OFF", "You are now visible")
     end
@@ -152,15 +164,19 @@ end
 
 -- Box ESP logic
 local function addBoxESP(character, color, size)
-    if not character or boxESPObjects[character] then return end
+    if not character or not isAlive(character) then return end -- Kiểm tra sống chết
+    if boxESPObjects[character] then return end
+    
     local head = character:FindFirstChild("Head")
     if not head or not head:IsA("BasePart") then return end
-    -- Remove any existing BoxHandleAdornment on head before adding new one
+    
+    -- Cleanup cũ
     for _, child in head:GetChildren() do
         if child:IsA("BoxHandleAdornment") and child.Name == "BoxCharmESP" then
             child:Destroy()
         end
     end
+
     local box = Instance.new("BoxHandleAdornment")
     box.Name = "BoxCharmESP"
     box.Adornee = head
@@ -174,7 +190,7 @@ local function addBoxESP(character, color, size)
 end
 
 local function updateBoxESPColor(character, color, size)
-    if boxESPObjects[character] then
+    if boxESPObjects[character] and boxESPObjects[character].Parent then
         boxESPObjects[character].Color3 = color
         boxESPObjects[character].Size = Vector3.new(size or DEFAULT_HITBOX_SIZE, size or DEFAULT_HITBOX_SIZE, size or DEFAULT_HITBOX_SIZE)
     end
@@ -188,11 +204,13 @@ local function removeBoxESP(character)
         end
         boxESPObjects[character] = nil
     end
+    -- Double check xóa trong Head
     local head = character:FindFirstChild("Head")
     if head then
-        local box = head:FindFirstChild("BoxCharmESP")
-        if box then
-            box:Destroy()
+        for _, child in head:GetChildren() do
+            if child:IsA("BoxHandleAdornment") and child.Name == "BoxCharmESP" then
+                child:Destroy()
+            end
         end
     end
 end
@@ -200,52 +218,66 @@ end
 local function removeHeadHitbox(character)
     if not character then return end
     local head = character:FindFirstChild("Head")
+    
+    -- Xóa Box ESP gắn kèm
+    removeBoxESP(character)
+
     if head then
         if head:FindFirstChild("OriginalSize") then
             head.Size = head.OriginalSize.Value
             head.OriginalSize:Destroy()
         end
         if playerData[character] and playerData[character].meshBackup then
-            playerData[character].meshBackup.Parent = head
+            if playerData[character].meshBackup.Parent == nil then -- Chỉ restore nếu chưa có
+                 -- Clone lại mesh gốc nếu cần thiết, hoặc parent lại
+                 playerData[character].meshBackup.Parent = head
+            end
         end
         head.Transparency = 0
         head.CanCollide = true
         head.Material = Enum.Material.Plastic
-        -- Remove BoxHandleAdornment if present
-        for _, child in head:GetChildren() do
-            if child:IsA("BoxHandleAdornment") and child.Name == "BoxCharmESP" then
-                child:Destroy()
-            end
-        end
     end
     processedPlayers[character] = nil
 end
 
 local function applyHeadHitbox(character, size)
-    if not character or processedPlayers[character] then return end
+    if not character then return end
+    if not isAlive(character) then return end -- KHÔNG ÁP DỤNG NẾU ĐÃ CHẾT
+    if processedPlayers[character] then return end
+
     local head = character:FindFirstChild("Head")
     if not head then return end
-    -- Remove any existing BoxHandleAdornment before applying hitbox
+
+    -- Cleanup trước khi add
     for _, child in head:GetChildren() do
         if child:IsA("BoxHandleAdornment") and child.Name == "BoxCharmESP" then
             child:Destroy()
         end
     end
-    local original = Instance.new("Vector3Value")
-    original.Name = "OriginalSize"
-    original.Value = head.Size
-    original.Parent = head
+
+    local original = head:FindFirstChild("OriginalSize") or Instance.new("Vector3Value")
+    if not head:FindFirstChild("OriginalSize") then
+        original.Name = "OriginalSize"
+        original.Value = head.Size
+        original.Parent = head
+    end
+
     if head:FindFirstChild("Mesh") then
         playerData[character] = playerData[character] or {}
-        playerData[character].meshBackup = head.Mesh:Clone()
+        -- Chỉ backup nếu chưa backup
+        if not playerData[character].meshBackup then
+            playerData[character].meshBackup = head.Mesh:Clone()
+        end
         head.Mesh:Destroy()
     end
+
     head.Massless = true
     head.Size = Vector3.new(size, size, size)
     head.CanCollide = false
     head.Transparency = 0.5
     head.Material = Enum.Material.ForceField
-    -- Always add BoxHandleAdornment for visual
+
+    -- Visual Hitbox
     local box = Instance.new("BoxHandleAdornment")
     box.Name = "BoxCharmESP"
     box.Adornee = head
@@ -256,17 +288,7 @@ local function applyHeadHitbox(character, size)
     box.AlwaysOnTop = true
     box.Parent = head
     boxESPObjects[character] = box
-    local humanoid = character:FindFirstChildOfClass("Humanoid")
-    if humanoid then
-        humanoid.Died:Connect(function()
-            removeHeadHitbox(character)
-        end)
-    end
-    character.AncestryChanged:Connect(function(_, parent)
-        if not parent then
-            removeHeadHitbox(character)
-        end
-    end)
+
     processedPlayers[character] = true
 end
 
@@ -319,11 +341,16 @@ local function createTransparentLabel(text, parent)
     return label
 end
 
--- UI SETUP (Mobile size)
+-- UI SETUP
 local gui = Instance.new("ScreenGui")
-gui.Name = "Mobile_ESP_GUI"
+gui.Name = "Mobile_ESP_GUI_Fixed"
 gui.ResetOnSpawn = false
 gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+-- Xóa GUI cũ nếu có
+if LocalPlayer:FindFirstChild("PlayerGui") then
+    local oldGui = LocalPlayer.PlayerGui:FindFirstChild("Mobile_ESP_GUI_Fixed")
+    if oldGui then oldGui:Destroy() end
+end
 gui.Parent = LocalPlayer:WaitForChild("PlayerGui")
 
 local mainContainer = Instance.new("Frame")
@@ -424,19 +451,17 @@ rightPanel.CanvasSize = UDim2.new(0, 0, 0, 0)
 rightPanel.Visible = false
 rightPanel.Parent = mainFrame
 
--- UIListLayout cho leftPanel
 local leftLayout = Instance.new("UIListLayout")
 leftLayout.Parent = leftPanel
 leftLayout.SortOrder = Enum.SortOrder.LayoutOrder
 leftLayout.Padding = UDim.new(0, 4)
 
--- UIListLayout cho rightPanel
 local rightLayout = Instance.new("UIListLayout")
 rightLayout.Parent = rightPanel
 rightLayout.SortOrder = Enum.SortOrder.LayoutOrder
 rightLayout.Padding = UDim.new(0, 4)
 
--- HeadHitbox Tab (leftPanel)
+-- HeadHitbox Tab
 local leftTitle = createTransparentLabel("Head hitbox", leftPanel)
 leftTitle.TextColor3 = Color3.fromRGB(255, 150, 150)
 leftTitle.Font = Enum.Font.GothamBold
@@ -451,14 +476,13 @@ local loopspeedInput = createTransparentInput("Speed (e.g. 16)", "16", leftPanel
 local loopspeedToggle = createTransparentButton("Loopspeed: OFF", Color3.fromRGB(80, 80, 200), leftPanel)
 invisButton = createTransparentButton("INVISIBLE", INVIS_CONFIG.PRIMARY_COLOR, leftPanel)
 
--- Sound for invisibility toggle
 invisSound = Instance.new("Sound")
 invisSound.Name = "ToggleSound"
 invisSound.SoundId = INVIS_CONFIG.SOUND_ID
 invisSound.Volume = 0.5
 invisSound.Parent = gui
 
--- Other Tab (rightPanel)
+-- Other Tab
 local rightTitle = createTransparentLabel("ESP & Other Features", rightPanel)
 rightTitle.TextColor3 = Color3.fromRGB(150, 200, 255)
 rightTitle.Font = Enum.Font.GothamBold
@@ -481,7 +505,6 @@ local refreshBtn = createTransparentButton("Refresh Player List", Color3.fromRGB
 local espNameAllBtn = createTransparentButton("ESP Name All: OFF", Color3.fromRGB(80, 200, 80), rightPanel)
 local boxESPBtn = createTransparentButton("ESP Box Charm: OFF", Color3.fromRGB(200, 200, 80), rightPanel)
 
--- Tab switching logic
 local function switchTab(tabIndex)
     if tabIndex == 1 then
         leftPanel.Visible = true
@@ -496,15 +519,10 @@ local function switchTab(tabIndex)
     end
 end
 
-tab1Btn.MouseButton1Click:Connect(function()
-    switchTab(1)
-end)
-tab2Btn.MouseButton1Click:Connect(function()
-    switchTab(2)
-end)
+tab1Btn.MouseButton1Click:Connect(function() switchTab(1) end)
+tab2Btn.MouseButton1Click:Connect(function() switchTab(2) end)
 switchTab(1)
 
--- Close Button
 local closeButton = Instance.new("TextButton")
 closeButton.Size = UDim2.new(0, 28, 0, 28)
 closeButton.Position = UDim2.new(1, -32, 0, 2)
@@ -522,10 +540,12 @@ local function createNameESP(player, char)
     if not char then return end
     local head = char:FindFirstChild("Head")
     if not head then return end
+    
     if nameESPObjects[player] then
         nameESPObjects[player]:Destroy()
         nameESPObjects[player] = nil
     end
+
     local billboard = Instance.new("BillboardGui")
     billboard.Name = "NameESP"
     billboard.Adornee = head
@@ -534,6 +554,7 @@ local function createNameESP(player, char)
     billboard.AlwaysOnTop = true
     billboard.MaxDistance = 1000
     billboard.Parent = head
+
     local nameLabel = Instance.new("TextLabel")
     nameLabel.Size = UDim2.new(1, 0, 0.5, 0)
     nameLabel.Position = UDim2.new(0, 0, 0, 0)
@@ -545,6 +566,7 @@ local function createNameESP(player, char)
     nameLabel.Font = Enum.Font.GothamBold
     nameLabel.TextSize = 14
     nameLabel.Parent = billboard
+
     local distanceLabel = Instance.new("TextLabel")
     distanceLabel.Size = UDim2.new(1, 0, 0.5, 0)
     distanceLabel.Position = UDim2.new(0, 0, 0.5, 0)
@@ -556,18 +578,27 @@ local function createNameESP(player, char)
     distanceLabel.Font = Enum.Font.Gotham
     distanceLabel.TextSize = 12
     distanceLabel.Parent = billboard
+
     local connection
     connection = RunService.Heartbeat:Connect(function()
         if not billboard or not billboard.Parent or not LocalPlayer.Character or not LocalPlayer.Character:FindFirstChild("Head") then
-            if connection then
-                connection:Disconnect()
-            end
+            if connection then connection:Disconnect() end
             return
         end
+        -- Kiểm tra nếu người chơi mục tiêu đã chết thì ẩn/xóa ESP
+        if not isAlive(char) then
+            billboard.Enabled = false
+            return
+        else
+            billboard.Enabled = true
+        end
+
         local localHead = LocalPlayer.Character.Head
-        local distance = (head.Position - localHead.Position).Magnitude
-        distanceLabel.Text = string.format("%.1fm", distance)
-        nameLabel.TextColor3 = getTeamColor(player)
+        if head and head.Parent then
+            local distance = (head.Position - localHead.Position).Magnitude
+            distanceLabel.Text = string.format("%.1fm", distance)
+            nameLabel.TextColor3 = getTeamColor(player)
+        end
     end)
     nameESPObjects[player] = billboard
 end
@@ -579,28 +610,43 @@ local function removeNameESP(player)
     end
 end
 
--- ESP Name All auto update for new players
+-- ESP Name All auto update
 local espNameAllState = false
 
 local function handlePlayer(player)
     if player == LocalPlayer then return end
+
     local function onCharacterAdded(char)
         task.wait(0.5)
-        if autoHitboxEnabled then
+        local humanoid = char:WaitForChild("Humanoid", 5)
+        
+        -- Logic khi chết: Dọn dẹp hết
+        if humanoid then
+            humanoid.Died:Connect(function()
+                removeHeadHitbox(char)
+                removeBoxESP(char)
+                removeNameESP(player)
+            end)
+        end
+
+        -- Tự động bật các tính năng nếu đang ON
+        if autoHitboxEnabled and isAlive(char) then
             applyHeadHitbox(char, tonumber(sizeInput.Text) or DEFAULT_HITBOX_SIZE)
         end
-        -- ESP Name All: tự động áp dụng cho người chơi mới nếu đang bật
+
         if espNameAllState then
             selectedPlayers[player] = true
             createNameESP(player, char)
         elseif nameESPEnabled and selectedPlayers[player] then
             createNameESP(player, char)
         end
-        if boxESPEnabled then
+
+        if boxESPEnabled and isAlive(char) then
             local color = getTeamColor(player)
             local size = tonumber(sizeInput.Text) or DEFAULT_HITBOX_SIZE
             addBoxESP(char, color, size)
         end
+
         if player.Team then
             player:GetPropertyChangedSignal("Team"):Connect(function()
                 local color = getTeamColor(player)
@@ -614,14 +660,7 @@ local function handlePlayer(player)
                 end
             end)
         end
-        local humanoid = char:FindFirstChildOfClass("Humanoid")
-        if humanoid then
-            humanoid.Died:Connect(function()
-                removeHeadHitbox(char)
-                removeBoxESP(char)
-                removeNameESP(player)
-            end)
-        end
+
         char.AncestryChanged:Connect(function(_, parent)
             if not parent then
                 removeHeadHitbox(char)
@@ -630,13 +669,16 @@ local function handlePlayer(player)
             end
         end)
     end
+
     local charConn = player.CharacterAdded:Connect(onCharacterAdded)
     table.insert(globalConnections, charConn)
     if player.Character then
         onCharacterAdded(player.Character)
     end
+    
     local leaveConn = player.AncestryChanged:Connect(function(_, parent)
         if not parent then
+             -- Người chơi rời game
             if player.Character then
                 removeHeadHitbox(player.Character)
                 removeBoxESP(player.Character)
@@ -650,9 +692,7 @@ end
 
 local function updatePlayerList()
     for _, child in pairs(playerList:GetChildren()) do
-        if child:IsA("TextButton") then
-            child:Destroy()
-        end
+        if child:IsA("TextButton") then child:Destroy() end
     end
     local yPos = 0
     for _, player in pairs(Players:GetPlayers()) do
@@ -674,7 +714,7 @@ local function updatePlayerList()
                 selectedPlayers[player] = not selectedPlayers[player]
                 playerBtn.BackgroundColor3 = selectedPlayers[player] and Color3.fromRGB(80, 160, 80) or Color3.fromRGB(60, 60, 60)
                 if nameESPEnabled then
-                    if selectedPlayers[player] and player.Character then
+                    if selectedPlayers[player] and player.Character and isAlive(player.Character) then
                         createNameESP(player, player.Character)
                     else
                         removeNameESP(player)
@@ -689,7 +729,6 @@ end
 
 local loopspeedEnabled = false
 local loopspeedConnection = nil
-local loopspeedInputValue = "16"
 
 local function setLoopspeedEnabled(state)
     loopspeedEnabled = state
@@ -726,7 +765,6 @@ loopspeedToggle.MouseButton1Click:Connect(function()
 end)
 
 loopspeedInput.FocusLost:Connect(function(enterPressed)
-    loopspeedInputValue = loopspeedInput.Text
     if loopspeedEnabled then
         setLoopspeedEnabled(true)
     end
@@ -751,7 +789,7 @@ autoToggle.MouseButton1Click:Connect(function()
     autoToggle.BackgroundColor3 = autoHitboxEnabled and Color3.fromRGB(50, 180, 50) or Color3.fromRGB(180, 50, 50)
     if autoHitboxEnabled then
         for _, player in pairs(Players:GetPlayers()) do
-            if player ~= LocalPlayer and player.Character then
+            if player ~= LocalPlayer and player.Character and isAlive(player.Character) then
                 applyHeadHitbox(player.Character, tonumber(sizeInput.Text) or DEFAULT_HITBOX_SIZE)
             end
         end
@@ -780,7 +818,7 @@ autoNameESP.MouseButton1Click:Connect(function()
         end
     else
         for player, selected in pairs(selectedPlayers) do
-            if selected and player.Character then
+            if selected and player.Character and isAlive(player.Character) then
                 createNameESP(player, player.Character)
             end
         end
@@ -798,7 +836,7 @@ espNameAllBtn.MouseButton1Click:Connect(function()
     for _, player in pairs(Players:GetPlayers()) do
         if player ~= LocalPlayer then
             selectedPlayers[player] = espNameAllState
-            if espNameAllState and player.Character then
+            if espNameAllState and player.Character and isAlive(player.Character) then
                 createNameESP(player, player.Character)
             else
                 removeNameESP(player)
@@ -813,7 +851,7 @@ boxESPBtn.MouseButton1Click:Connect(function()
     boxESPBtn.Text = boxESPEnabled and "ESP Box Charm: ON" or "ESP Box Charm: OFF"
     boxESPBtn.BackgroundColor3 = boxESPEnabled and Color3.fromRGB(220, 220, 80) or Color3.fromRGB(200, 200, 80)
     for _, player in pairs(Players:GetPlayers()) do
-        if player ~= LocalPlayer and player.Character then
+        if player ~= LocalPlayer and player.Character and isAlive(player.Character) then
             local color = getTeamColor(player)
             local size = tonumber(sizeInput.Text) or DEFAULT_HITBOX_SIZE
             if boxESPEnabled then
@@ -825,14 +863,10 @@ boxESPBtn.MouseButton1Click:Connect(function()
     end
 end)
 
--- Invisibility Button logic
 invisButton.MouseButton1Click:Connect(toggleInvisibility)
 
 UserInputService.InputBegan:Connect(function(input, gameProcessed)
-    if gameProcessed then
-        return
-    end
-
+    if gameProcessed then return end
     if input.KeyCode == INVIS_CONFIG.TOGGLE_KEY then
         toggleInvisibility()
     end
@@ -843,33 +877,25 @@ LocalPlayer.CharacterAdded:Connect(function(character)
     invisButton.BackgroundColor3 = INVIS_CONFIG.PRIMARY_COLOR
     invisButton.Text = "INVISIBLE"
     local invisChair = workspace:FindFirstChild("invischair")
-    if invisChair then
-        invisChair:Destroy()
-    end
+    if invisChair then invisChair:Destroy() end
     setCharacterTransparency(character, 0)
 end)
 
-Players.PlayerRemoving:Connect(function(leavingPlayer)
-    if leavingPlayer == LocalPlayer then
-        local invisChair = workspace:FindFirstChild("invischair")
-        if invisChair then
-            invisChair:Destroy()
-        end
-    end
-end)
-
--- ESP Name All: tự động áp dụng cho người chơi mới vào nếu đang bật
 Players.PlayerAdded:Connect(function(player)
     handlePlayer(player)
     if espNameAllState then
         selectedPlayers[player] = true
-        if player.Character then
+        if player.Character and isAlive(player.Character) then
             createNameESP(player, player.Character)
         end
     end
 end)
 
 Players.PlayerRemoving:Connect(function(player)
+    if player == LocalPlayer then
+         local invisChair = workspace:FindFirstChild("invischair")
+         if invisChair then invisChair:Destroy() end
+    end
     if player.Character then
         removeHeadHitbox(player.Character)
         removeBoxESP(player.Character)
@@ -882,20 +908,21 @@ for _, player in pairs(Players:GetPlayers()) do
     handlePlayer(player)
 end
 
--- Hitbox head auto apply loop mỗi 5 giây
+-- Vòng lặp tự động (Đã được sửa lỗi hitbox xác chết)
 task.spawn(function()
     while true do
         task.wait(5)
         if autoHitboxEnabled then
             for _, player in pairs(Players:GetPlayers()) do
-                if player ~= LocalPlayer and player.Character and not processedPlayers[player.Character] then
-                    applyHeadHitbox(player.Character, tonumber(sizeInput.Text) or DEFAULT_HITBOX_SIZE)
-                else
-                    -- Periodically check and re-add BoxHandleAdornment if missing
-                    local character = player.Character
-                    if character then
-                        local head = character:FindFirstChild("Head")
-                        if head and processedPlayers[character] then
+                local char = player.Character
+                -- CHỈ ÁP DỤNG NẾU CÒN SỐNG (isAlive)
+                if player ~= LocalPlayer and char and isAlive(char) then
+                    if not processedPlayers[char] then
+                        applyHeadHitbox(char, tonumber(sizeInput.Text) or DEFAULT_HITBOX_SIZE)
+                    else
+                        -- Kiểm tra nếu Box Charm bị mất thì gắn lại
+                        local head = char:FindFirstChild("Head")
+                        if head then
                             local foundBox = false
                             for _, child in head:GetChildren() do
                                 if child:IsA("BoxHandleAdornment") and child.Name == "BoxCharmESP" then
@@ -914,10 +941,15 @@ task.spawn(function()
                                 box.ZIndex = 10
                                 box.AlwaysOnTop = true
                                 box.Parent = head
-                                boxESPObjects[character] = box
+                                boxESPObjects[char] = box
                             end
                         end
                     end
+                elseif char and not isAlive(char) then
+                     -- Nếu tìm thấy nhân vật nhưng đã chết, hãy đảm bảo hitbox bị xóa
+                     if processedPlayers[char] then
+                         removeHeadHitbox(char)
+                     end
                 end
             end
             statusLabel.Text = "Processing: " .. tableCount(processedPlayers) .. " Players"
