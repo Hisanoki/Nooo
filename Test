@@ -22,7 +22,7 @@ local CurrentTarget = nil
 
 -- --- TẠO GUI ---
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "GeminiAimGUI"
+ScreenGui.Name = "AimGUI"
 ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
 ScreenGui.ResetOnSpawn = false
 
@@ -193,7 +193,7 @@ local FOVRing = Instance.new("ImageLabel")
 FOVRing.Name = "FOVRing"
 FOVRing.Parent = ScreenGui
 FOVRing.AnchorPoint = Vector2.new(0.5, 0.5)
-FOVRing.Position = UDim2.new(0.5, 0, 0.5, 0)
+FOVRing.Position = UDim2.new(0.500, -2, 0.500, -16)
 FOVRing.BackgroundTransparency = 1
 FOVRing.Image = "rbxassetid://3570695787"
 FOVRing.ImageColor3 = Color3.fromRGB(255, 50, 50)
@@ -277,7 +277,7 @@ RunService.RenderStepped:Connect(function()
         -- DỰ ĐOÁN DI CHUYỂN
         if SETTINGS.PredictionEnabled and humanoid and humanoid.MoveDirection.Magnitude > 0 then
             local velocity = humanoid.MoveDirection * humanoid.WalkSpeed
-            local timeToHit = distance / 500  -- Giả định tốc độ đạn 500 studs/s
+            local timeToHit = distance / 200  -- Giả định tốc độ đạn 500 studs/s
             aimPos = aimPos + (velocity * timeToHit)
         end
         
