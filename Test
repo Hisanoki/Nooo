@@ -1,495 +1,293 @@
 local Players = game:GetService("Players")
-local ProximityPromptService = game:GetService("ProximityPromptService")
-local TweenService = game:GetService("TweenService")
-local player = Players.LocalPlayer
-local character = player.Character or player.CharacterAdded:Wait()
-local humanoidRootPart = character:WaitForChild("HumanoidRootPart")
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+local Workspace = game:GetService("Workspace")
+local Camera = Workspace.CurrentCamera
+local LocalPlayer = Players.LocalPlayer
 
--- Cấu hình tự động tương tác
-local instantInteractEnabled = true
-
-ProximityPromptService.PromptButtonHoldBegan:Connect(function(prompt, player)
-    if instantInteractEnabled then
-        fireproximityprompt(prompt)
-    end
-end)
-
--- Cấu hình auto boss
-local autoBossEnabled = false
-local tweenSpeed = 300
-local currentTween = nil
-local isAttackingBoss = false
-
-local BOSS_DATA = {
-    ["Goblin"] = {
-        position = Vector3.new(945, 35, -40376),
-        color = Color3.fromRGB(0, 128, 0),
-        textColor = Color3.fromRGB(255, 255, 255)
-    },
-    ["Điểm xuất phát"] = {
-        position = Vector3.new(22, 11, -40001),
-        color = Color3.fromRGB(100, 100, 100),
-        textColor = Color3.fromRGB(255, 255, 255)
-    },
-    ["Samurai"] = {
-        position = Vector3.new(-198, 38, -3561),
-        color = Color3.fromRGB(220, 20, 60),
-        textColor = Color3.fromRGB(255, 255, 255)
-    },
-    ["Vam"] = {
-        position = Vector3.new(114, 54, 5126),
-        color = Color3.fromRGB(75, 0, 130),
-        textColor = Color3.fromRGB(255, 255, 255)
-    },
-    ["Steampunk"] = {
-        position = Vector3.new(-7, 91, 26997),
-        color = Color3.fromRGB(210, 180, 140),
-        textColor = Color3.fromRGB(0, 0, 0)
-    },
-    ["Người lùn"] = {
-        position = Vector3.new(353, 51, 16077),
-        color = Color3.fromRGB(139, 69, 19),
-        textColor = Color3.fromRGB(255, 255, 255)
-    },
-    ["Đảo sky"] = {
-        position = Vector3.new(-395, 355, 34959),
-        color = Color3.fromRGB(135, 206, 235),
-        textColor = Color3.fromRGB(0, 0, 0)
-    },
-    ["Vua băng"] = {
-        position = Vector3.new(-5, 35, 46465),
-        color = Color3.fromRGB(173, 216, 230),
-        textColor = Color3.fromRGB(0, 0, 0)
-    }
+-- --- CẤU HÌNH MẶC ĐỊNH ---
+local SETTINGS = {
+    AimbotEnabled = true,
+    TeamCheck = true,
+    AimPart = "Head",
+    FOVSize = 50,
+    Smoothness = 0.5,
+    DistanceMultiplier = 0.03,  -- HỆ SỐ BÙ KHOẢNG CÁCH
+    VisibleCheck = true,
+    PredictionEnabled = true     -- DỰ ĐOÁN DI CHUYỂN
 }
 
--- Danh sách boss cần săn
-local BOSS_NAMES = {
-    "GoblinKing",
-    "MasterSamurai",
-    "Elder Vampire",
-    "MysteriousMerchant",
-    "RoboSanta",
-    "SteamborneCzar",
-    "King Ice",
-    "SubZeroIceGolem"
-}
+-- --- BIẾN HỆ THỐNG ---
+local CurrentTarget = nil
 
--- Tạo GUI
-local screenGui = Instance.new("ScreenGui")
-screenGui.Name = "BossTeleporter"
-screenGui.ResetOnSpawn = false
+-- --- TẠO GUI ---
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "GeminiAimGUI"
+ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
+ScreenGui.ResetOnSpawn = false
 
--- Frame chính (có thể di chuyển)
-local mainFrame = Instance.new("ImageLabel")
-mainFrame.Name = "MainFrame"
-mainFrame.Size = UDim2.new(0, 220, 0, 400)
-mainFrame.Position = UDim2.new(0, 50, 0, 50)
-mainFrame.Image = "rbxassetid://11437654695"
-mainFrame.ScaleType = Enum.ScaleType.Stretch
-mainFrame.BackgroundTransparency = 1
-mainFrame.BorderSizePixel = 2
-mainFrame.BorderColor3 = Color3.fromRGB(255, 255, 255)
-mainFrame.Active = true
-mainFrame.Draggable = true
-mainFrame.Selectable = true
-mainFrame.Parent = screenGui
+-- 1. NÚT BẬT TẮT (DRAGGABLE)
+local ToggleButton = Instance.new("TextButton")
+ToggleButton.Name = "ToggleAimMenu"
+ToggleButton.Parent = ScreenGui
+ToggleButton.BackgroundColor3 = Color3.fromRGB(0, 150, 255)
+ToggleButton.Position = UDim2.new(0.1, 0, 0.3, 0)
+ToggleButton.Size = UDim2.new(0, 50, 0, 50)
+ToggleButton.Font = Enum.Font.GothamBold
+ToggleButton.Text = "AIM"
+ToggleButton.TextColor3 = Color3.new(1, 1, 1)
+ToggleButton.TextSize = 14
+ToggleButton.AutoButtonColor = true
 
--- Thanh tiêu đề
-local titleBar = Instance.new("Frame")
-titleBar.Name = "TitleBar"
-titleBar.Size = UDim2.new(1, 0, 0, 35)
-titleBar.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-titleBar.BorderSizePixel = 0
-titleBar.Parent = mainFrame
+local ToggleCorner = Instance.new("UICorner")
+ToggleCorner.CornerRadius = UDim.new(1, 0)
+ToggleCorner.Parent = ToggleButton
 
-local titleText = Instance.new("TextLabel")
-titleText.Name = "TitleText"
-titleText.Size = UDim2.new(0.7, 0, 1, 0)
-titleText.Position = UDim2.new(0.05, 0, 0, 0)
-titleText.BackgroundTransparency = 1
-titleText.Text = "BOSS TELEPORTER"
-titleText.TextColor3 = Color3.fromRGB(0, 0, 0)
-titleText.Font = Enum.Font.GothamBold
-titleText.TextSize = 16
-titleText.Parent = titleBar
+local ToggleStroke = Instance.new("UIStroke")
+ToggleStroke.Parent = ToggleButton
+ToggleStroke.Color = Color3.new(1, 1, 1)
+ToggleStroke.Thickness = 2
 
--- Nút đóng/mở GUI
-local toggleButton = Instance.new("TextButton")
-toggleButton.Name = "ToggleButton"
-toggleButton.Size = UDim2.new(0, 100, 0, 30)
-toggleButton.Position = UDim2.new(0.5, -50, 0, 40)
-toggleButton.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-toggleButton.BorderSizePixel = 1
-toggleButton.BorderColor3 = Color3.fromRGB(200, 200, 200)
-toggleButton.Text = "Ẩn GUI"
-toggleButton.TextColor3 = Color3.fromRGB(0, 0, 0)
-toggleButton.Font = Enum.Font.Gotham
-toggleButton.TextSize = 13
-toggleButton.Parent = mainFrame
-
--- Hiển thị trạng thái auto-interact
-local autoInteractLabel = Instance.new("TextLabel")
-autoInteractLabel.Name = "AutoInteractLabel"
-autoInteractLabel.Size = UDim2.new(1, -20, 0, 20)
-autoInteractLabel.Position = UDim2.new(0, 10, 0, 75)
-autoInteractLabel.BackgroundTransparency = 1
-autoInteractLabel.Text = "Mua đồ nhanh: Bật"
-autoInteractLabel.TextColor3 = Color3.fromRGB(0, 255, 0)
-autoInteractLabel.Font = Enum.Font.Gotham
-autoInteractLabel.TextSize = 12
-autoInteractLabel.TextXAlignment = Enum.TextXAlignment.Center
-autoInteractLabel.Parent = mainFrame
-
--- Nút toggle auto-interact
-local toggleAutoButton = Instance.new("TextButton")
-toggleAutoButton.Name = "Tự động"
-toggleAutoButton.Size = UDim2.new(0, 120, 0, 25)
-toggleAutoButton.Position = UDim2.new(0.5, -60, 0, 100)
-toggleAutoButton.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-toggleAutoButton.BorderSizePixel = 1
-toggleAutoButton.BorderColor3 = Color3.fromRGB(200, 200, 200)
-toggleAutoButton.Text = "Tắt mua đồ nhanh"
-toggleAutoButton.TextColor3 = Color3.fromRGB(0, 0, 0)
-toggleAutoButton.Font = Enum.Font.Gotham
-toggleAutoButton.TextSize = 12
-toggleAutoButton.Parent = mainFrame
-
--- Nút Auto Boss
-local autoBossButton = Instance.new("TextButton")
-autoBossButton.Name = "AutoBossButton"
-autoBossButton.Size = UDim2.new(0, 120, 0, 25)
-autoBossButton.Position = UDim2.new(0.5, -60, 0, 130)
-autoBossButton.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-autoBossButton.BorderSizePixel = 1
-autoBossButton.BorderColor3 = Color3.fromRGB(200, 200, 200)
-autoBossButton.Text = "Tự động đánh Boss"
-autoBossButton.TextColor3 = Color3.fromRGB(0, 0, 0)
-autoBossButton.Font = Enum.Font.Gotham
-autoBossButton.TextSize = 11
-autoBossButton.Parent = mainFrame
-
--- Label hiển thị trạng thái auto boss
-local autoBossLabel = Instance.new("TextLabel")
-autoBossLabel.Name = "AutoBossLabel"
-autoBossLabel.Size = UDim2.new(1, -20, 0, 20)
-autoBossLabel.Position = UDim2.new(0, 10, 0, 160)
-autoBossLabel.BackgroundTransparency = 1
-autoBossLabel.Text = "Auto Boss: Tắt"
-autoBossLabel.TextColor3 = Color3.fromRGB(255, 50, 50)
-autoBossLabel.Font = Enum.Font.Gotham
-autoBossLabel.TextSize = 12
-autoBossLabel.TextXAlignment = Enum.TextXAlignment.Center
-autoBossLabel.Parent = mainFrame
-
--- Ô chỉnh tốc độ tween
-local speedLabel = Instance.new("TextLabel")
-speedLabel.Name = "SpeedLabel"
-speedLabel.Size = UDim2.new(0, 80, 0, 20)
-speedLabel.Position = UDim2.new(0, 10, 0, 185)
-speedLabel.BackgroundTransparency = 1
-speedLabel.Text = "Tốc độ:"
-speedLabel.TextColor3 = Color3.fromRGB(0, 0, 0)
-speedLabel.Font = Enum.Font.Gotham
-speedLabel.TextSize = 11
-speedLabel.TextXAlignment = Enum.TextXAlignment.Left
-speedLabel.Parent = mainFrame
-
-local speedInput = Instance.new("TextBox")
-speedInput.Name = "SpeedInput"
-speedInput.Size = UDim2.new(0, 100, 0, 25)
-speedInput.Position = UDim2.new(0, 90, 0, 183)
-speedInput.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-speedInput.BorderSizePixel = 1
-speedInput.BorderColor3 = Color3.fromRGB(200, 200, 200)
-speedInput.Text = tostring(tweenSpeed)
-speedInput.TextColor3 = Color3.fromRGB(0, 0, 0)
-speedInput.Font = Enum.Font.Gotham
-speedInput.TextSize = 11
-speedInput.Parent = mainFrame
-
--- Danh sách các nút teleport
-local scrollFrame = Instance.new("ScrollingFrame")
-scrollFrame.Name = "ScrollFrame"
-scrollFrame.Size = UDim2.new(1, -10, 0, 140)
-scrollFrame.Position = UDim2.new(0, 5, 0, 215)
-scrollFrame.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-scrollFrame.BackgroundTransparency = 0.2
-scrollFrame.BorderSizePixel = 1
-scrollFrame.BorderColor3 = Color3.fromRGB(200, 200, 200)
-scrollFrame.ScrollBarThickness = 6
-scrollFrame.ScrollBarImageColor3 = Color3.fromRGB(200, 200, 200)
-scrollFrame.CanvasSize = UDim2.new(0, 0, 0, 0)
-scrollFrame.Parent = mainFrame
-
-local buttonHeight = 32
-local padding = 4
-
--- Tạo nút cho từng boss
-local buttonCount = 0
-for bossName, bossInfo in pairs(BOSS_DATA) do
-    local teleButton = Instance.new("TextButton")
-    teleButton.Name = bossName .. "Button"
-    teleButton.Size = UDim2.new(1, -10, 0, buttonHeight)
-    teleButton.Position = UDim2.new(0, 5, 0, (buttonHeight + padding) * buttonCount)
-    
-    teleButton.BackgroundColor3 = bossInfo.color
-    teleButton.BorderSizePixel = 1
-    teleButton.BorderColor3 = bossInfo.color:lerp(Color3.new(0, 0, 0), 0.3)
-    
-    teleButton.Text = bossName
-    teleButton.TextColor3 = bossInfo.textColor
-    teleButton.Font = Enum.Font.GothamMedium
-    teleButton.TextSize = 13
-    teleButton.Parent = scrollFrame
-    
-    teleButton.MouseEnter:Connect(function()
-        teleButton.BackgroundColor3 = bossInfo.color:lerp(Color3.new(1, 1, 1), 0.2)
-    end)
-    
-    teleButton.MouseLeave:Connect(function()
-        teleButton.BackgroundColor3 = bossInfo.color
-    end)
-    
-    teleButton.MouseButton1Click:Connect(function()
-        if character and humanoidRootPart then
-            teleButton.Text = "Đang teleport..."
-            teleButton.BackgroundColor3 = Color3.fromRGB(255, 215, 0)
+-- Hàm di chuyển nút
+local function MakeDraggable(guiObject)
+    local dragging, dragInput, dragStart, startPos
+    guiObject.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            dragging = true
+            dragStart = input.Position
+            startPos = guiObject.Position
             
-            humanoidRootPart.CFrame = CFrame.new(bossInfo.position)
-            
-            task.wait(0.5)
-            teleButton.Text = bossName
-            teleButton.BackgroundColor3 = bossInfo.color
+            input.Changed:Connect(function()
+                if input.UserInputState == Enum.UserInputState.End then dragging = false end
+            end)
         end
     end)
-    
-    buttonCount = buttonCount + 1
+    guiObject.InputChanged:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+            dragInput = input
+        end
+    end)
+    UserInputService.InputChanged:Connect(function(input)
+        if input == dragInput and dragging then
+            local delta = input.Position - dragStart
+            guiObject.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+        end
+    end)
 end
+MakeDraggable(ToggleButton)
 
-scrollFrame.CanvasSize = UDim2.new(0, 0, 0, (buttonHeight + padding) * buttonCount)
+-- 2. MENU CHÍNH
+local MainFrame = Instance.new("Frame")
+MainFrame.Name = "MainFrame"
+MainFrame.Parent = ScreenGui
+MainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+MainFrame.Position = UDim2.new(0.5, -140, 0.5, -180)
+MainFrame.Size = UDim2.new(0, 280, 0, 400)
+MainFrame.Visible = false
+MainFrame.BorderSizePixel = 0
 
--- Nút mini trên màn hình khi GUI ẩn
-local miniButton = Instance.new("ImageButton")
-miniButton.Name = "MiniButton"
-miniButton.Size = UDim2.new(0, 60, 0, 60)
-miniButton.Position = UDim2.new(0, 10, 0.5, -30)
-miniButton.Image = "rbxassetid://11437654695"
-miniButton.ScaleType = Enum.ScaleType.Stretch
-miniButton.BackgroundTransparency = 1
-miniButton.BorderSizePixel = 2
-miniButton.BorderColor3 = Color3.fromRGB(255, 255, 255)
-miniButton.Visible = false
-miniButton.Active = true
-miniButton.Draggable = true
-miniButton.Selectable = true
-miniButton.Parent = screenGui
+local MainCorner = Instance.new("UICorner")
+MainCorner.CornerRadius = UDim.new(0, 15)
+MainCorner.Parent = MainFrame
 
-local miniButtonText = Instance.new("TextLabel")
-miniButtonText.Size = UDim2.new(1, 0, 1, 0)
-miniButtonText.BackgroundTransparency = 1
-miniButtonText.Text = "Mở\nGUI"
-miniButtonText.TextColor3 = Color3.fromRGB(0, 0, 0)
-miniButtonText.Font = Enum.Font.Gotham
-miniButtonText.TextSize = 11
-miniButtonText.TextWrapped = true
-miniButtonText.Parent = miniButton
+local Title = Instance.new("TextLabel")
+Title.Parent = MainFrame
+Title.BackgroundTransparency = 1
+Title.Position = UDim2.new(0, 0, 0, 10)
+Title.Size = UDim2.new(1, 0, 0, 30)
+Title.Font = Enum.Font.GothamBold
+Title.Text = "🎯 ADVANCED AIMBOT"
+Title.TextColor3 = Color3.fromRGB(255, 255, 255)
+Title.TextSize = 18
 
--- Biến trạng thái
-local isGUIVisible = true
-
--- Hàm tween teleport
-local function tweenTeleport(targetPosition)
-    if currentTween then
-        currentTween:Cancel()
+-- Hàm tạo các tùy chọn
+local yOffset = 50
+local function CreateOption(text, type, settingKey, minVal, maxVal, step)
+    local Label = Instance.new("TextLabel")
+    Label.Parent = MainFrame
+    Label.BackgroundTransparency = 1
+    Label.Position = UDim2.new(0.05, 0, 0, yOffset)
+    Label.Size = UDim2.new(0.5, 0, 0, 30)
+    Label.Font = Enum.Font.Gotham
+    Label.Text = text
+    Label.TextColor3 = Color3.fromRGB(200, 200, 200)
+    Label.TextXAlignment = Enum.TextXAlignment.Left
+    Label.TextSize = 13
+    
+    local Button = Instance.new("TextButton")
+    Button.Parent = MainFrame
+    Button.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+    Button.Position = UDim2.new(0.55, 0, 0, yOffset)
+    Button.Size = UDim2.new(0.4, 0, 0, 30)
+    Button.Font = Enum.Font.GothamBold
+    Button.TextColor3 = Color3.fromRGB(0, 255, 100)
+    Button.TextSize = 12
+    
+    local Corner = Instance.new("UICorner")
+    Corner.CornerRadius = UDim.new(0, 6)
+    Corner.Parent = Button
+    
+    if type == "Toggle" then
+        Button.Text = SETTINGS[settingKey] and "ON" or "OFF"
+        Button.TextColor3 = SETTINGS[settingKey] and Color3.fromRGB(0, 255, 100) or Color3.fromRGB(255, 50, 50)
+        Button.MouseButton1Click:Connect(function()
+            SETTINGS[settingKey] = not SETTINGS[settingKey]
+            Button.Text = SETTINGS[settingKey] and "ON" or "OFF"
+            Button.TextColor3 = SETTINGS[settingKey] and Color3.fromRGB(0, 255, 100) or Color3.fromRGB(255, 50, 50)
+        end)
+    elseif type == "Switch" then
+        Button.Text = SETTINGS[settingKey] == "Head" and "HEAD" or "BODY"
+        Button.MouseButton1Click:Connect(function()
+            if SETTINGS[settingKey] == "Head" then 
+                SETTINGS[settingKey] = "HumanoidRootPart" 
+            else 
+                SETTINGS[settingKey] = "Head" 
+            end
+            Button.Text = SETTINGS[settingKey] == "Head" and "HEAD" or "BODY"
+        end)
+    elseif type == "Slider" then
+        local currentValue = SETTINGS[settingKey]
+        Button.Text = string.format("%.2f", currentValue)
+        
+        Button.MouseButton1Click:Connect(function()
+            currentValue = currentValue + step
+            if currentValue > maxVal then currentValue = minVal end
+            SETTINGS[settingKey] = currentValue
+            Button.Text = string.format("%.2f", currentValue)
+        end)
     end
     
-    character = player.Character
-    if not character then return end
-    humanoidRootPart = character:FindFirstChild("HumanoidRootPart")
-    if not humanoidRootPart then return end
-    
-    local distance = (targetPosition - humanoidRootPart.Position).Magnitude
-    local duration = distance / tweenSpeed
-    
-    local tweenInfo = TweenInfo.new(
-        duration,
-        Enum.EasingStyle.Linear,
-        Enum.EasingDirection.InOut
-    )
-    
-    local goal = {CFrame = CFrame.new(targetPosition)}
-    currentTween = TweenService:Create(humanoidRootPart, tweenInfo, goal)
-    currentTween:Play()
-    
-    return currentTween
+    yOffset = yOffset + 40
 end
 
--- Hàm tìm boss trong workspace
-local function findBoss()
-    for _, bossName in ipairs(BOSS_NAMES) do
-        for _, obj in ipairs(workspace:GetDescendants()) do
-            if obj:IsA("Model") and obj.Name == bossName then
-                local humanoid = obj:FindFirstChildOfClass("Humanoid")
-                local rootPart = obj:FindFirstChild("HumanoidRootPart") or obj:FindFirstChild("Torso")
-                if humanoid and humanoid.Health > 0 and rootPart then
-                    return obj, rootPart
+-- TẠO CÁC TÙYCHỌN
+CreateOption("Enable Aimbot", "Toggle", "AimbotEnabled")
+CreateOption("Team Check", "Toggle", "TeamCheck")
+CreateOption("Aim Part", "Switch", "AimPart")
+CreateOption("FOV Size", "Slider", "FOVSize", 50, 400, 50)
+CreateOption("Smoothness", "Slider", "Smoothness", 0.05, 1.0, 0.05)
+CreateOption("Distance Fix", "Slider", "DistanceMultiplier", 0.01, 0.10, 0.01)
+CreateOption("Visible Check", "Toggle", "VisibleCheck")
+CreateOption("Prediction", "Toggle", "PredictionEnabled")
+
+-- Thêm hướng dẫn
+local Note = Instance.new("TextLabel")
+Note.Parent = MainFrame
+Note.BackgroundTransparency = 1
+Note.Position = UDim2.new(0.05, 0, 0, yOffset + 10)
+Note.Size = UDim2.new(0.9, 0, 0, 50)
+Note.Font = Enum.Font.Gotham
+Note.Text = "Distance Fix: Sửa lệch khi bắn xa\nSmooth: 0.05 (Mượt) -> 1.0 (Dính)\nKéo nút AIM để di chuyển"
+Note.TextColor3 = Color3.fromRGB(150, 150, 150)
+Note.TextSize = 10
+Note.TextWrapped = true
+Note.TextYAlignment = Enum.TextYAlignment.Top
+
+-- Toggle Menu
+ToggleButton.MouseButton1Click:Connect(function()
+    MainFrame.Visible = not MainFrame.Visible
+end)
+
+-- 3. VÒNG TRÒN FOV
+local FOVRing = Instance.new("ImageLabel")
+FOVRing.Name = "FOVRing"
+FOVRing.Parent = ScreenGui
+FOVRing.AnchorPoint = Vector2.new(0.5, 0.5)
+FOVRing.Position = UDim2.new(0.5, 0, 0.5, 0)
+FOVRing.BackgroundTransparency = 1
+FOVRing.Image = "rbxassetid://3570695787"
+FOVRing.ImageColor3 = Color3.fromRGB(255, 50, 50)
+FOVRing.ImageTransparency = 0.8
+FOVRing.ScaleType = Enum.ScaleType.Fit
+
+-- --- LOGIC AIMBOT ---
+
+-- Hàm kiểm tra tầm nhìn
+local function IsVisible(targetPart)
+    if not SETTINGS.VisibleCheck then return true end
+    local origin = Camera.CFrame.Position
+    local direction = (targetPart.Position - origin).Unit * (targetPart.Position - origin).Magnitude
+    local raycastParams = RaycastParams.new()
+    raycastParams.FilterDescendantsInstances = {LocalPlayer.Character, ScreenGui}
+    raycastParams.FilterType = Enum.RaycastFilterType.Exclude
+    
+    local result = Workspace:Raycast(origin, direction, raycastParams)
+    if result then
+        return result.Instance:IsDescendantOf(targetPart.Parent)
+    end
+    return false
+end
+
+-- Hàm tìm địch gần nhất
+local function GetClosestTarget()
+    local closestPlayer = nil
+    local shortestDistance = SETTINGS.FOVSize
+    
+    for _, player in pairs(Players:GetPlayers()) do
+        if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("Humanoid") and player.Character.Humanoid.Health > 0 and player.Character:FindFirstChild(SETTINGS.AimPart) then
+            if SETTINGS.TeamCheck and player.Team == LocalPlayer.Team then continue end
+            
+            local targetPart = player.Character[SETTINGS.AimPart]
+            local pos, onScreen = Camera:WorldToViewportPoint(targetPart.Position)
+            
+            if onScreen then
+                local screenCenter = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
+                local distance = (Vector2.new(pos.X, pos.Y) - screenCenter).Magnitude
+                
+                if distance < shortestDistance then
+                    if IsVisible(targetPart) then
+                        shortestDistance = distance
+                        closestPlayer = player.Character
+                    end
                 end
             end
         end
     end
-    return nil, nil
+    return closestPlayer
 end
 
--- Hàm spam M1
-local function spamM1()
-    local tool = character:FindFirstChildOfClass("Tool")
-    if tool and tool:FindFirstChild("Handle") then
-        tool:Activate()
-    end
-end
-
--- Hàm kiểm tra MasterKatana
-local function hasMasterKatana()
-    return player.Backpack:FindFirstChild("MasterKatana") ~= nil or 
-           (character and character:FindFirstChild("MasterKatana") ~= nil)
-end
-
--- Hàm auto boss chính
-local function autoBossLoop()
-    while autoBossEnabled do
-        character = player.Character
-        if not character then
-            task.wait(1)
-            continue
-        end
-        
-        humanoidRootPart = character:FindFirstChild("HumanoidRootPart")
-        if not humanoidRootPart then
-            task.wait(1)
-            continue
-        end
-        
-        -- Teleport đến vị trí mở map
-        local mapPosition = Vector3.new(2, 68, 46753)
-        local tween = tweenTeleport(mapPosition)
-        if tween then
-            tween.Completed:Wait()
-        end
-        task.wait(0.5)
-        
-        -- Tìm boss
-        local boss, bossRoot = findBoss()
-        
-        if boss and bossRoot then
-            local bossHumanoid = boss:FindFirstChildOfClass("Humanoid")
-            
-            -- Kiểm tra điều kiện MasterSamurai
-            if boss.Name == "MasterSamurai" then
-                if not hasMasterKatana() then
-                    autoBossLabel.Text = "Chờ MasterKatana..."
-                    task.wait(2)
-                    continue
-                end
-            end
-            
-            autoBossLabel.Text = "Đang đánh: " .. boss.Name
-            isAttackingBoss = true
-            
-            -- Teleport lên trên đầu boss
-            local attackPosition = bossRoot.Position + Vector3.new(0, 20, 0)
-            local attackTween = tweenTeleport(attackPosition)
-            if attackTween then
-                attackTween.Completed:Wait()
-            end
-            
-            -- Spam M1 cho đến khi boss chết
-            while autoBossEnabled and boss and boss.Parent and bossHumanoid and bossHumanoid.Health > 0 do
-                spamM1()
-                task.wait(2)
-            end
-            
-            isAttackingBoss = false
-            autoBossLabel.Text = "Đã tiêu diệt: " .. boss.Name
-            task.wait(1)
-        else
-            autoBossLabel.Text = "Không tìm thấy boss..."
-            task.wait(2)
-        end
-    end
-end
-
--- Hàm toggle GUI
-local function toggleGUI()
-    isGUIVisible = not isGUIVisible
-    mainFrame.Visible = isGUIVisible
-    miniButton.Visible = not isGUIVisible
+-- VÒNG LẶP CHÍNH
+RunService.RenderStepped:Connect(function()
+    -- Cập nhật FOV
+    FOVRing.Size = UDim2.new(0, SETTINGS.FOVSize * 2, SETTINGS.FOVSize * 2)
+    FOVRing.Visible = SETTINGS.AimbotEnabled
     
-    if isGUIVisible then
-        toggleButton.Text = "Ẩn GUI"
-    else
-        toggleButton.Text = "Hiện GUI"
-    end
-end
-
--- Hàm toggle auto-interact
-local function toggleAutoInteract()
-    instantInteractEnabled = not instantInteractEnabled
+    if not SETTINGS.AimbotEnabled then return end
     
-    if instantInteractEnabled then
-        autoInteractLabel.Text = "Mua đồ nhanh: Bật"
-        autoInteractLabel.TextColor3 = Color3.fromRGB(0, 255, 0)
-        toggleAutoButton.Text = "Tắt mua đồ nhanh"
-    else
-        autoInteractLabel.Text = "Mua đồ nhanh: Tắt"
-        autoInteractLabel.TextColor3 = Color3.fromRGB(255, 50, 50)
-        toggleAutoButton.Text = "Bật mua đồ nhanh"
-    end
-end
-
--- Hàm toggle auto boss
-local function toggleAutoBoss()
-    autoBossEnabled = not autoBossEnabled
+    CurrentTarget = GetClosestTarget()
     
-    if autoBossEnabled then
-        autoBossLabel.Text = "Auto Boss: Bật"
-        autoBossLabel.TextColor3 = Color3.fromRGB(0, 255, 0)
-        autoBossButton.BackgroundColor3 = Color3.fromRGB(200, 255, 200)
-        task.spawn(autoBossLoop)
-    else
-        autoBossLabel.Text = "Auto Boss: Tắt"
-        autoBossLabel.TextColor3 = Color3.fromRGB(255, 50, 50)
-        autoBossButton.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-        if currentTween then
-            currentTween:Cancel()
+    if CurrentTarget then
+        FOVRing.ImageColor3 = Color3.fromRGB(0, 255, 100)
+        
+        local targetPart = CurrentTarget[SETTINGS.AimPart]
+        local humanoid = CurrentTarget:FindFirstChild("Humanoid")
+        
+        -- TÍNH KHOẢNG CÁCH
+        local distance = (targetPart.Position - Camera.CFrame.Position).Magnitude
+        
+        -- BÙ OFFSET THEO KHOẢNG CÁCH
+        local dynamicOffset = 0
+        if SETTINGS.AimPart == "Head" then
+            dynamicOffset = math.clamp(distance * SETTINGS.DistanceMultiplier, 0, 6)
         end
-    end
-end
-
--- Cập nhật tốc độ tween
-speedInput.FocusLost:Connect(function()
-    local newSpeed = tonumber(speedInput.Text)
-    if newSpeed and newSpeed > 0 then
-        tweenSpeed = newSpeed
+        
+        -- VỊ TRÍ AIM
+        local aimPos = targetPart.Position + Vector3.new(0, dynamicOffset, 0)
+        
+        -- DỰ ĐOÁN DI CHUYỂN
+        if SETTINGS.PredictionEnabled and humanoid and humanoid.MoveDirection.Magnitude > 0 then
+            local velocity = humanoid.MoveDirection * humanoid.WalkSpeed
+            local timeToHit = distance / 500  -- Giả định tốc độ đạn 500 studs/s
+            aimPos = aimPos + (velocity * timeToHit)
+        end
+        
+        -- TẠO CFRAME
+        local currentCFrame = Camera.CFrame
+        local targetCFrame = CFrame.new(currentCFrame.Position, aimPos)
+        
+        -- SMOOTH AIM
+        Camera.CFrame = currentCFrame:Lerp(targetCFrame, SETTINGS.Smoothness)
     else
-        speedInput.Text = tostring(tweenSpeed)
-    end
-end)
-
--- Kết nối sự kiện nút
-toggleButton.MouseButton1Click:Connect(toggleGUI)
-miniButton.MouseButton1Click:Connect(toggleGUI)
-toggleAutoButton.MouseButton1Click:Connect(toggleAutoInteract)
-autoBossButton.MouseButton1Click:Connect(toggleAutoBoss)
-
--- Thêm GUI vào màn hình
-screenGui.Parent = player:WaitForChild("PlayerGui")
-
--- Hiệu ứng khi mở GUI
-task.spawn(function()
-    mainFrame.ImageTransparency = 1
-    for i = 0, 1, 0.1 do
-        mainFrame.ImageTransparency = 1 - i
-        task.wait(0.01)
+        FOVRing.ImageColor3 = Color3.fromRGB(255, 50, 50)
     end
 end)
