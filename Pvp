@@ -6,7 +6,7 @@ local LocalPlayer = Players.LocalPlayer
 -- --- CẤU HÌNH ---
 local CONFIG = {
     Range = 40,
-    AllyNames = "GrahamScyther,namlkun1407",  -- Thêm bằng dấu phẩy
+    AllyNames = "GrahamScyther,namlkun1407",
     BubbleColor = Color3.fromRGB(0, 170, 255),
     BubbleTransparency = 0.6,
     SkillPrefix = "Kamen Rider",
@@ -22,14 +22,15 @@ local CONFIG = {
     },
     AntiStunDuration = 0.2,
     AntiStunCooldown = 2,
-    AntiStunEnabled = false
+    AntiStunEnabled = false,
+    AntiFallEnabled = true  -- Mặc định BẬT
 }
 
 -- Hàm chuyển đổi chuỗi ally thành table
 local function ParseAllyNames()
     local allies = {}
     for name in string.gmatch(CONFIG.AllyNames, "([^,]+)") do
-        local trimmed = name:match("^%s*(.-)%s*$")  -- Trim spaces
+        local trimmed = name:match("^%s*(.-)%s*$")
         if trimmed ~= "" then
             table.insert(allies, trimmed)
         end
@@ -37,12 +38,10 @@ local function ParseAllyNames()
     return allies
 end
 
--- Lấy danh sách ally
 local function GetAllyList()
     return ParseAllyNames()
 end
 
--- Kiểm tra có phải ally không
 local function IsAlly(playerName)
     local allies = GetAllyList()
     for _, allyName in ipairs(allies) do
@@ -68,14 +67,71 @@ local cachedCharacter = nil
 local cachedRootPart = nil
 local cachedHumanoid = nil
 
--- --- HÀM ANTI-STUN ---
+-- ============================================================
+-- --- ANTI FALL SYSTEM ---
+-- ============================================================
+local antiFallConnection = nil  -- connection Heartbeat clamp velocity
+local antiFallSetupDone = false -- flag tránh setup nhiều lần sau respawn
+
+local function SetupAntiFall(character)
+    -- Dọn connection cũ nếu có
+    if antiFallConnection then
+        antiFallConnection:Disconnect()
+        antiFallConnection = nil
+    end
+
+    if not CONFIG.AntiFallEnabled then return end
+
+    local rootPart = character:WaitForChild("HumanoidRootPart", 5)
+    if not rootPart then return end
+
+    -- Chặn RemoteEvent trong các LocalScript fall client
+    for _, obj in pairs(character:GetDescendants()) do
+        if obj:IsA("LocalScript") then
+            local re = obj:FindFirstChildOfClass("RemoteEvent")
+            if re then
+                re:Destroy()
+            end
+        end
+    end
+
+    -- Clamp velocity Y để script fall client không bao giờ trigger (nó check < -150)
+    antiFallConnection = RunService.Heartbeat:Connect(function()
+        if rootPart and rootPart.Parent and rootPart.Velocity.Y < -148 then
+            local vel = rootPart.Velocity
+            rootPart.Velocity = Vector3.new(vel.X, -148, vel.Z)
+        end
+    end)
+
+    -- Chặn RemoteEvent mới được thêm vào (phòng trường hợp script load muộn)
+    character.DescendantAdded:Connect(function(obj)
+        if obj:IsA("RemoteEvent") and obj.Parent and obj.Parent:IsA("LocalScript") then
+            obj:Destroy()
+        end
+    end)
+end
+
+-- Hàm bật/tắt Anti Fall (dùng bởi toggle button)
+local function ToggleAntiFall(enabled)
+    CONFIG.AntiFallEnabled = enabled
+    if enabled then
+        if cachedCharacter then
+            SetupAntiFall(cachedCharacter)
+        end
+    else
+        if antiFallConnection then
+            antiFallConnection:Disconnect()
+            antiFallConnection = nil
+        end
+    end
+end
+
+-- --- ANTI-STUN ---
 local function ApplyAntiStun()
     if not cachedCharacter or not cachedRootPart or not cachedHumanoid then return end
-    
     cachedRootPart.Anchored = false
     cachedHumanoid.PlatformStand = false
     cachedHumanoid.Sit = false
-    
     for _, obj in pairs(cachedRootPart:GetChildren()) do
         if obj:IsA("BodyMover") then
             obj:Destroy()
@@ -85,15 +141,10 @@ end
 
 local function TriggerAntiStun()
     local currentTime = tick()
-    
-    if currentTime - lastAntiStunTime < CONFIG.AntiStunCooldown then
-        return false
-    end
-    
+    if currentTime - lastAntiStunTime < CONFIG.AntiStunCooldown then return false end
     isAntiStunActive = true
     lastAntiStunTime = currentTime
     antiStunCooldownRemaining = CONFIG.AntiStunCooldown
-    
     task.spawn(function()
         local startTime = tick()
         while tick() - startTime < CONFIG.AntiStunDuration do
@@ -102,7 +153,6 @@ local function TriggerAntiStun()
         end
         isAntiStunActive = false
     end)
-    
     return true
 end
 
@@ -157,7 +207,7 @@ MainFrame.Image = "rbxassetid://122727189017649"
 MainFrame.ScaleType = Enum.ScaleType.Stretch
 MainFrame.BackgroundTransparency = 1
 MainFrame.Position = UDim2.new(0.5, -140, 0.1, 0)
-MainFrame.Size = UDim2.new(0, 280, 0, 550)  -- Tăng chiều cao
+MainFrame.Size = UDim2.new(0, 280, 0, 400)  -- Tăng chiều cao cho thêm nút Anti Fall
 MainFrame.Active = true
 MainFrame.Draggable = true
 
@@ -172,7 +222,7 @@ Header.Parent = MainFrame
 Header.BackgroundColor3 = Color3.fromRGB(0, 120, 215)
 Header.Size = UDim2.new(1, 0, 0, 40)
 Header.Font = Enum.Font.GothamBold
-Header.Text = "🎯 AIM PRO V2"
+Header.Text = "AIM PRO"
 Header.TextColor3 = Color3.fromRGB(255, 255, 255)
 Header.TextSize = 16
 
@@ -247,7 +297,7 @@ CooldownTimer.Text = "0.0s"
 CooldownTimer.TextColor3 = Color3.fromRGB(255, 255, 255)
 CooldownTimer.TextSize = 18
 
--- Anti-Stun COOLDOWN DISPLAY
+-- Anti-Stun Cooldown Display
 local AntiStunFrame = Instance.new("Frame")
 AntiStunFrame.Parent = ScreenGui
 AntiStunFrame.BackgroundColor3 = Color3.fromRGB(160, 90, 0)
@@ -284,7 +334,7 @@ ScrollFrame.Parent = MainFrame
 ScrollFrame.BackgroundTransparency = 1
 ScrollFrame.Position = UDim2.new(0, 0, 0, 45)
 ScrollFrame.Size = UDim2.new(1, 0, 1, -45)
-ScrollFrame.CanvasSize = UDim2.new(0, 0, 0, 900)
+ScrollFrame.CanvasSize = UDim2.new(0, 0, 0, 950)
 ScrollFrame.ScrollBarThickness = 4
 ScrollFrame.ScrollBarImageColor3 = Color3.fromRGB(0, 120, 215)
 
@@ -327,7 +377,46 @@ local yPos = 10
 CreateSectionLabel("⚙️ TÍNH NĂNG", UDim2.new(0.05, 0, 0, yPos)) yPos = yPos + 28
 local AimToggle = CreateToggle("AimToggle", "🎯 Aim Assist", UDim2.new(0.05, 0, 0, yPos)) yPos = yPos + 48
 local AntiToggle = CreateToggle("AntiToggle", "⚡ Khắc Runner", UDim2.new(0.05, 0, 0, yPos)) yPos = yPos + 48
-local DashAntiStunToggle = CreateToggle("DashAntiStunToggle", "💨 Dash Anti-Stun", UDim2.new(0.05, 0, 0, yPos)) yPos = yPos + 58
+local DashAntiStunToggle = CreateToggle("DashAntiStunToggle", "💨 Dash Anti-Stun", UDim2.new(0.05, 0, 0, yPos)) yPos = yPos + 48
+
+-- ============================================================
+-- NÚT ANTI FALL (mặc định BẬT, màu xanh lá)
+-- ============================================================
+local AntiFallToggle, AntiFallLabel = CreateToggle("AntiFallToggle", "🛡️ Anti Fall", UDim2.new(0.05, 0, 0, yPos))
+-- Set trạng thái ban đầu = ON
+AntiFallToggle.Text = "ON"
+AntiFallToggle.TextColor3 = Color3.fromRGB(80, 255, 80)
+AntiFallToggle.BackgroundColor3 = Color3.fromRGB(0, 120, 80)
+AntiFallToggle.Parent.BackgroundColor3 = Color3.fromRGB(0, 80, 140)
+yPos = yPos + 58
+
+-- ============================================================
+-- HIỂN THỊ TRẠNG THÁI ANTI FALL (badge nhỏ dưới nút)
+-- ============================================================
+local AntiFallStatusLabel = Instance.new("TextLabel")
+AntiFallStatusLabel.Parent = ScrollFrame
+AntiFallStatusLabel.BackgroundColor3 = Color3.fromRGB(0, 120, 80)
+AntiFallStatusLabel.BackgroundTransparency = 0.3
+AntiFallStatusLabel.Position = UDim2.new(0.05, 0, 0, yPos - 46)  -- ngay dưới toggle frame
+AntiFallStatusLabel.Size = UDim2.new(0.9, 0, 0, 22)
+AntiFallStatusLabel.Font = Enum.Font.GothamBold
+AntiFallStatusLabel.Text = "✅ Anti Fall: ĐANG HOẠT ĐỘNG"
+AntiFallStatusLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+AntiFallStatusLabel.TextSize = 11
+local AntiFallStatusCorner = Instance.new("UICorner")
+AntiFallStatusCorner.CornerRadius = UDim.new(0, 5)
+AntiFallStatusCorner.Parent = AntiFallStatusLabel
+
+-- Hàm cập nhật badge trạng thái
+local function UpdateAntiFallStatus(enabled)
+    if enabled then
+        AntiFallStatusLabel.Text = "✅ Anti Fall: ĐANG HOẠT ĐỘNG"
+        AntiFallStatusLabel.BackgroundColor3 = Color3.fromRGB(0, 120, 80)
+    else
+        AntiFallStatusLabel.Text = "❌ Anti Fall: ĐÃ TẮT"
+        AntiFallStatusLabel.BackgroundColor3 = Color3.fromRGB(160, 40, 40)
+    end
+end
 
 CreateSectionLabel("⚔️ CHỌN SKILL AUTO TP:", UDim2.new(0.05, 0, 0, yPos)) yPos = yPos + 28
 local SkillR = CreateSkillToggle("R", UDim2.new(0.05, 0, 0, yPos))
@@ -348,14 +437,14 @@ local BubbleInput = CreateInput("BubbleInput", "💧 Bubble:", UDim2.new(0.05, 0
 local AntiStunDurationInput = CreateInput("AntiStunDuration", "⏳ Anti-Stun Time:", UDim2.new(0.05, 0, 0, yPos), CONFIG.AntiStunDuration) yPos = yPos + 48
 local AntiStunCooldownInput = CreateInput("AntiStunCooldown", "🔄 Anti-Stun CD:", UDim2.new(0.05, 0, 0, yPos), CONFIG.AntiStunCooldown) yPos = yPos + 58
 
-local Credit = Instance.new("TextLabel") 
-Credit.Parent = ScrollFrame 
-Credit.BackgroundTransparency = 1 
-Credit.Position = UDim2.new(0, 0, 0, yPos) 
-Credit.Size = UDim2.new(1, 0, 0, 22) 
-Credit.Font = Enum.Font.GothamBold 
+local Credit = Instance.new("TextLabel")
+Credit.Parent = ScrollFrame
+Credit.BackgroundTransparency = 1
+Credit.Position = UDim2.new(0, 0, 0, yPos)
+Credit.Size = UDim2.new(1, 0, 0, 22)
+Credit.Font = Enum.Font.GothamBold
 Credit.Text = "Allies: " .. CONFIG.AllyNames
-Credit.TextColor3 = Color3.fromRGB(150, 200, 255) 
+Credit.TextColor3 = Color3.fromRGB(150, 200, 255)
 Credit.TextSize = 10
 
 ScrollFrame.CanvasSize = UDim2.new(0, 0, 0, yPos + 30)
@@ -373,31 +462,24 @@ BubblePart.Anchored = true
 BubblePart.CastShadow = false
 BubblePart.Parent = workspace
 
--- --- HÀM TÌM MỤC TIÊU CẢI TIẾN ---
+-- --- HÀM TÌM MỤC TIÊU ---
 local function GetClosestEnemy(searchRange)
     if not cachedCharacter or not cachedRootPart then return nil end
-    
     local closestPlayer = nil
     local shortestDistance = searchRange
     local myPosition = cachedRootPart.Position
     local allies = GetAllyList()
-    
     for _, player in pairs(Players:GetPlayers()) do
         if player ~= LocalPlayer then
             local isAlly = false
             for _, allyName in ipairs(allies) do
-                if player.Name == allyName then
-                    isAlly = true
-                    break
+                if player.Name == allyName then isAlly = true break end
             end
-            end
-            
             if not isAlly then
                 local char = player.Character
                 if char then
                     local humanoid = char:FindFirstChild("Humanoid")
                     local root = char:FindFirstChild("HumanoidRootPart")
-                    
                     if humanoid and humanoid.Health > 0 and root then
                         local distance = (root.Position - myPosition).Magnitude
                         if distance < shortestDistance then
@@ -412,45 +494,31 @@ local function GetClosestEnemy(searchRange)
     return closestPlayer
 end
 
--- --- HÀM THỰC HIỆN TELEPORT ---
+-- --- HÀM TELEPORT ---
 local function ExecuteTeleport(target)
     if not target or not target:FindFirstChild("HumanoidRootPart") then return end
     if not cachedCharacter or not cachedRootPart then return end
-    
     local targetCFrame = target.HumanoidRootPart.CFrame
     local backPosition = targetCFrame * CFrame.new(0, 0, 3)
-    
     cachedRootPart.CFrame = CFrame.lookAt(backPosition.Position, target.HumanoidRootPart.Position)
-    
     lastTeleportTime = tick()
     teleportCooldownRemaining = CONFIG.TeleportCooldown
     CooldownFrame.Visible = true
 end
 
--- --- TELEPORT TỰ ĐỘNG ---
 local function AutoTeleportToTarget()
     local currentTime = tick()
     if currentTime - lastTeleportTime < CONFIG.TeleportCooldown then return end
-    
     task.wait(CONFIG.TeleportDelay)
-    
     local target = GetClosestEnemy(CONFIG.Range + 5)
-    if target then
-        ExecuteTeleport(target)
-    end
+    if target then ExecuteTeleport(target) end
 end
 
--- --- TELEPORT THỦ CÔNG ---
 MobileTPBtn.MouseButton1Click:Connect(function()
     local currentTime = tick()
-    if currentTime - lastTeleportTime < CONFIG.TeleportCooldown then 
-        return 
-    end
-    
+    if currentTime - lastTeleportTime < CONFIG.TeleportCooldown then return end
     local target = GetClosestEnemy(CONFIG.Range + 5)
-    if target then
-        ExecuteTeleport(target)
-    end
+    if target then ExecuteTeleport(target) end
 end)
 
 -- --- HOOK ---
@@ -458,25 +526,20 @@ local dashConnection = nil
 
 local function SetupDashHook()
     if dashConnection then return end
-    
     local oldNamecall
     oldNamecall = hookmetamethod(game, "__namecall", function(self, ...)
         local args = {...}
         local method = getnamecallmethod()
-        
         if CONFIG.AntiStunEnabled and method == "FireServer" and self.Name == "Remote" and args[1] == "Dash" then
             TriggerAntiStun()
         end
-        
         if method == "FireServer" and self.Name == "Remote" then
             if isAntiRunner and CONFIG.SelectedSkills[args[1]] then
                 task.spawn(AutoTeleportToTarget)
             end
         end
-        
         return oldNamecall(self, ...)
     end)
-    
     dashConnection = true
 end
 
@@ -501,18 +564,25 @@ DashAntiStunToggle.MouseButton1Click:Connect(function()
     DashAntiStunToggle.Text = CONFIG.AntiStunEnabled and "ON" or "OFF"
     DashAntiStunToggle.TextColor3 = CONFIG.AntiStunEnabled and Color3.fromRGB(80, 255, 80) or Color3.fromRGB(255, 80, 80)
     DashAntiStunToggle.BackgroundColor3 = CONFIG.AntiStunEnabled and Color3.fromRGB(0, 120, 80) or Color3.fromRGB(0, 60, 110)
-    
-    if CONFIG.AntiStunEnabled then
-        SetupDashHook()
-    end
+    if CONFIG.AntiStunEnabled then SetupDashHook() end
+end)
+
+-- ============================================================
+-- LOGIC NÚT ANTI FALL
+-- ============================================================
+AntiFallToggle.MouseButton1Click:Connect(function()
+    local newState = not CONFIG.AntiFallEnabled
+    ToggleAntiFall(newState)
+    AntiFallToggle.Text = newState and "ON" or "OFF"
+    AntiFallToggle.TextColor3 = newState and Color3.fromRGB(80, 255, 80) or Color3.fromRGB(255, 80, 80)
+    AntiFallToggle.BackgroundColor3 = newState and Color3.fromRGB(0, 120, 80) or Color3.fromRGB(0, 60, 110)
+    UpdateAntiFallStatus(newState)
 end)
 
 -- Xử lý Ally Input
 AllyInput.FocusLost:Connect(function()
-    local newAllyText = AllyInput.Text:gsub("%s+", "")  -- Xóa hết space
-    if newAllyText == "" then 
-        newAllyText = "GrahamScyther,namlkun1407"
-    end
+    local newAllyText = AllyInput.Text:gsub("%s+", "")
+    if newAllyText == "" then newAllyText = "GrahamScyther,namlkun1407" end
     CONFIG.AllyNames = newAllyText
     AllyInput.Text = CONFIG.AllyNames
     Credit.Text = "Allies: " .. CONFIG.AllyNames
@@ -528,7 +598,6 @@ local function SetupSkillToggle(button, skillKey)
 end
 SetupSkillToggle(SkillR, "R") SetupSkillToggle(SkillT, "T") SetupSkillToggle(SkillF, "F") SetupSkillToggle(SkillG, "G")
 
--- Input Handlers
 CharacterInput.FocusLost:Connect(function()
     local newName = CharacterInput.Text:gsub("^%s*(.-)%s*$", "%1")
     if newName == "" then CharacterInput.Text = CONFIG.SkillSuffix return end
@@ -546,39 +615,39 @@ RangeInput.FocusLost:Connect(function()
     end
 end)
 
-TPDelayInput.FocusLost:Connect(function() 
-    local v = tonumber(TPDelayInput.Text) 
-    if v and v >= 0 then CONFIG.TeleportDelay = v else TPDelayInput.Text = tostring(CONFIG.TeleportDelay) end 
+TPDelayInput.FocusLost:Connect(function()
+    local v = tonumber(TPDelayInput.Text)
+    if v and v >= 0 then CONFIG.TeleportDelay = v else TPDelayInput.Text = tostring(CONFIG.TeleportDelay) end
 end)
 
-TPCooldownInput.FocusLost:Connect(function() 
-    local v = tonumber(TPCooldownInput.Text) 
-    if v and v >= 0 then CONFIG.TeleportCooldown = v else TPCooldownInput.Text = tostring(CONFIG.TeleportCooldown) end 
+TPCooldownInput.FocusLost:Connect(function()
+    local v = tonumber(TPCooldownInput.Text)
+    if v and v >= 0 then CONFIG.TeleportCooldown = v else TPCooldownInput.Text = tostring(CONFIG.TeleportCooldown) end
 end)
 
-SkillDelayInput.FocusLost:Connect(function() 
-    local v = tonumber(SkillDelayInput.Text) 
-    if v and v >= 0 then CONFIG.SkillDelay = v else SkillDelayInput.Text = tostring(CONFIG.SkillDelay) end 
+SkillDelayInput.FocusLost:Connect(function()
+    local v = tonumber(SkillDelayInput.Text)
+    if v and v >= 0 then CONFIG.SkillDelay = v else SkillDelayInput.Text = tostring(CONFIG.SkillDelay) end
 end)
 
-BubbleInput.FocusLost:Connect(function() 
-    local v = tonumber(BubbleInput.Text) 
-    if v and v >= 0 and v <= 1 then 
-        CONFIG.BubbleTransparency = v 
-        if isAiming then BubblePart.Transparency = v end 
-    else 
-        BubbleInput.Text = tostring(CONFIG.BubbleTransparency) 
-    end 
+BubbleInput.FocusLost:Connect(function()
+    local v = tonumber(BubbleInput.Text)
+    if v and v >= 0 and v <= 1 then
+        CONFIG.BubbleTransparency = v
+        if isAiming then BubblePart.Transparency = v end
+    else
+        BubbleInput.Text = tostring(CONFIG.BubbleTransparency)
+    end
 end)
 
-AntiStunDurationInput.FocusLost:Connect(function() 
-    local v = tonumber(AntiStunDurationInput.Text) 
-    if v and v > 0 then CONFIG.AntiStunDuration = v else AntiStunDurationInput.Text = tostring(CONFIG.AntiStunDuration) end 
+AntiStunDurationInput.FocusLost:Connect(function()
+    local v = tonumber(AntiStunDurationInput.Text)
+    if v and v > 0 then CONFIG.AntiStunDuration = v else AntiStunDurationInput.Text = tostring(CONFIG.AntiStunDuration) end
 end)
 
-AntiStunCooldownInput.FocusLost:Connect(function() 
-    local v = tonumber(AntiStunCooldownInput.Text) 
-    if v and v > 0 then CONFIG.AntiStunCooldown = v else AntiStunCooldownInput.Text = tostring(CONFIG.AntiStunCooldown) end 
+AntiStunCooldownInput.FocusLost:Connect(function()
+    local v = tonumber(AntiStunCooldownInput.Text)
+    if v and v > 0 then CONFIG.AntiStunCooldown = v else AntiStunCooldownInput.Text = tostring(CONFIG.AntiStunCooldown) end
 end)
 
 -- --- CẬP NHẬT CACHE CHARACTER ---
@@ -593,12 +662,27 @@ local function UpdateCharacterCache()
     end
 end
 
-LocalPlayer.CharacterAdded:Connect(function()
+-- ============================================================
+-- AUTO SETUP ANTI FALL KHI HỒI SINH (chỉ bật 1 lần mỗi lần spawn)
+-- ============================================================
+LocalPlayer.CharacterAdded:Connect(function(character)
     task.wait(0.1)
     UpdateCharacterCache()
+    antiFallSetupDone = false  -- reset flag để cho phép setup lại
+    if CONFIG.AntiFallEnabled and not antiFallSetupDone then
+        antiFallSetupDone = true
+        SetupAntiFall(character)
+        UpdateAntiFallStatus(true)  -- cập nhật badge trên GUI
+    end
 end)
 
 UpdateCharacterCache()
+
+-- Setup Anti Fall cho character hiện tại ngay lúc chạy script
+if CONFIG.AntiFallEnabled and cachedCharacter and not antiFallSetupDone then
+    antiFallSetupDone = true
+    SetupAntiFall(cachedCharacter)
+end
 
 -- --- VÒNG LẶP CHÍNH ---
 local lastUpdate = tick()
@@ -606,7 +690,7 @@ local updateInterval = 0.016
 
 RunService.RenderStepped:Connect(function(deltaTime)
     local currentTime = tick()
-    
+
     if not cachedCharacter or not cachedRootPart then
         UpdateCharacterCache()
         if not cachedRootPart then
@@ -614,33 +698,23 @@ RunService.RenderStepped:Connect(function(deltaTime)
             return
         end
     end
-    
+
     BubblePart.Position = cachedRootPart.Position
-    
+
     if teleportCooldownRemaining > 0 then
         teleportCooldownRemaining = math.max(0, teleportCooldownRemaining - deltaTime)
         CooldownTimer.Text = string.format("%.1fs", teleportCooldownRemaining)
-        if teleportCooldownRemaining <= 0 then 
-            CooldownFrame.Visible = false 
-        end
+        if teleportCooldownRemaining <= 0 then CooldownFrame.Visible = false end
     end
-    
+
     if antiStunCooldownRemaining > 0 then
         antiStunCooldownRemaining = math.max(0, antiStunCooldownRemaining - deltaTime)
         AntiStunTimer.Text = string.format("%.1fs", antiStunCooldownRemaining)
         AntiStunFrame.Visible = true
-        
-        if isAntiStunActive then
-            AntiStunFrame.BackgroundColor3 = Color3.fromRGB(0, 160, 90)
-        else
-            AntiStunFrame.BackgroundColor3 = Color3.fromRGB(160, 90, 0)
-        end
-        
-        if antiStunCooldownRemaining <= 0 then 
-            AntiStunFrame.Visible = false 
-        end
+        AntiStunFrame.BackgroundColor3 = isAntiStunActive and Color3.fromRGB(0, 160, 90) or Color3.fromRGB(160, 90, 0)
+        if antiStunCooldownRemaining <= 0 then AntiStunFrame.Visible = false end
     end
-    
+
     if isAiming and currentTime - lastUpdate >= updateInterval then
         lastUpdate = currentTime
         local target = GetClosestEnemy(CONFIG.Range + 5)
