@@ -9,15 +9,58 @@ local Humanoid = Character:WaitForChild("Humanoid")
 local HumanoidRootPart = Character:WaitForChild("HumanoidRootPart")
 
 -- Cấu hình
-local ANTI_STUN_ENABLED = false -- Tắt auto anti-stun
-local MANUAL_ANTI_STUN_DURATION = 0.2 -- Thời gian anti-stun khi bấm 1
-local COOLDOWN_TIME = 2 -- Thời gian hồi chiêu
-local KEYBIND = Enum.KeyCode.One -- Phím kích hoạt (số 1)
-local TOGGLE_GUI_KEY = Enum.KeyCode.LeftControl -- Phím bật/tắt GUI
+local ANTI_STUN_ENABLED = false
+local MANUAL_ANTI_STUN_DURATION = 0.2
+local COOLDOWN_TIME = 2
+local KEYBIND = Enum.KeyCode.One
+local TOGGLE_GUI_KEY = Enum.KeyCode.LeftControl
 
 local isOnCooldown = false
 local isManualAntiStunActive = false
 local isGUIVisible = true
+
+-- ===================== ANTI FALL =====================
+local ANTI_FALL_ENABLED = true
+local antiFallConnection = nil
+local antiFallSetup = false
+
+local function SetupAntiFall()
+    if antiFallSetup then return end
+    antiFallSetup = true
+
+    -- Clamp velocity để block fall damage trigger
+    if antiFallConnection then
+        antiFallConnection:Disconnect()
+        antiFallConnection = nil
+    end
+
+    antiFallConnection = RunService.Heartbeat:Connect(function()
+        if not ANTI_FALL_ENABLED then return end
+        local root = Character and Character:FindFirstChild("HumanoidRootPart")
+        if root and root.Velocity.Y < -148 then
+            local vel = root.Velocity
+            root.Velocity = Vector3.new(vel.X, -148, vel.Z)
+        end
+    end)
+
+    -- Destroy RemoteEvent trong fall script để chặn FireServer
+    for _, obj in pairs(Character:GetDescendants()) do
+        if obj:IsA("LocalScript") then
+            local re = obj:FindFirstChildOfClass("RemoteEvent")
+            if re then re:Destroy() end
+        end
+    end
+
+    Character.DescendantAdded:Connect(function(obj)
+        if not ANTI_FALL_ENABLED then return end
+        if obj:IsA("RemoteEvent") and obj.Parent:IsA("LocalScript") then
+            obj:Destroy()
+        end
+    end)
+end
+
+SetupAntiFall()
+-- =====================================================
 
 -- Tạo GUI
 local ScreenGui = Instance.new("ScreenGui")
@@ -26,11 +69,11 @@ ScreenGui.ResetOnSpawn = false
 ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
 
--- Frame chính
+-- Frame chính (cao thêm để chứa nút mới)
 local MainFrame = Instance.new("Frame")
 MainFrame.Name = "MainFrame"
-MainFrame.Size = UDim2.new(0, 280, 0, 200)
-MainFrame.Position = UDim2.new(0.5, -140, 0.5, -100)
+MainFrame.Size = UDim2.new(0, 280, 0, 250)
+MainFrame.Position = UDim2.new(0.5, -140, 0.5, -125)
 MainFrame.BackgroundColor3 = Color3.fromRGB(35, 35, 45)
 MainFrame.BorderSizePixel = 0
 MainFrame.Parent = ScreenGui
@@ -55,7 +98,7 @@ local HeaderCorner = Instance.new("UICorner")
 HeaderCorner.CornerRadius = UDim.new(0, 10)
 HeaderCorner.Parent = Header
 
--- Toggle Button
+-- Toggle Button (Auto Anti-Stun)
 local ToggleButton = Instance.new("TextButton")
 ToggleButton.Name = "ToggleButton"
 ToggleButton.Size = UDim2.new(0, 240, 0, 35)
@@ -72,11 +115,28 @@ local ToggleCorner = Instance.new("UICorner")
 ToggleCorner.CornerRadius = UDim.new(0, 8)
 ToggleCorner.Parent = ToggleButton
 
+-- Anti Fall Button
+local AntiFallButton = Instance.new("TextButton")
+AntiFallButton.Name = "AntiFallButton"
+AntiFallButton.Size = UDim2.new(0, 240, 0, 35)
+AntiFallButton.Position = UDim2.new(0, 20, 0, 90)
+AntiFallButton.BackgroundColor3 = Color3.fromRGB(50, 180, 220)
+AntiFallButton.BorderSizePixel = 0
+AntiFallButton.Font = Enum.Font.GothamBold
+AntiFallButton.Text = "Anti Fall: ON"
+AntiFallButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+AntiFallButton.TextSize = 14
+AntiFallButton.Parent = MainFrame
+
+local AntiFallCorner = Instance.new("UICorner")
+AntiFallCorner.CornerRadius = UDim.new(0, 8)
+AntiFallCorner.Parent = AntiFallButton
+
 -- Cooldown Display
 local CooldownFrame = Instance.new("Frame")
 CooldownFrame.Name = "CooldownFrame"
 CooldownFrame.Size = UDim2.new(0, 240, 0, 35)
-CooldownFrame.Position = UDim2.new(0, 20, 0, 90)
+CooldownFrame.Position = UDim2.new(0, 20, 0, 135)
 CooldownFrame.BackgroundColor3 = Color3.fromRGB(50, 50, 60)
 CooldownFrame.BorderSizePixel = 0
 CooldownFrame.Parent = MainFrame
@@ -95,11 +155,11 @@ CooldownLabel.TextColor3 = Color3.fromRGB(100, 255, 100)
 CooldownLabel.TextSize = 14
 CooldownLabel.Parent = CooldownFrame
 
--- Settings
+-- Settings inputs
 local DurationInput = Instance.new("TextBox")
 DurationInput.Name = "DurationInput"
 DurationInput.Size = UDim2.new(0, 115, 0, 30)
-DurationInput.Position = UDim2.new(0, 20, 0, 135)
+DurationInput.Position = UDim2.new(0, 20, 0, 182)
 DurationInput.BackgroundColor3 = Color3.fromRGB(50, 50, 60)
 DurationInput.BorderSizePixel = 0
 DurationInput.Font = Enum.Font.Gotham
@@ -116,7 +176,7 @@ DurationCorner.Parent = DurationInput
 local CooldownInput = Instance.new("TextBox")
 CooldownInput.Name = "CooldownInput"
 CooldownInput.Size = UDim2.new(0, 115, 0, 30)
-CooldownInput.Position = UDim2.new(0, 145, 0, 135)
+CooldownInput.Position = UDim2.new(0, 145, 0, 182)
 CooldownInput.BackgroundColor3 = Color3.fromRGB(50, 50, 60)
 CooldownInput.BorderSizePixel = 0
 CooldownInput.Font = Enum.Font.Gotham
@@ -135,7 +195,10 @@ local dragging, dragInput, dragStart, startPos
 
 local function update(input)
     local delta = input.Position - dragStart
-    MainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+    MainFrame.Position = UDim2.new(
+        startPos.X.Scale, startPos.X.Offset + delta.X,
+        startPos.Y.Scale, startPos.Y.Offset + delta.Y
+    )
 end
 
 Header.InputBegan:Connect(function(input)
@@ -143,7 +206,6 @@ Header.InputBegan:Connect(function(input)
         dragging = true
         dragStart = input.Position
         startPos = MainFrame.Position
-        
         input.Changed:Connect(function()
             if input.UserInputState == Enum.UserInputState.End then
                 dragging = false
@@ -164,10 +226,9 @@ UserInputService.InputChanged:Connect(function(input)
     end
 end)
 
--- Toggle GUI Visibility (Left Ctrl)
+-- Toggle GUI
 UserInputService.InputBegan:Connect(function(input, gameProcessed)
     if gameProcessed then return end
-    
     if input.KeyCode == TOGGLE_GUI_KEY then
         isGUIVisible = not isGUIVisible
         MainFrame.Visible = isGUIVisible
@@ -177,13 +238,24 @@ end)
 -- Toggle Auto Anti-Stun
 ToggleButton.MouseButton1Click:Connect(function()
     ANTI_STUN_ENABLED = not ANTI_STUN_ENABLED
-    
     if ANTI_STUN_ENABLED then
         ToggleButton.Text = "Auto Anti-Stun: ON"
         ToggleButton.BackgroundColor3 = Color3.fromRGB(50, 220, 50)
     else
         ToggleButton.Text = "Auto Anti-Stun: OFF"
         ToggleButton.BackgroundColor3 = Color3.fromRGB(220, 50, 50)
+    end
+end)
+
+-- Toggle Anti Fall
+AntiFallButton.MouseButton1Click:Connect(function()
+    ANTI_FALL_ENABLED = not ANTI_FALL_ENABLED
+    if ANTI_FALL_ENABLED then
+        AntiFallButton.Text = "Anti Fall: ON"
+        AntiFallButton.BackgroundColor3 = Color3.fromRGB(50, 180, 220)
+    else
+        AntiFallButton.Text = "Anti Fall: OFF"
+        AntiFallButton.BackgroundColor3 = Color3.fromRGB(120, 120, 130)
     end
 end)
 
@@ -209,22 +281,18 @@ end)
 -- Hàm anti-stun
 local function AntiStun()
     if not (ANTI_STUN_ENABLED or isManualAntiStunActive) then return end
-    
     pcall(function()
         if HumanoidRootPart.Anchored then
             HumanoidRootPart.Anchored = false
         end
-        
         if Humanoid.PlatformStand then
             Humanoid.PlatformStand = false
         end
-        
         if Humanoid.Sit then
             Humanoid.Sit = false
         end
-        
         for _, obj in pairs(HumanoidRootPart:GetChildren()) do
-            if obj:IsA("BodyVelocity") or obj:IsA("BodyGyro") or 
+            if obj:IsA("BodyVelocity") or obj:IsA("BodyGyro") or
                obj:IsA("BodyPosition") or obj:IsA("BodyThrust") then
                 obj:Destroy()
             end
@@ -235,25 +303,22 @@ end
 -- Manual Anti-Stun (Press 1)
 UserInputService.InputBegan:Connect(function(input, gameProcessed)
     if gameProcessed then return end
-    
     if input.KeyCode == KEYBIND and not isOnCooldown then
         isOnCooldown = true
         isManualAntiStunActive = true
-        
+
         CooldownLabel.Text = "ACTIVE!"
         CooldownLabel.TextColor3 = Color3.fromRGB(255, 255, 100)
-        
-        -- Anti-stun trong duration
+
         task.wait(MANUAL_ANTI_STUN_DURATION)
         isManualAntiStunActive = false
-        
-        -- Đếm ngược cooldown (chắc chắn hiện)
+
         for i = COOLDOWN_TIME * 10, 1, -1 do
             CooldownLabel.Text = string.format("Cooldown: %.1fs", i / 10)
             CooldownLabel.TextColor3 = Color3.fromRGB(255, 100, 100)
             task.wait(0.1)
         end
-        
+
         isOnCooldown = false
         CooldownLabel.Text = "Ready (Press 1)"
         CooldownLabel.TextColor3 = Color3.fromRGB(100, 255, 100)
@@ -263,9 +328,26 @@ end)
 -- Loop anti-stun
 RunService.Heartbeat:Connect(AntiStun)
 
--- Reset khi respawn
+-- Reset & tái kích hoạt khi respawn (chỉ 1 lần)
 LocalPlayer.CharacterAdded:Connect(function(newCharacter)
     Character = newCharacter
     Humanoid = Character:WaitForChild("Humanoid")
     HumanoidRootPart = Character:WaitForChild("HumanoidRootPart")
+
+    -- Reset flag để SetupAntiFall chạy lại đúng 1 lần
+    antiFallSetup = false
+
+    -- Ngắt connection cũ nếu còn
+    if antiFallConnection then
+        antiFallConnection:Disconnect()
+        antiFallConnection = nil
+    end
+
+    -- Chỉ bật lại nếu Anti Fall đang được bật
+    if ANTI_FALL_ENABLED then
+        SetupAntiFall()
+        -- Cập nhật lại nút cho đúng trạng thái
+        AntiFallButton.Text = "Anti Fall: ON"
+        AntiFallButton.BackgroundColor3 = Color3.fromRGB(50, 180, 220)
+    end
 end)
