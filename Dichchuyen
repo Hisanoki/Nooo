@@ -12,8 +12,9 @@ local CONFIG = {
 
 -- --- BIẾN TRẠNG THÁI ---
 local selectedTarget = nil
-local isAutoFarmKill = false
-local isAntiAFK = true -- Mặc định bật
+local isAutoAttack = false
+local isAutoTeleport = false
+local isAntiAFK = true
 local lastTeleportTime = 0
 local hasSelectedCharacter = false
 local lastHealth = 100
@@ -27,19 +28,19 @@ LocalPlayer.Idled:Connect(function()
     end
 end)
 
--- --- TẠO GUI HIỆN ĐẠI ---
+-- --- TẠO GUI ---
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "ModernAutoFarmGUI"
 ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
 ScreenGui.ResetOnSpawn = false
 
--- Nút Toggle GUI (có thể di chuyển) - MÀU VÀNG CÁT VỚI ẢNH
+-- Nút Toggle GUI
 local ToggleBtn = Instance.new("ImageButton")
 ToggleBtn.Parent = ScreenGui
-ToggleBtn.BackgroundColor3 = Color3.fromRGB(218, 165, 32) -- Màu vàng cát
+ToggleBtn.BackgroundColor3 = Color3.fromRGB(218, 165, 32)
 ToggleBtn.Position = UDim2.new(0.02, 0, 0.3, 0)
 ToggleBtn.Size = UDim2.new(0, 70, 0, 70)
-ToggleBtn.Image = "rbxassetid://7965269366" -- ID ảnh của bạn
+ToggleBtn.Image = "rbxassetid://7965269366"
 ToggleBtn.ScaleType = Enum.ScaleType.Fit
 ToggleBtn.Active = true
 ToggleBtn.Draggable = true
@@ -49,11 +50,11 @@ ToggleCorner.CornerRadius = UDim.new(0, 15)
 ToggleCorner.Parent = ToggleBtn
 
 local ToggleStroke = Instance.new("UIStroke")
-ToggleStroke.Color = Color3.fromRGB(255, 215, 0) -- Viền vàng sáng
+ToggleStroke.Color = Color3.fromRGB(255, 215, 0)
 ToggleStroke.Thickness = 4
 ToggleStroke.Parent = ToggleBtn
 
--- Thêm hiệu ứng shadow cho nút
+-- Shadow
 local ToggleShadow = Instance.new("ImageLabel")
 ToggleShadow.Parent = ToggleBtn
 ToggleShadow.BackgroundTransparency = 1
@@ -64,13 +65,13 @@ ToggleShadow.ImageColor3 = Color3.fromRGB(0, 0, 0)
 ToggleShadow.ImageTransparency = 0.7
 ToggleShadow.ZIndex = -1
 
--- Main Frame (có thể kéo toàn màn hình) - TĂNG CHIỀU CAO
+-- Main Frame - tăng chiều cao để chứa thêm nút
 local MainFrame = Instance.new("Frame")
 MainFrame.Name = "MainFrame"
 MainFrame.Parent = ScreenGui
 MainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
-MainFrame.Position = UDim2.new(0.5, -180, 0.5, -225)
-MainFrame.Size = UDim2.new(0, 360, 0, 450) -- Tăng từ 400 lên 450
+MainFrame.Position = UDim2.new(0.5, -180, 0.5, -250)
+MainFrame.Size = UDim2.new(0, 360, 0, 500)
 MainFrame.Active = true
 MainFrame.Draggable = true
 MainFrame.Visible = false
@@ -125,13 +126,13 @@ TargetLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
 TargetLabel.TextSize = 16
 TargetLabel.TextXAlignment = Enum.TextXAlignment.Left
 
--- ScrollFrame cho danh sách người chơi
+-- ScrollFrame
 local ScrollFrame = Instance.new("ScrollingFrame")
 ScrollFrame.Parent = MainFrame
 ScrollFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 35)
 ScrollFrame.BorderSizePixel = 0
 ScrollFrame.Position = UDim2.new(0, 15, 0, 90)
-ScrollFrame.Size = UDim2.new(1, -30, 0, 180)
+ScrollFrame.Size = UDim2.new(1, -30, 0, 160)
 ScrollFrame.ScrollBarThickness = 6
 ScrollFrame.ScrollBarImageColor3 = Color3.fromRGB(255, 50, 50)
 
@@ -148,7 +149,7 @@ UIListLayout.SortOrder = Enum.SortOrder.Name
 local StatusLabel = Instance.new("TextLabel")
 StatusLabel.Parent = MainFrame
 StatusLabel.BackgroundTransparency = 1
-StatusLabel.Position = UDim2.new(0, 15, 0, 280)
+StatusLabel.Position = UDim2.new(0, 15, 0, 260)
 StatusLabel.Size = UDim2.new(1, -30, 0, 25)
 StatusLabel.Font = Enum.Font.GothamBold
 StatusLabel.Text = "⚡ Trạng thái: Chờ..."
@@ -160,7 +161,7 @@ StatusLabel.TextXAlignment = Enum.TextXAlignment.Left
 local AntiAFKLabel = Instance.new("TextLabel")
 AntiAFKLabel.Parent = MainFrame
 AntiAFKLabel.BackgroundTransparency = 1
-AntiAFKLabel.Position = UDim2.new(0, 15, 0, 305)
+AntiAFKLabel.Position = UDim2.new(0, 15, 0, 285)
 AntiAFKLabel.Size = UDim2.new(1, -30, 0, 25)
 AntiAFKLabel.Font = Enum.Font.GothamBold
 AntiAFKLabel.Text = "🛡️ Anti-AFK: BẬT"
@@ -168,12 +169,12 @@ AntiAFKLabel.TextColor3 = Color3.fromRGB(100, 255, 100)
 AntiAFKLabel.TextSize = 14
 AntiAFKLabel.TextXAlignment = Enum.TextXAlignment.Left
 
--- Anti-AFK Toggle Button
+-- Anti-AFK Button
 local AntiAFKBtn = Instance.new("TextButton")
 AntiAFKBtn.Parent = MainFrame
 AntiAFKBtn.BackgroundColor3 = Color3.fromRGB(50, 150, 50)
-AntiAFKBtn.Position = UDim2.new(0, 15, 0, 340)
-AntiAFKBtn.Size = UDim2.new(1, -30, 0, 40)
+AntiAFKBtn.Position = UDim2.new(0, 15, 0, 318)
+AntiAFKBtn.Size = UDim2.new(1, -30, 0, 38)
 AntiAFKBtn.Font = Enum.Font.GothamBold
 AntiAFKBtn.Text = "🛡️ Anti-AFK: BẬT"
 AntiAFKBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -183,12 +184,14 @@ local AntiAFKCorner = Instance.new("UICorner")
 AntiAFKCorner.CornerRadius = UDim.new(0, 10)
 AntiAFKCorner.Parent = AntiAFKBtn
 
--- Refresh Button
+-- =============================================
+-- HÀNG NÚT 1: REFRESH + AUTO TELEPORT
+-- =============================================
 local RefreshBtn = Instance.new("TextButton")
 RefreshBtn.Parent = MainFrame
 RefreshBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 55)
-RefreshBtn.Position = UDim2.new(0, 15, 0, 390)
-RefreshBtn.Size = UDim2.new(0.48, -10, 0, 40)
+RefreshBtn.Position = UDim2.new(0, 15, 0, 368)
+RefreshBtn.Size = UDim2.new(0.48, -10, 0, 38)
 RefreshBtn.Font = Enum.Font.GothamBold
 RefreshBtn.Text = "🔄 Refresh"
 RefreshBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -198,33 +201,53 @@ local RefreshCorner = Instance.new("UICorner")
 RefreshCorner.CornerRadius = UDim.new(0, 10)
 RefreshCorner.Parent = RefreshBtn
 
--- Auto Farm Kill Button
-local AutoBtn = Instance.new("TextButton")
-AutoBtn.Parent = MainFrame
-AutoBtn.BackgroundColor3 = Color3.fromRGB(70, 70, 75)
-AutoBtn.Position = UDim2.new(0.52, 0, 0, 390)
-AutoBtn.Size = UDim2.new(0.48, -15, 0, 40)
-AutoBtn.Font = Enum.Font.GothamBold
-AutoBtn.Text = "⚔️ Auto Farm Kill"
-AutoBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-AutoBtn.TextSize = 14
+-- Auto Teleport Button
+local TeleBtn = Instance.new("TextButton")
+TeleBtn.Parent = MainFrame
+TeleBtn.BackgroundColor3 = Color3.fromRGB(30, 100, 180)
+TeleBtn.Position = UDim2.new(0.52, 0, 0, 368)
+TeleBtn.Size = UDim2.new(0.48, -15, 0, 38)
+TeleBtn.Font = Enum.Font.GothamBold
+TeleBtn.Text = "🌀 Auto Tele"
+TeleBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+TeleBtn.TextSize = 14
 
-local AutoCorner = Instance.new("UICorner")
-AutoCorner.CornerRadius = UDim.new(0, 10)
-AutoCorner.Parent = AutoBtn
+local TeleCorner = Instance.new("UICorner")
+TeleCorner.CornerRadius = UDim.new(0, 10)
+TeleCorner.Parent = TeleBtn
+
+-- =============================================
+-- HÀNG NÚT 2: AUTO ATTACK (full width)
+-- =============================================
+local AutoAttackBtn = Instance.new("TextButton")
+AutoAttackBtn.Parent = MainFrame
+AutoAttackBtn.BackgroundColor3 = Color3.fromRGB(70, 70, 75)
+AutoAttackBtn.Position = UDim2.new(0, 15, 0, 418)
+AutoAttackBtn.Size = UDim2.new(1, -30, 0, 38)
+AutoAttackBtn.Font = Enum.Font.GothamBold
+AutoAttackBtn.Text = "⚔️ Auto Attack: TẮT"
+AutoAttackBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+AutoAttackBtn.TextSize = 16
+
+local AutoAttackCorner = Instance.new("UICorner")
+AutoAttackCorner.CornerRadius = UDim.new(0, 10)
+AutoAttackCorner.Parent = AutoAttackBtn
 
 -- Credit
 local Credit = Instance.new("TextLabel")
 Credit.Parent = MainFrame
 Credit.BackgroundTransparency = 1
-Credit.Position = UDim2.new(0, 0, 1, -25)
+Credit.Position = UDim2.new(0, 0, 1, -22)
 Credit.Size = UDim2.new(1, 0, 0, 20)
 Credit.Font = Enum.Font.GothamBold
 Credit.Text = "Made for Mobile 📱"
 Credit.TextColor3 = Color3.fromRGB(120, 120, 125)
 Credit.TextSize = 12
 
--- --- HÀM CHỌN TƯỚNG ---
+-- =============================================
+-- CÁC HÀM CHỨC NĂNG
+-- =============================================
+
 local function SelectCharacter()
     local success = pcall(function()
         local args = {
@@ -234,7 +257,7 @@ local function SelectCharacter()
         }
         LocalPlayer.PlayerGui:WaitForChild("Menu"):WaitForChild("Frame"):WaitForChild("LocalScript"):WaitForChild("RemoteEvent"):FireServer(unpack(args))
     end)
-    
+
     if success then
         hasSelectedCharacter = true
         print("✅ Đã chọn tướng: " .. CONFIG.CharacterName)
@@ -246,27 +269,25 @@ local function SelectCharacter()
     end
 end
 
--- --- HÀM TÌM REMOTE ---
 local function GetCharacterRemote()
-    local tool = LocalPlayer.Backpack:FindFirstChild(CONFIG.CharacterName) or LocalPlayer.Character:FindFirstChild(CONFIG.CharacterName)
+    local tool = LocalPlayer.Backpack:FindFirstChild(CONFIG.CharacterName)
+        or (LocalPlayer.Character and LocalPlayer.Character:FindFirstChild(CONFIG.CharacterName))
     if tool then
         return tool:FindFirstChild("Remote")
     end
     return nil
 end
 
--- --- HÀM TẠO DANH SÁCH NGƯỜI CHƠI ---
 local playerButtons = {}
 
 local function CreatePlayerList()
-    -- Xóa danh sách cũ
     for _, btn in ipairs(playerButtons) do
         btn:Destroy()
     end
     playerButtons = {}
 
     local totalHeight = 5
-    
+
     for _, player in ipairs(Players:GetPlayers()) do
         if player ~= LocalPlayer then
             local button = Instance.new("TextButton")
@@ -279,56 +300,49 @@ local function CreatePlayerList()
             button.TextSize = 14
             button.TextXAlignment = Enum.TextXAlignment.Left
             button.TextTruncate = Enum.TextTruncate.AtEnd
-            
-            -- Padding cho text
+
             local padding = Instance.new("UIPadding")
             padding.PaddingLeft = UDim.new(0, 10)
             padding.Parent = button
-            
+
             local corner = Instance.new("UICorner")
             corner.CornerRadius = UDim.new(0, 8)
             corner.Parent = button
-            
+
             button.MouseButton1Click:Connect(function()
                 selectedTarget = player
-                
-                -- Reset màu tất cả nút
+
                 for _, btn in ipairs(playerButtons) do
                     btn.BackgroundColor3 = Color3.fromRGB(50, 50, 55)
                     btn.TextColor3 = Color3.fromRGB(255, 255, 255)
                 end
-                
-                -- Highlight nút được chọn
+
                 button.BackgroundColor3 = Color3.fromRGB(255, 50, 50)
                 button.TextColor3 = Color3.fromRGB(255, 255, 255)
-                
+
                 StatusLabel.Text = "🎯 Mục tiêu: " .. player.Name
                 StatusLabel.TextColor3 = Color3.fromRGB(100, 255, 100)
             end)
-            
+
             table.insert(playerButtons, button)
             totalHeight = totalHeight + 40
         end
     end
-    
+
     ScrollFrame.CanvasSize = UDim2.new(0, 0, 0, totalHeight)
 end
 
--- --- HÀM TELEPORT ---
 local function TeleportToTarget()
     if not selectedTarget or not selectedTarget.Character then return end
-    
     local targetRoot = selectedTarget.Character:FindFirstChild("HumanoidRootPart")
     local myChar = LocalPlayer.Character
     local myRoot = myChar and myChar:FindFirstChild("HumanoidRootPart")
-    
     if targetRoot and myRoot then
         myRoot.CFrame = targetRoot.CFrame * CFrame.new(0, 3, -5)
         lastTeleportTime = tick()
     end
 end
 
--- --- HÀM TẤN CÔNG ---
 local function AttackTarget()
     local remote = GetCharacterRemote()
     if remote then
@@ -336,59 +350,64 @@ local function AttackTarget()
     end
 end
 
+local function UpdateStatusLabel()
+    local parts = {}
+    if isAutoTeleport then table.insert(parts, "🌀 Tele") end
+    if isAutoAttack then table.insert(parts, "⚔️ Attack") end
+
+    if #parts == 0 then
+        StatusLabel.Text = "⚡ Trạng thái: Chờ..."
+        StatusLabel.TextColor3 = Color3.fromRGB(255, 255, 100)
+    else
+        local target = selectedTarget and selectedTarget.Name or "???"
+        StatusLabel.Text = table.concat(parts, " + ") .. " → " .. target
+        StatusLabel.TextColor3 = Color3.fromRGB(255, 100, 100)
+    end
+end
+
 -- --- THEO DÕI RESPAWN ---
 local function SetupCharacterMonitoring()
     LocalPlayer.CharacterAdded:Connect(function(character)
-        -- Đợi character load xong
         task.wait(0.5)
-        
-        -- Nếu auto đang bật và chưa chọn tướng sau khi respawn
-        if isAutoFarmKill and not hasSelectedCharacter then
+
+        if (isAutoAttack or isAutoTeleport) and not hasSelectedCharacter then
             StatusLabel.Text = "🔄 Đang chọn tướng..."
             StatusLabel.TextColor3 = Color3.fromRGB(255, 255, 100)
-            
-            task.wait(1) -- Đợi menu load
+            task.wait(1)
             SelectCharacter()
-            
             task.wait(1.5)
-            if isAutoFarmKill and selectedTarget then
-                StatusLabel.Text = "⚔️ Đang farm: " .. selectedTarget.Name
-                StatusLabel.TextColor3 = Color3.fromRGB(255, 100, 100)
-            end
+            UpdateStatusLabel()
         end
-        
-        -- Theo dõi máu để phát hiện chết
+
         local humanoid = character:WaitForChild("Humanoid")
         lastHealth = humanoid.Health
-        
+
         humanoid.Died:Connect(function()
-            hasSelectedCharacter = false -- Reset flag khi chết
+            hasSelectedCharacter = false
             print("💀 Nhân vật đã chết, sẽ chọn lại tướng khi respawn")
         end)
     end)
 end
 
--- --- HIỆU ỨNG NÚT TOGGLE ---
+-- =============================================
+-- HIỆU ỨNG NÚT TOGGLE
+-- =============================================
 local function AddButtonAnimation()
-    local originalSize = ToggleBtn.Size
-    local hoverSize = UDim2.new(0, 75, 0, 75)
-    
     ToggleBtn.MouseEnter:Connect(function()
-        ToggleBtn:TweenSize(hoverSize, Enum.EasingDirection.Out, Enum.EasingStyle.Quad, 0.2, true)
+        ToggleBtn:TweenSize(UDim2.new(0, 75, 0, 75), Enum.EasingDirection.Out, Enum.EasingStyle.Quad, 0.2, true)
         ToggleStroke.Thickness = 5
     end)
-    
     ToggleBtn.MouseLeave:Connect(function()
-        ToggleBtn:TweenSize(originalSize, Enum.EasingDirection.Out, Enum.EasingStyle.Quad, 0.2, true)
+        ToggleBtn:TweenSize(UDim2.new(0, 70, 0, 70), Enum.EasingDirection.Out, Enum.EasingStyle.Quad, 0.2, true)
         ToggleStroke.Thickness = 4
     end)
 end
 
--- --- LOGIC NÚT BẤM ---
+-- =============================================
+-- SỰ KIỆN NÚT BẤM
+-- =============================================
 ToggleBtn.MouseButton1Click:Connect(function()
     MainFrame.Visible = not MainFrame.Visible
-    
-    -- Hiệu ứng nhấn
     ToggleBtn:TweenSize(UDim2.new(0, 65, 0, 65), Enum.EasingDirection.Out, Enum.EasingStyle.Quad, 0.1, true)
     task.wait(0.1)
     ToggleBtn:TweenSize(UDim2.new(0, 70, 0, 70), Enum.EasingDirection.Out, Enum.EasingStyle.Quad, 0.1, true)
@@ -402,46 +421,65 @@ RefreshBtn.MouseButton1Click:Connect(function()
     CreatePlayerList()
     StatusLabel.Text = "✅ Đã làm mới danh sách!"
     StatusLabel.TextColor3 = Color3.fromRGB(100, 255, 100)
-    
     task.wait(2)
-    if not isAutoFarmKill then
-        StatusLabel.Text = "⚡ Trạng thái: Chờ..."
-        StatusLabel.TextColor3 = Color3.fromRGB(255, 255, 100)
-    end
+    UpdateStatusLabel()
 end)
 
--- Anti-AFK Button Logic
 AntiAFKBtn.MouseButton1Click:Connect(function()
     isAntiAFK = not isAntiAFK
-    
     if isAntiAFK then
         AntiAFKBtn.Text = "🛡️ Anti-AFK: BẬT"
         AntiAFKBtn.BackgroundColor3 = Color3.fromRGB(50, 150, 50)
         AntiAFKLabel.Text = "🛡️ Anti-AFK: BẬT"
         AntiAFKLabel.TextColor3 = Color3.fromRGB(100, 255, 100)
-        print("✅ Anti-AFK đã BẬT")
     else
         AntiAFKBtn.Text = "🛡️ Anti-AFK: TẮT"
         AntiAFKBtn.BackgroundColor3 = Color3.fromRGB(150, 50, 50)
         AntiAFKLabel.Text = "🛡️ Anti-AFK: TẮT"
         AntiAFKLabel.TextColor3 = Color3.fromRGB(255, 100, 100)
-        print("❌ Anti-AFK đã TẮT")
     end
 end)
 
-AutoBtn.MouseButton1Click:Connect(function()
+-- =============================================
+-- NÚT AUTO TELEPORT (TÁCH RIÊNG)
+-- =============================================
+TeleBtn.MouseButton1Click:Connect(function()
     if not selectedTarget then
         StatusLabel.Text = "⚠️ Chưa chọn mục tiêu!"
         StatusLabel.TextColor3 = Color3.fromRGB(255, 100, 100)
         return
     end
-    
-    isAutoFarmKill = not isAutoFarmKill
-    
-    if isAutoFarmKill then
-        AutoBtn.Text = "🛑 Dừng Farm"
-        AutoBtn.BackgroundColor3 = Color3.fromRGB(255, 50, 50)
-        
+
+    isAutoTeleport = not isAutoTeleport
+
+    if isAutoTeleport then
+        TeleBtn.Text = "🌀 Auto Tele: BẬT"
+        TeleBtn.BackgroundColor3 = Color3.fromRGB(0, 150, 255)
+        TeleportToTarget() -- Teleport ngay lập tức
+    else
+        TeleBtn.Text = "🌀 Auto Tele"
+        TeleBtn.BackgroundColor3 = Color3.fromRGB(30, 100, 180)
+    end
+
+    UpdateStatusLabel()
+end)
+
+-- =============================================
+-- NÚT AUTO ATTACK (TÁCH RIÊNG)
+-- =============================================
+AutoAttackBtn.MouseButton1Click:Connect(function()
+    if not selectedTarget then
+        StatusLabel.Text = "⚠️ Chưa chọn mục tiêu!"
+        StatusLabel.TextColor3 = Color3.fromRGB(255, 100, 100)
+        return
+    end
+
+    isAutoAttack = not isAutoAttack
+
+    if isAutoAttack then
+        AutoAttackBtn.Text = "⚔️ Auto Attack: BẬT"
+        AutoAttackBtn.BackgroundColor3 = Color3.fromRGB(255, 50, 50)
+
         -- Chọn tướng nếu chưa chọn
         if not hasSelectedCharacter then
             StatusLabel.Text = "🔄 Đang chọn tướng..."
@@ -449,32 +487,26 @@ AutoBtn.MouseButton1Click:Connect(function()
             SelectCharacter()
             task.wait(1)
         end
-        
-        StatusLabel.Text = "⚔️ Đang farm: " .. selectedTarget.Name
-        StatusLabel.TextColor3 = Color3.fromRGB(255, 100, 100)
-        
-        -- Teleport ngay lập tức
-        TeleportToTarget()
     else
-        AutoBtn.Text = "⚔️ Auto Farm Kill"
-        AutoBtn.BackgroundColor3 = Color3.fromRGB(70, 70, 75)
-        StatusLabel.Text = "⏸️ Đã dừng farm"
-        StatusLabel.TextColor3 = Color3.fromRGB(255, 255, 100)
+        AutoAttackBtn.Text = "⚔️ Auto Attack: TẮT"
+        AutoAttackBtn.BackgroundColor3 = Color3.fromRGB(70, 70, 75)
     end
+
+    UpdateStatusLabel()
 end)
 
--- --- VÒNG LẶP TẤN CÔNG ---
+-- =============================================
+-- VÒNG LẶP CHÍNH
+-- =============================================
 task.spawn(function()
     while true do
-        if isAutoFarmKill and selectedTarget then
-            -- Kiểm tra mục tiêu còn sống không
-            if selectedTarget.Character and selectedTarget.Character:FindFirstChild("Humanoid") and selectedTarget.Character.Humanoid.Health > 0 then
+        -- AUTO ATTACK
+        if isAutoAttack and selectedTarget then
+            if selectedTarget.Character
+                and selectedTarget.Character:FindFirstChild("Humanoid")
+                and selectedTarget.Character.Humanoid.Health > 0
+            then
                 AttackTarget()
-                
-                -- Teleport mỗi 3 giây
-                if tick() - lastTeleportTime >= CONFIG.TeleportInterval then
-                    TeleportToTarget()
-                end
             else
                 StatusLabel.Text = "💀 Mục tiêu đã chết!"
                 StatusLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
@@ -484,12 +516,30 @@ task.spawn(function()
     end
 end)
 
--- --- KHỞI TẠO ---
+task.spawn(function()
+    while true do
+        -- AUTO TELEPORT (dùng interval riêng)
+        if isAutoTeleport and selectedTarget then
+            if selectedTarget.Character
+                and selectedTarget.Character:FindFirstChild("Humanoid")
+                and selectedTarget.Character.Humanoid.Health > 0
+            then
+                if tick() - lastTeleportTime >= CONFIG.TeleportInterval then
+                    TeleportToTarget()
+                end
+            end
+        end
+        task.wait(0.5)
+    end
+end)
+
+-- =============================================
+-- KHỞI TẠO
+-- =============================================
 AddButtonAnimation()
 SetupCharacterMonitoring()
 CreatePlayerList()
 
--- Auto refresh khi có người vào/ra
 Players.PlayerAdded:Connect(function()
     task.wait(1)
     CreatePlayerList()
@@ -498,9 +548,12 @@ end)
 Players.PlayerRemoving:Connect(function(player)
     if selectedTarget == player then
         selectedTarget = nil
-        isAutoFarmKill = false
-        AutoBtn.Text = "⚔️ Auto Farm Kill"
-        AutoBtn.BackgroundColor3 = Color3.fromRGB(70, 70, 75)
+        isAutoAttack = false
+        isAutoTeleport = false
+        AutoAttackBtn.Text = "⚔️ Auto Attack: TẮT"
+        AutoAttackBtn.BackgroundColor3 = Color3.fromRGB(70, 70, 75)
+        TeleBtn.Text = "🌀 Auto Tele"
+        TeleBtn.BackgroundColor3 = Color3.fromRGB(30, 100, 180)
         StatusLabel.Text = "⚠️ Mục tiêu đã thoát!"
         StatusLabel.TextColor3 = Color3.fromRGB(255, 100, 100)
     end
