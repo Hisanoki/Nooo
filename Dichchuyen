@@ -8,16 +8,18 @@ local CONFIG = {
     CharacterName = "Kamen Rider Diend",
     AttackDelay = 0.2,
     TeleportInterval = 3,
+    RespawnWait = 3,       -- Giây chờ sau khi respawn trước khi chọn tướng
+    AutoResetHP = 80,      -- Tự reset khi HP <= giá trị này
 }
 
 -- --- BIẾN TRẠNG THÁI ---
 local selectedTarget = nil
 local isAutoAttack = false
 local isAutoTeleport = false
+local isAutoReset = false
 local isAntiAFK = true
 local lastTeleportTime = 0
 local hasSelectedCharacter = false
-local lastHealth = 100
 
 -- --- ANTI AFK ---
 LocalPlayer.Idled:Connect(function()
@@ -54,7 +56,6 @@ ToggleStroke.Color = Color3.fromRGB(255, 215, 0)
 ToggleStroke.Thickness = 4
 ToggleStroke.Parent = ToggleBtn
 
--- Shadow
 local ToggleShadow = Instance.new("ImageLabel")
 ToggleShadow.Parent = ToggleBtn
 ToggleShadow.BackgroundTransparency = 1
@@ -65,13 +66,13 @@ ToggleShadow.ImageColor3 = Color3.fromRGB(0, 0, 0)
 ToggleShadow.ImageTransparency = 0.7
 ToggleShadow.ZIndex = -1
 
--- Main Frame - tăng chiều cao để chứa thêm nút
+-- Main Frame - tăng chiều cao để chứa thêm nút auto reset
 local MainFrame = Instance.new("Frame")
 MainFrame.Name = "MainFrame"
 MainFrame.Parent = ScreenGui
 MainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
-MainFrame.Position = UDim2.new(0.5, -180, 0.5, -250)
-MainFrame.Size = UDim2.new(0, 360, 0, 500)
+MainFrame.Position = UDim2.new(0.5, -180, 0.5, -275)
+MainFrame.Size = UDim2.new(0, 360, 0, 550)
 MainFrame.Active = true
 MainFrame.Draggable = true
 MainFrame.Visible = false
@@ -99,7 +100,6 @@ local HeaderCorner = Instance.new("UICorner")
 HeaderCorner.CornerRadius = UDim.new(0, 15)
 HeaderCorner.Parent = Header
 
--- Close Button
 local CloseBtn = Instance.new("TextButton")
 CloseBtn.Parent = Header
 CloseBtn.BackgroundColor3 = Color3.fromRGB(200, 0, 0)
@@ -132,7 +132,7 @@ ScrollFrame.Parent = MainFrame
 ScrollFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 35)
 ScrollFrame.BorderSizePixel = 0
 ScrollFrame.Position = UDim2.new(0, 15, 0, 90)
-ScrollFrame.Size = UDim2.new(1, -30, 0, 160)
+ScrollFrame.Size = UDim2.new(1, -30, 0, 155)
 ScrollFrame.ScrollBarThickness = 6
 ScrollFrame.ScrollBarImageColor3 = Color3.fromRGB(255, 50, 50)
 
@@ -149,7 +149,7 @@ UIListLayout.SortOrder = Enum.SortOrder.Name
 local StatusLabel = Instance.new("TextLabel")
 StatusLabel.Parent = MainFrame
 StatusLabel.BackgroundTransparency = 1
-StatusLabel.Position = UDim2.new(0, 15, 0, 260)
+StatusLabel.Position = UDim2.new(0, 15, 0, 255)
 StatusLabel.Size = UDim2.new(1, -30, 0, 25)
 StatusLabel.Font = Enum.Font.GothamBold
 StatusLabel.Text = "⚡ Trạng thái: Chờ..."
@@ -157,11 +157,11 @@ StatusLabel.TextColor3 = Color3.fromRGB(255, 255, 100)
 StatusLabel.TextSize = 14
 StatusLabel.TextXAlignment = Enum.TextXAlignment.Left
 
--- Anti-AFK Status Label
+-- Anti-AFK Label
 local AntiAFKLabel = Instance.new("TextLabel")
 AntiAFKLabel.Parent = MainFrame
 AntiAFKLabel.BackgroundTransparency = 1
-AntiAFKLabel.Position = UDim2.new(0, 15, 0, 285)
+AntiAFKLabel.Position = UDim2.new(0, 15, 0, 280)
 AntiAFKLabel.Size = UDim2.new(1, -30, 0, 25)
 AntiAFKLabel.Font = Enum.Font.GothamBold
 AntiAFKLabel.Text = "🛡️ Anti-AFK: BẬT"
@@ -173,7 +173,7 @@ AntiAFKLabel.TextXAlignment = Enum.TextXAlignment.Left
 local AntiAFKBtn = Instance.new("TextButton")
 AntiAFKBtn.Parent = MainFrame
 AntiAFKBtn.BackgroundColor3 = Color3.fromRGB(50, 150, 50)
-AntiAFKBtn.Position = UDim2.new(0, 15, 0, 318)
+AntiAFKBtn.Position = UDim2.new(0, 15, 0, 313)
 AntiAFKBtn.Size = UDim2.new(1, -30, 0, 38)
 AntiAFKBtn.Font = Enum.Font.GothamBold
 AntiAFKBtn.Text = "🛡️ Anti-AFK: BẬT"
@@ -185,12 +185,12 @@ AntiAFKCorner.CornerRadius = UDim.new(0, 10)
 AntiAFKCorner.Parent = AntiAFKBtn
 
 -- =============================================
--- HÀNG NÚT 1: REFRESH + AUTO TELEPORT
+-- HÀNG 2: REFRESH + AUTO TELEPORT
 -- =============================================
 local RefreshBtn = Instance.new("TextButton")
 RefreshBtn.Parent = MainFrame
 RefreshBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 55)
-RefreshBtn.Position = UDim2.new(0, 15, 0, 368)
+RefreshBtn.Position = UDim2.new(0, 15, 0, 362)
 RefreshBtn.Size = UDim2.new(0.48, -10, 0, 38)
 RefreshBtn.Font = Enum.Font.GothamBold
 RefreshBtn.Text = "🔄 Refresh"
@@ -201,11 +201,10 @@ local RefreshCorner = Instance.new("UICorner")
 RefreshCorner.CornerRadius = UDim.new(0, 10)
 RefreshCorner.Parent = RefreshBtn
 
--- Auto Teleport Button
 local TeleBtn = Instance.new("TextButton")
 TeleBtn.Parent = MainFrame
 TeleBtn.BackgroundColor3 = Color3.fromRGB(30, 100, 180)
-TeleBtn.Position = UDim2.new(0.52, 0, 0, 368)
+TeleBtn.Position = UDim2.new(0.52, 0, 0, 362)
 TeleBtn.Size = UDim2.new(0.48, -15, 0, 38)
 TeleBtn.Font = Enum.Font.GothamBold
 TeleBtn.Text = "🌀 Auto Tele"
@@ -217,12 +216,12 @@ TeleCorner.CornerRadius = UDim.new(0, 10)
 TeleCorner.Parent = TeleBtn
 
 -- =============================================
--- HÀNG NÚT 2: AUTO ATTACK (full width)
+-- HÀNG 3: AUTO ATTACK (full width)
 -- =============================================
 local AutoAttackBtn = Instance.new("TextButton")
 AutoAttackBtn.Parent = MainFrame
 AutoAttackBtn.BackgroundColor3 = Color3.fromRGB(70, 70, 75)
-AutoAttackBtn.Position = UDim2.new(0, 15, 0, 418)
+AutoAttackBtn.Position = UDim2.new(0, 15, 0, 412)
 AutoAttackBtn.Size = UDim2.new(1, -30, 0, 38)
 AutoAttackBtn.Font = Enum.Font.GothamBold
 AutoAttackBtn.Text = "⚔️ Auto Attack: TẮT"
@@ -232,6 +231,23 @@ AutoAttackBtn.TextSize = 16
 local AutoAttackCorner = Instance.new("UICorner")
 AutoAttackCorner.CornerRadius = UDim.new(0, 10)
 AutoAttackCorner.Parent = AutoAttackBtn
+
+-- =============================================
+-- HÀNG 4: AUTO RESET KHI MẤT 80 MÁU (full width)
+-- =============================================
+local AutoResetBtn = Instance.new("TextButton")
+AutoResetBtn.Parent = MainFrame
+AutoResetBtn.BackgroundColor3 = Color3.fromRGB(100, 50, 150)
+AutoResetBtn.Position = UDim2.new(0, 15, 0, 462)
+AutoResetBtn.Size = UDim2.new(1, -30, 0, 38)
+AutoResetBtn.Font = Enum.Font.GothamBold
+AutoResetBtn.Text = "💀 Auto Reset (≤" .. CONFIG.AutoResetHP .. " HP): TẮT"
+AutoResetBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+AutoResetBtn.TextSize = 14
+
+local AutoResetCorner = Instance.new("UICorner")
+AutoResetCorner.CornerRadius = UDim.new(0, 10)
+AutoResetCorner.Parent = AutoResetBtn
 
 -- Credit
 local Credit = Instance.new("TextLabel")
@@ -248,6 +264,12 @@ Credit.TextSize = 12
 -- CÁC HÀM CHỨC NĂNG
 -- =============================================
 
+-- Kiểm tra xem tướng có trong Backpack chưa
+local function IsCharacterInBackpack()
+    return LocalPlayer.Backpack:FindFirstChild(CONFIG.CharacterName) ~= nil
+        or (LocalPlayer.Character and LocalPlayer.Character:FindFirstChild(CONFIG.CharacterName) ~= nil)
+end
+
 local function SelectCharacter()
     local success = pcall(function()
         local args = {
@@ -255,7 +277,12 @@ local function SelectCharacter()
             CONFIG.CharacterName,
             LocalPlayer.PlayerGui:WaitForChild("Menu")
         }
-        LocalPlayer.PlayerGui:WaitForChild("Menu"):WaitForChild("Frame"):WaitForChild("LocalScript"):WaitForChild("RemoteEvent"):FireServer(unpack(args))
+        LocalPlayer.PlayerGui
+            :WaitForChild("Menu")
+            :WaitForChild("Frame")
+            :WaitForChild("LocalScript")
+            :WaitForChild("RemoteEvent")
+            :FireServer(unpack(args))
     end)
 
     if success then
@@ -263,9 +290,10 @@ local function SelectCharacter()
         print("✅ Đã chọn tướng: " .. CONFIG.CharacterName)
         StatusLabel.Text = "✅ Đã chọn tướng!"
         StatusLabel.TextColor3 = Color3.fromRGB(100, 255, 100)
-        task.wait(1)
     else
         print("❌ Lỗi khi chọn tướng!")
+        StatusLabel.Text = "❌ Lỗi chọn tướng!"
+        StatusLabel.TextColor3 = Color3.fromRGB(255, 80, 80)
     end
 end
 
@@ -354,37 +382,100 @@ local function UpdateStatusLabel()
     local parts = {}
     if isAutoTeleport then table.insert(parts, "🌀 Tele") end
     if isAutoAttack then table.insert(parts, "⚔️ Attack") end
+    if isAutoReset then table.insert(parts, "💀 Reset") end
 
     if #parts == 0 then
         StatusLabel.Text = "⚡ Trạng thái: Chờ..."
         StatusLabel.TextColor3 = Color3.fromRGB(255, 255, 100)
     else
         local target = selectedTarget and selectedTarget.Name or "???"
-        StatusLabel.Text = table.concat(parts, " + ") .. " → " .. target
+        StatusLabel.Text = table.concat(parts, " | ") .. " → " .. target
         StatusLabel.TextColor3 = Color3.fromRGB(255, 100, 100)
     end
 end
 
--- --- THEO DÕI RESPAWN ---
-local function SetupCharacterMonitoring()
-    LocalPlayer.CharacterAdded:Connect(function(character)
-        task.wait(0.5)
+-- =============================================
+-- XỬ LÝ SAU KHI RESPAWN (dùng chung cho cả tele và attack)
+-- =============================================
+local function HandleRespawn(character)
+    hasSelectedCharacter = false
 
-        if (isAutoAttack or isAutoTeleport) and not hasSelectedCharacter then
-            StatusLabel.Text = "🔄 Đang chọn tướng..."
-            StatusLabel.TextColor3 = Color3.fromRGB(255, 255, 100)
-            task.wait(1)
-            SelectCharacter()
-            task.wait(1.5)
-            UpdateStatusLabel()
+    -- Chỉ xử lý nếu đang bật ít nhất 1 chế độ auto
+    if not isAutoAttack and not isAutoTeleport then return end
+
+    StatusLabel.Text = "⏳ Chờ " .. CONFIG.RespawnWait .. "s sau respawn..."
+    StatusLabel.TextColor3 = Color3.fromRGB(200, 200, 100)
+
+    task.wait(CONFIG.RespawnWait)
+
+    -- Kiểm tra xem tướng đã có trong backpack chưa (có thể game tự cấp)
+    if IsCharacterInBackpack() then
+        hasSelectedCharacter = true
+        print("✅ Tướng đã có sẵn trong Backpack!")
+    else
+        -- Chưa có thì gọi chọn tướng
+        StatusLabel.Text = "🔄 Đang chọn tướng..."
+        StatusLabel.TextColor3 = Color3.fromRGB(255, 255, 100)
+        SelectCharacter()
+        task.wait(1) -- Đợi server xử lý xong
+    end
+
+    -- Nếu auto tele đang bật thì tele ngay
+    if isAutoTeleport and selectedTarget then
+        TeleportToTarget()
+    end
+
+    UpdateStatusLabel()
+end
+
+-- =============================================
+-- THEO DÕI HP (AUTO RESET + AUTO RESET SAU CHẾT)
+-- =============================================
+local healthConnection = nil
+
+local function SetupHealthMonitor(character)
+    -- Ngắt kết nối cũ nếu có
+    if healthConnection then
+        healthConnection:Disconnect()
+        healthConnection = nil
+    end
+
+    local humanoid = character:WaitForChild("Humanoid")
+
+    -- Theo dõi HP để auto reset
+    -- Reset khi MẤT >= CONFIG.AutoResetHP máu (tức HP <= MaxHP - AutoResetHP)
+    healthConnection = humanoid.HealthChanged:Connect(function(hp)
+        local maxHp = humanoid.MaxHealth
+        local threshold = maxHp - CONFIG.AutoResetHP
+        if isAutoReset and hp <= threshold and hp > 0 then
+            local lost = math.floor(maxHp - hp)
+            print("💀 Mất " .. lost .. " HP (" .. math.floor(hp) .. "/" .. math.floor(maxHp) .. ") → Tự reset!")
+            StatusLabel.Text = "💀 Mất " .. lost .. " HP! Đang reset..."
+            StatusLabel.TextColor3 = Color3.fromRGB(255, 80, 80)
+            humanoid.Health = 0 -- Tự kill để respawn
         end
+    end)
 
-        local humanoid = character:WaitForChild("Humanoid")
-        lastHealth = humanoid.Health
+    -- Khi chết
+    humanoid.Died:Connect(function()
+        print("💀 Nhân vật đã chết, sẽ chọn lại tướng khi respawn")
+    end)
+end
 
-        humanoid.Died:Connect(function()
-            hasSelectedCharacter = false
-            print("💀 Nhân vật đã chết, sẽ chọn lại tướng khi respawn")
+-- =============================================
+-- THEO DÕI RESPAWN
+-- =============================================
+local function SetupCharacterMonitoring()
+    -- Xử lý character hiện tại nếu đã tồn tại
+    if LocalPlayer.Character then
+        SetupHealthMonitor(LocalPlayer.Character)
+    end
+
+    LocalPlayer.CharacterAdded:Connect(function(character)
+        task.wait(0.5) -- Đợi character load sơ bộ
+        SetupHealthMonitor(character)
+        task.spawn(function()
+            HandleRespawn(character)
         end)
     end)
 end
@@ -440,9 +531,7 @@ AntiAFKBtn.MouseButton1Click:Connect(function()
     end
 end)
 
--- =============================================
--- NÚT AUTO TELEPORT (TÁCH RIÊNG)
--- =============================================
+-- AUTO TELEPORT
 TeleBtn.MouseButton1Click:Connect(function()
     if not selectedTarget then
         StatusLabel.Text = "⚠️ Chưa chọn mục tiêu!"
@@ -455,7 +544,19 @@ TeleBtn.MouseButton1Click:Connect(function()
     if isAutoTeleport then
         TeleBtn.Text = "🌀 Auto Tele: BẬT"
         TeleBtn.BackgroundColor3 = Color3.fromRGB(0, 150, 255)
-        TeleportToTarget() -- Teleport ngay lập tức
+
+        -- Kiểm tra backpack trước khi tele
+        if not IsCharacterInBackpack() then
+            StatusLabel.Text = "⚠️ Chưa có tướng trong Backpack!"
+            StatusLabel.TextColor3 = Color3.fromRGB(255, 150, 50)
+            -- Tự động chọn nếu chưa có
+            if not hasSelectedCharacter then
+                SelectCharacter()
+                task.wait(1)
+            end
+        end
+
+        TeleportToTarget() -- Tele ngay lập tức
     else
         TeleBtn.Text = "🌀 Auto Tele"
         TeleBtn.BackgroundColor3 = Color3.fromRGB(30, 100, 180)
@@ -464,9 +565,7 @@ TeleBtn.MouseButton1Click:Connect(function()
     UpdateStatusLabel()
 end)
 
--- =============================================
--- NÚT AUTO ATTACK (TÁCH RIÊNG)
--- =============================================
+-- AUTO ATTACK
 AutoAttackBtn.MouseButton1Click:Connect(function()
     if not selectedTarget then
         StatusLabel.Text = "⚠️ Chưa chọn mục tiêu!"
@@ -480,12 +579,14 @@ AutoAttackBtn.MouseButton1Click:Connect(function()
         AutoAttackBtn.Text = "⚔️ Auto Attack: BẬT"
         AutoAttackBtn.BackgroundColor3 = Color3.fromRGB(255, 50, 50)
 
-        -- Chọn tướng nếu chưa chọn
-        if not hasSelectedCharacter then
+        -- Kiểm tra backpack
+        if not IsCharacterInBackpack() then
             StatusLabel.Text = "🔄 Đang chọn tướng..."
             StatusLabel.TextColor3 = Color3.fromRGB(255, 255, 100)
             SelectCharacter()
             task.wait(1)
+        else
+            hasSelectedCharacter = true
         end
     else
         AutoAttackBtn.Text = "⚔️ Auto Attack: TẮT"
@@ -495,12 +596,28 @@ AutoAttackBtn.MouseButton1Click:Connect(function()
     UpdateStatusLabel()
 end)
 
+-- AUTO RESET KHI MẤT 80 MÁU
+AutoResetBtn.MouseButton1Click:Connect(function()
+    isAutoReset = not isAutoReset
+
+    if isAutoReset then
+        AutoResetBtn.Text = "💀 Auto Reset (≤" .. CONFIG.AutoResetHP .. " HP): BẬT"
+        AutoResetBtn.BackgroundColor3 = Color3.fromRGB(180, 50, 220)
+        print("✅ Auto Reset BẬT - Sẽ reset khi HP ≤ " .. CONFIG.AutoResetHP)
+    else
+        AutoResetBtn.Text = "💀 Auto Reset (≤" .. CONFIG.AutoResetHP .. " HP): TẮT"
+        AutoResetBtn.BackgroundColor3 = Color3.fromRGB(100, 50, 150)
+        print("❌ Auto Reset TẮT")
+    end
+
+    UpdateStatusLabel()
+end)
+
 -- =============================================
--- VÒNG LẶP CHÍNH
+-- VÒNG LẶP AUTO ATTACK
 -- =============================================
 task.spawn(function()
     while true do
-        -- AUTO ATTACK
         if isAutoAttack and selectedTarget then
             if selectedTarget.Character
                 and selectedTarget.Character:FindFirstChild("Humanoid")
@@ -516,9 +633,11 @@ task.spawn(function()
     end
 end)
 
+-- =============================================
+-- VÒNG LẶP AUTO TELEPORT
+-- =============================================
 task.spawn(function()
     while true do
-        -- AUTO TELEPORT (dùng interval riêng)
         if isAutoTeleport and selectedTarget then
             if selectedTarget.Character
                 and selectedTarget.Character:FindFirstChild("Humanoid")
