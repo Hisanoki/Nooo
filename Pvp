@@ -13,7 +13,6 @@ local CONFIG = {
     SkillSuffix = "Chalice",
     TeleportDelay = 0.3,
     TeleportCooldown = 5,
-    TeleportDistance = 3, -- KHOẢNG CÁCH TP (Sau lưng mục tiêu)
     SkillDelay = 0.2,
     SelectedSkills = {
         R = true,
@@ -21,17 +20,10 @@ local CONFIG = {
         F = false,
         G = false
     },
-    -- Thêm Range TP riêng cho từng skill
-    SkillRanges = {
-        R = 40,
-        T = 40,
-        F = 40,
-        G = 40
-    },
     AntiStunDuration = 0.2,
     AntiStunCooldown = 2,
     AntiStunEnabled = false,
-    AntiFallEnabled = true
+    AntiFallEnabled = true  -- Mặc định BẬT
 }
 
 -- Hàm chuyển đổi chuỗi ally thành table
@@ -78,10 +70,11 @@ local cachedHumanoid = nil
 -- ============================================================
 -- --- ANTI FALL SYSTEM ---
 -- ============================================================
-local antiFallConnection = nil
-local antiFallSetupDone = false
+local antiFallConnection = nil  -- connection Heartbeat clamp velocity
+local antiFallSetupDone = false -- flag tránh setup nhiều lần sau respawn
 
 local function SetupAntiFall(character)
+    -- Dọn connection cũ nếu có
     if antiFallConnection then
         antiFallConnection:Disconnect()
         antiFallConnection = nil
@@ -92,13 +85,17 @@ local function SetupAntiFall(character)
     local rootPart = character:WaitForChild("HumanoidRootPart", 5)
     if not rootPart then return end
 
+    -- Chặn RemoteEvent trong các LocalScript fall client
     for _, obj in pairs(character:GetDescendants()) do
         if obj:IsA("LocalScript") then
             local re = obj:FindFirstChildOfClass("RemoteEvent")
-            if re then re:Destroy() end
+            if re then
+                re:Destroy()
+            end
         end
     end
 
+    -- Clamp velocity Y để script fall client không bao giờ trigger (nó check < -150)
     antiFallConnection = RunService.Heartbeat:Connect(function()
         if rootPart and rootPart.Parent and rootPart.Velocity.Y < -148 then
             local vel = rootPart.Velocity
@@ -106,6 +103,7 @@ local function SetupAntiFall(character)
         end
     end)
 
+    -- Chặn RemoteEvent mới được thêm vào (phòng trường hợp script load muộn)
     character.DescendantAdded:Connect(function(obj)
         if obj:IsA("RemoteEvent") and obj.Parent and obj.Parent:IsA("LocalScript") then
             obj:Destroy()
@@ -113,10 +111,13 @@ local function SetupAntiFall(character)
     end)
 end
 
+-- Hàm bật/tắt Anti Fall (dùng bởi toggle button)
 local function ToggleAntiFall(enabled)
     CONFIG.AntiFallEnabled = enabled
     if enabled then
-        if cachedCharacter then SetupAntiFall(cachedCharacter) end
+        if cachedCharacter then
+            SetupAntiFall(cachedCharacter)
+        end
     else
         if antiFallConnection then
             antiFallConnection:Disconnect()
@@ -176,8 +177,15 @@ MobileTPBtn.AutoButtonColor = true
 MobileTPBtn.Active = true
 MobileTPBtn.Draggable = true
 
-local TPBtnCorner = Instance.new("UICorner") TPBtnCorner.CornerRadius = UDim.new(1, 0) TPBtnCorner.Parent = MobileTPBtn
-local TPBtnStroke = Instance.new("UIStroke") TPBtnStroke.Color = Color3.fromRGB(255, 255, 255) TPBtnStroke.Thickness = 2 TPBtnStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border TPBtnStroke.Parent = MobileTPBtn
+local TPBtnCorner = Instance.new("UICorner")
+TPBtnCorner.CornerRadius = UDim.new(1, 0)
+TPBtnCorner.Parent = MobileTPBtn
+
+local TPBtnStroke = Instance.new("UIStroke")
+TPBtnStroke.Color = Color3.fromRGB(255, 255, 255)
+TPBtnStroke.Thickness = 2
+TPBtnStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+TPBtnStroke.Parent = MobileTPBtn
 
 local TPShadow = Instance.new("ImageLabel")
 TPShadow.Name = "Shadow"
@@ -199,11 +207,14 @@ MainFrame.Image = "rbxassetid://122727189017649"
 MainFrame.ScaleType = Enum.ScaleType.Stretch
 MainFrame.BackgroundTransparency = 1
 MainFrame.Position = UDim2.new(0.5, -140, 0.1, 0)
-MainFrame.Size = UDim2.new(0, 280, 0, 420) 
+MainFrame.Size = UDim2.new(0, 280, 0, 400)  -- Tăng chiều cao cho thêm nút Anti Fall
 MainFrame.Active = true
 MainFrame.Draggable = true
 
-local MainStroke = Instance.new("UIStroke") MainStroke.Color = Color3.fromRGB(0, 120, 215) MainStroke.Thickness = 2 MainStroke.Parent = MainFrame
+local MainStroke = Instance.new("UIStroke")
+MainStroke.Color = Color3.fromRGB(0, 120, 215)
+MainStroke.Thickness = 2
+MainStroke.Parent = MainFrame
 
 -- Header
 local Header = Instance.new("TextLabel")
@@ -214,7 +225,10 @@ Header.Font = Enum.Font.GothamBold
 Header.Text = "AIM PRO"
 Header.TextColor3 = Color3.fromRGB(255, 255, 255)
 Header.TextSize = 16
-local HeaderCorner = Instance.new("UICorner") HeaderCorner.CornerRadius = UDim.new(0, 10) HeaderCorner.Parent = Header
+
+local HeaderCorner = Instance.new("UICorner")
+HeaderCorner.CornerRadius = UDim.new(0, 10)
+HeaderCorner.Parent = Header
 
 -- Nút đóng/mở GUI
 local ToggleBtn = Instance.new("ImageButton")
@@ -227,8 +241,14 @@ ToggleBtn.Size = UDim2.new(0, 45, 0, 45)
 ToggleBtn.Active = true
 ToggleBtn.Draggable = true
 
-local ToggleBtnStroke = Instance.new("UIStroke") ToggleBtnStroke.Color = Color3.fromRGB(0, 120, 215) ToggleBtnStroke.Thickness = 2 ToggleBtnStroke.Parent = ToggleBtn
-local ToggleCorner = Instance.new("UICorner") ToggleCorner.CornerRadius = UDim.new(0, 22) ToggleCorner.Parent = ToggleBtn
+local ToggleBtnStroke = Instance.new("UIStroke")
+ToggleBtnStroke.Color = Color3.fromRGB(0, 120, 215)
+ToggleBtnStroke.Thickness = 2
+ToggleBtnStroke.Parent = ToggleBtn
+
+local ToggleCorner = Instance.new("UICorner")
+ToggleCorner.CornerRadius = UDim.new(0, 22)
+ToggleCorner.Parent = ToggleBtn
 
 local ToggleBtnText = Instance.new("TextLabel")
 ToggleBtnText.Parent = ToggleBtn
@@ -253,7 +273,10 @@ CooldownFrame.BackgroundColor3 = Color3.fromRGB(0, 90, 160)
 CooldownFrame.Position = UDim2.new(0.02, 0, 0.1, 0)
 CooldownFrame.Size = UDim2.new(0, 90, 0, 55)
 CooldownFrame.Visible = false
-local CooldownCorner = Instance.new("UICorner") CooldownCorner.CornerRadius = UDim.new(0, 10) CooldownCorner.Parent = CooldownFrame
+
+local CooldownCorner = Instance.new("UICorner")
+CooldownCorner.CornerRadius = UDim.new(0, 10)
+CooldownCorner.Parent = CooldownFrame
 
 local CooldownLabel = Instance.new("TextLabel")
 CooldownLabel.Parent = CooldownFrame
@@ -281,7 +304,10 @@ AntiStunFrame.BackgroundColor3 = Color3.fromRGB(160, 90, 0)
 AntiStunFrame.Position = UDim2.new(0.02, 0, 0.18, 0)
 AntiStunFrame.Size = UDim2.new(0, 90, 0, 55)
 AntiStunFrame.Visible = false
-local AntiStunCorner = Instance.new("UICorner") AntiStunCorner.CornerRadius = UDim.new(0, 10) AntiStunCorner.Parent = AntiStunFrame
+
+local AntiStunCorner = Instance.new("UICorner")
+AntiStunCorner.CornerRadius = UDim.new(0, 10)
+AntiStunCorner.Parent = AntiStunFrame
 
 local AntiStunLabel = Instance.new("TextLabel")
 AntiStunLabel.Parent = AntiStunFrame
@@ -308,13 +334,17 @@ ScrollFrame.Parent = MainFrame
 ScrollFrame.BackgroundTransparency = 1
 ScrollFrame.Position = UDim2.new(0, 0, 0, 45)
 ScrollFrame.Size = UDim2.new(1, 0, 1, -45)
-ScrollFrame.CanvasSize = UDim2.new(0, 0, 0, 1150)
+ScrollFrame.CanvasSize = UDim2.new(0, 0, 0, 950)
 ScrollFrame.ScrollBarThickness = 4
 ScrollFrame.ScrollBarImageColor3 = Color3.fromRGB(0, 120, 215)
 
 -- Functions tạo GUI components
 local function CreateToggle(name, text, position)
-    local frame = Instance.new("Frame") frame.Parent = ScrollFrame frame.BackgroundColor3 = Color3.fromRGB(0, 80, 140) frame.Position = position frame.Size = UDim2.new(0.9, 0, 0, 42)
+    local frame = Instance.new("Frame")
+    frame.Parent = ScrollFrame
+    frame.BackgroundColor3 = Color3.fromRGB(0, 80, 140)
+    frame.Position = position
+    frame.Size = UDim2.new(0.9, 0, 0, 42)
     local corner = Instance.new("UICorner") corner.CornerRadius = UDim.new(0, 7) corner.Parent = frame
     local label = Instance.new("TextLabel") label.Parent = frame label.BackgroundTransparency = 1 label.Position = UDim2.new(0.05, 0, 0, 0) label.Size = UDim2.new(0.62, 0, 1, 0) label.Font = Enum.Font.GothamBold label.Text = text label.TextColor3 = Color3.fromRGB(255, 255, 255) label.TextSize = 13 label.TextXAlignment = Enum.TextXAlignment.Left
     local toggle = Instance.new("TextButton") toggle.Parent = frame toggle.BackgroundColor3 = Color3.fromRGB(0, 60, 110) toggle.Position = UDim2.new(0.69, 0, 0.18, 0) toggle.Size = UDim2.new(0.26, 0, 0.64, 0) toggle.Font = Enum.Font.GothamBold toggle.Text = "OFF" toggle.TextColor3 = Color3.fromRGB(255, 80, 80) toggle.TextSize = 11
@@ -336,6 +366,12 @@ local function CreateSectionLabel(text, position)
     return label
 end
 
+local function CreateSkillToggle(skillKey, position)
+    local toggle = Instance.new("TextButton") toggle.Parent = ScrollFrame toggle.BackgroundColor3 = CONFIG.SelectedSkills[skillKey] and Color3.fromRGB(0, 120, 80) or Color3.fromRGB(0, 60, 110) toggle.Position = position toggle.Size = UDim2.new(0.2, 0, 0, 36) toggle.Font = Enum.Font.GothamBold toggle.Text = skillKey toggle.TextColor3 = CONFIG.SelectedSkills[skillKey] and Color3.fromRGB(80, 255, 80) or Color3.fromRGB(255, 80, 80) toggle.TextSize = 15
+    local corner = Instance.new("UICorner") corner.CornerRadius = UDim.new(0, 7) corner.Parent = toggle
+    return toggle
+end
+
 -- Tạo Controls
 local yPos = 10
 CreateSectionLabel("⚙️ TÍNH NĂNG", UDim2.new(0.05, 0, 0, yPos)) yPos = yPos + 28
@@ -343,26 +379,35 @@ local AimToggle = CreateToggle("AimToggle", "🎯 Aim Assist", UDim2.new(0.05, 0
 local AntiToggle = CreateToggle("AntiToggle", "⚡ Khắc Runner", UDim2.new(0.05, 0, 0, yPos)) yPos = yPos + 48
 local DashAntiStunToggle = CreateToggle("DashAntiStunToggle", "💨 Dash Anti-Stun", UDim2.new(0.05, 0, 0, yPos)) yPos = yPos + 48
 
--- Anti Fall
+-- ============================================================
+-- NÚT ANTI FALL (mặc định BẬT, màu xanh lá)
+-- ============================================================
 local AntiFallToggle, AntiFallLabel = CreateToggle("AntiFallToggle", "🛡️ Anti Fall", UDim2.new(0.05, 0, 0, yPos))
+-- Set trạng thái ban đầu = ON
 AntiFallToggle.Text = "ON"
 AntiFallToggle.TextColor3 = Color3.fromRGB(80, 255, 80)
 AntiFallToggle.BackgroundColor3 = Color3.fromRGB(0, 120, 80)
 AntiFallToggle.Parent.BackgroundColor3 = Color3.fromRGB(0, 80, 140)
 yPos = yPos + 58
 
+-- ============================================================
+-- HIỂN THỊ TRẠNG THÁI ANTI FALL (badge nhỏ dưới nút)
+-- ============================================================
 local AntiFallStatusLabel = Instance.new("TextLabel")
 AntiFallStatusLabel.Parent = ScrollFrame
 AntiFallStatusLabel.BackgroundColor3 = Color3.fromRGB(0, 120, 80)
 AntiFallStatusLabel.BackgroundTransparency = 0.3
-AntiFallStatusLabel.Position = UDim2.new(0.05, 0, 0, yPos - 46)
+AntiFallStatusLabel.Position = UDim2.new(0.05, 0, 0, yPos - 46)  -- ngay dưới toggle frame
 AntiFallStatusLabel.Size = UDim2.new(0.9, 0, 0, 22)
 AntiFallStatusLabel.Font = Enum.Font.GothamBold
 AntiFallStatusLabel.Text = "✅ Anti Fall: ĐANG HOẠT ĐỘNG"
 AntiFallStatusLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
 AntiFallStatusLabel.TextSize = 11
-local AntiFallStatusCorner = Instance.new("UICorner") AntiFallStatusCorner.CornerRadius = UDim.new(0, 5) AntiFallStatusCorner.Parent = AntiFallStatusLabel
+local AntiFallStatusCorner = Instance.new("UICorner")
+AntiFallStatusCorner.CornerRadius = UDim.new(0, 5)
+AntiFallStatusCorner.Parent = AntiFallStatusLabel
 
+-- Hàm cập nhật badge trạng thái
 local function UpdateAntiFallStatus(enabled)
     if enabled then
         AntiFallStatusLabel.Text = "✅ Anti Fall: ĐANG HOẠT ĐỘNG"
@@ -373,77 +418,18 @@ local function UpdateAntiFallStatus(enabled)
     end
 end
 
--- ============================================================
--- PHẦN SKILL & NHẬP RANGE CỤ THỂ
--- ============================================================
-CreateSectionLabel("⚔️ SKILL & RANGE TP RIÊNG:", UDim2.new(0.05, 0, 0, yPos)) yPos = yPos + 28
-
-local function CreateSkillRow(skillKey, position)
-    local frame = Instance.new("Frame") frame.Parent = ScrollFrame frame.BackgroundColor3 = Color3.fromRGB(0, 80, 140) frame.Position = position frame.Size = UDim2.new(0.9, 0, 0, 42)
-    local corner = Instance.new("UICorner") corner.CornerRadius = UDim.new(0, 7) corner.Parent = frame
-    
-    local toggle = Instance.new("TextButton") toggle.Parent = frame toggle.BackgroundColor3 = CONFIG.SelectedSkills[skillKey] and Color3.fromRGB(0, 120, 80) or Color3.fromRGB(0, 60, 110) toggle.Position = UDim2.new(0.05, 0, 0.18, 0) toggle.Size = UDim2.new(0.35, 0, 0.64, 0) toggle.Font = Enum.Font.GothamBold toggle.Text = "Skill " .. skillKey toggle.TextColor3 = CONFIG.SelectedSkills[skillKey] and Color3.fromRGB(80, 255, 80) or Color3.fromRGB(255, 80, 80) toggle.TextSize = 13
-    local corner1 = Instance.new("UICorner") corner1.CornerRadius = UDim.new(0, 5) corner1.Parent = toggle
-
-    local input = Instance.new("TextBox") input.Parent = frame input.BackgroundColor3 = Color3.fromRGB(0, 100, 180) input.Position = UDim2.new(0.45, 0, 0.18, 0) input.Size = UDim2.new(0.5, 0, 0.64, 0) input.Font = Enum.Font.Gotham input.Text = tostring(CONFIG.SkillRanges[skillKey]) input.TextColor3 = Color3.fromRGB(255, 255, 255) input.TextSize = 13 input.PlaceholderText = "Range TP"
-    local corner2 = Instance.new("UICorner") corner2.CornerRadius = UDim.new(0, 5) corner2.Parent = input
-
-    toggle.MouseButton1Click:Connect(function()
-        CONFIG.SelectedSkills[skillKey] = not CONFIG.SelectedSkills[skillKey]
-        toggle.TextColor3 = CONFIG.SelectedSkills[skillKey] and Color3.fromRGB(80, 255, 80) or Color3.fromRGB(255, 80, 80)
-        toggle.BackgroundColor3 = CONFIG.SelectedSkills[skillKey] and Color3.fromRGB(0, 120, 80) or Color3.fromRGB(0, 60, 110)
-    end)
-
-    input.FocusLost:Connect(function()
-        local val = tonumber(input.Text)
-        if val and val > 0 then
-            CONFIG.SkillRanges[skillKey] = val
-        else
-            input.Text = tostring(CONFIG.SkillRanges[skillKey])
-        end
-    end)
-
-    return toggle, input
-end
-
-local SkillR, InputR = CreateSkillRow("R", UDim2.new(0.05, 0, 0, yPos)) yPos = yPos + 48
-local SkillT, InputT = CreateSkillRow("T", UDim2.new(0.05, 0, 0, yPos)) yPos = yPos + 48
-local SkillF, InputF = CreateSkillRow("F", UDim2.new(0.05, 0, 0, yPos)) yPos = yPos + 48
-local SkillG, InputG = CreateSkillRow("G", UDim2.new(0.05, 0, 0, yPos)) yPos = yPos + 48
-
--- ÁP DỤNG ALL RANGE
-local SetAllFrame = Instance.new("Frame") SetAllFrame.Parent = ScrollFrame SetAllFrame.BackgroundColor3 = Color3.fromRGB(0, 80, 140) SetAllFrame.Position = UDim2.new(0.05, 0, 0, yPos) SetAllFrame.Size = UDim2.new(0.9, 0, 0, 42)
-local cornerSA = Instance.new("UICorner") cornerSA.CornerRadius = UDim.new(0, 7) cornerSA.Parent = SetAllFrame
-
-local SetAllLabel = Instance.new("TextLabel") SetAllLabel.Parent = SetAllFrame SetAllLabel.BackgroundTransparency = 1 SetAllLabel.Position = UDim2.new(0.05, 0, 0, 0) SetAllLabel.Size = UDim2.new(0.35, 0, 1, 0) SetAllLabel.Font = Enum.Font.GothamBold SetAllLabel.Text = "Range All:" SetAllLabel.TextColor3 = Color3.fromRGB(255, 200, 50) SetAllLabel.TextSize = 12 SetAllLabel.TextXAlignment = Enum.TextXAlignment.Left
-
-local SetAllInput = Instance.new("TextBox") SetAllInput.Parent = SetAllFrame SetAllInput.BackgroundColor3 = Color3.fromRGB(0, 100, 180) SetAllInput.Position = UDim2.new(0.4, 0, 0.18, 0) SetAllInput.Size = UDim2.new(0.25, 0, 0.64, 0) SetAllInput.Font = Enum.Font.Gotham SetAllInput.Text = "40" SetAllInput.TextColor3 = Color3.fromRGB(255, 255, 255) SetAllInput.TextSize = 13
-local cornerSAI = Instance.new("UICorner") cornerSAI.CornerRadius = UDim.new(0, 5) cornerSAI.Parent = SetAllInput
-
-local SetAllBtn = Instance.new("TextButton") SetAllBtn.Parent = SetAllFrame SetAllBtn.BackgroundColor3 = Color3.fromRGB(200, 100, 0) SetAllBtn.Position = UDim2.new(0.68, 0, 0.18, 0) SetAllBtn.Size = UDim2.new(0.27, 0, 0.64, 0) SetAllBtn.Font = Enum.Font.GothamBold SetAllBtn.Text = "ÁP DỤNG" SetAllBtn.TextColor3 = Color3.fromRGB(255, 255, 255) SetAllBtn.TextSize = 10
-local cornerSAB = Instance.new("UICorner") cornerSAB.CornerRadius = UDim.new(0, 5) cornerSAB.Parent = SetAllBtn
-
-SetAllBtn.MouseButton1Click:Connect(function()
-    local val = tonumber(SetAllInput.Text)
-    if val and val > 0 then
-        CONFIG.SkillRanges.R = val; InputR.Text = tostring(val)
-        CONFIG.SkillRanges.T = val; InputT.Text = tostring(val)
-        CONFIG.SkillRanges.F = val; InputF.Text = tostring(val)
-        CONFIG.SkillRanges.G = val; InputG.Text = tostring(val)
-    end
-end)
-yPos = yPos + 58
+CreateSectionLabel("⚔️ CHỌN SKILL AUTO TP:", UDim2.new(0.05, 0, 0, yPos)) yPos = yPos + 28
+local SkillR = CreateSkillToggle("R", UDim2.new(0.05, 0, 0, yPos))
+local SkillT = CreateSkillToggle("T", UDim2.new(0.28, 0, 0, yPos))
+local SkillF = CreateSkillToggle("F", UDim2.new(0.51, 0, 0, yPos))
+local SkillG = CreateSkillToggle("G", UDim2.new(0.74, 0, 0, yPos)) yPos = yPos + 48
 
 CreateSectionLabel("👥 DANH SÁCH ALLY", UDim2.new(0.05, 0, 0, yPos)) yPos = yPos + 28
 local AllyInput = CreateInput("AllyInput", "👥 Ally (phẩy):", UDim2.new(0.05, 0, 0, yPos), CONFIG.AllyNames) yPos = yPos + 48
 
-CreateSectionLabel("🔧 CÀI ĐẶT CHUNG", UDim2.new(0.05, 0, 0, yPos)) yPos = yPos + 28
+CreateSectionLabel("🔧 CÀI ĐẶT", UDim2.new(0.05, 0, 0, yPos)) yPos = yPos + 28
 local CharacterInput = CreateInput("CharacterInput", "🎭 Tướng:", UDim2.new(0.05, 0, 0, yPos), CONFIG.SkillSuffix) yPos = yPos + 48
 local RangeInput = CreateInput("RangeInput", "📏 Bubble Size:", UDim2.new(0.05, 0, 0, yPos), CONFIG.Range) yPos = yPos + 48
-
--- Thêm Khoảng Cách TP
-local TPDistanceInput = CreateInput("TPDistance", "📏 C/Cách TP:", UDim2.new(0.05, 0, 0, yPos), CONFIG.TeleportDistance) yPos = yPos + 48
-
 local TPDelayInput = CreateInput("TPDelayInput", "⏱️ TP Delay:", UDim2.new(0.05, 0, 0, yPos), CONFIG.TeleportDelay) yPos = yPos + 48
 local TPCooldownInput = CreateInput("TPCooldownInput", "⏳ TP CD:", UDim2.new(0.05, 0, 0, yPos), CONFIG.TeleportCooldown) yPos = yPos + 48
 local SkillDelayInput = CreateInput("SkillDelayInput", "⚡ Skill Delay:", UDim2.new(0.05, 0, 0, yPos), CONFIG.SkillDelay) yPos = yPos + 48
@@ -513,24 +499,18 @@ local function ExecuteTeleport(target)
     if not target or not target:FindFirstChild("HumanoidRootPart") then return end
     if not cachedCharacter or not cachedRootPart then return end
     local targetCFrame = target.HumanoidRootPart.CFrame
-    -- Áp dụng khoảng cách TP (Sau lưng)
-    local backPosition = targetCFrame * CFrame.new(0, 0, CONFIG.TeleportDistance)
+    local backPosition = targetCFrame * CFrame.new(0, 0, 3)
     cachedRootPart.CFrame = CFrame.lookAt(backPosition.Position, target.HumanoidRootPart.Position)
     lastTeleportTime = tick()
     teleportCooldownRemaining = CONFIG.TeleportCooldown
     CooldownFrame.Visible = true
 end
 
--- Hàm TP Auto gọi khi nhấn Skill
-local function AutoTeleportToTarget(skillKey)
+local function AutoTeleportToTarget()
     local currentTime = tick()
     if currentTime - lastTeleportTime < CONFIG.TeleportCooldown then return end
     task.wait(CONFIG.TeleportDelay)
-    
-    -- Ưu tiên lấy Range riêng của Skill, nếu lỗi fallback về Range chung
-    local searchRange = (skillKey and CONFIG.SkillRanges[skillKey]) or CONFIG.Range
-    local target = GetClosestEnemy(searchRange + 5)
-    
+    local target = GetClosestEnemy(CONFIG.Range + 5)
     if target then ExecuteTeleport(target) end
 end
 
@@ -555,10 +535,7 @@ local function SetupDashHook()
         end
         if method == "FireServer" and self.Name == "Remote" then
             if isAntiRunner and CONFIG.SelectedSkills[args[1]] then
-                local usedSkill = args[1]
-                task.spawn(function()
-                    AutoTeleportToTarget(usedSkill)
-                end)
+                task.spawn(AutoTeleportToTarget)
             end
         end
         return oldNamecall(self, ...)
@@ -590,6 +567,9 @@ DashAntiStunToggle.MouseButton1Click:Connect(function()
     if CONFIG.AntiStunEnabled then SetupDashHook() end
 end)
 
+-- ============================================================
+-- LOGIC NÚT ANTI FALL
+-- ============================================================
 AntiFallToggle.MouseButton1Click:Connect(function()
     local newState = not CONFIG.AntiFallEnabled
     ToggleAntiFall(newState)
@@ -599,6 +579,7 @@ AntiFallToggle.MouseButton1Click:Connect(function()
     UpdateAntiFallStatus(newState)
 end)
 
+-- Xử lý Ally Input
 AllyInput.FocusLost:Connect(function()
     local newAllyText = AllyInput.Text:gsub("%s+", "")
     if newAllyText == "" then newAllyText = "GrahamScyther,namlkun1407" end
@@ -606,6 +587,16 @@ AllyInput.FocusLost:Connect(function()
     AllyInput.Text = CONFIG.AllyNames
     Credit.Text = "Allies: " .. CONFIG.AllyNames
 end)
+
+local function SetupSkillToggle(button, skillKey)
+    button.MouseButton1Click:Connect(function()
+        CONFIG.SelectedSkills[skillKey] = not CONFIG.SelectedSkills[skillKey]
+        button.Text = skillKey
+        button.TextColor3 = CONFIG.SelectedSkills[skillKey] and Color3.fromRGB(80, 255, 80) or Color3.fromRGB(255, 80, 80)
+        button.BackgroundColor3 = CONFIG.SelectedSkills[skillKey] and Color3.fromRGB(0, 120, 80) or Color3.fromRGB(0, 60, 110)
+    end)
+end
+SetupSkillToggle(SkillR, "R") SetupSkillToggle(SkillT, "T") SetupSkillToggle(SkillF, "F") SetupSkillToggle(SkillG, "G")
 
 CharacterInput.FocusLost:Connect(function()
     local newName = CharacterInput.Text:gsub("^%s*(.-)%s*$", "%1")
@@ -622,11 +613,6 @@ RangeInput.FocusLost:Connect(function()
     else
         RangeInput.Text = tostring(CONFIG.Range)
     end
-end)
-
-TPDistanceInput.FocusLost:Connect(function()
-    local v = tonumber(TPDistanceInput.Text)
-    if v then CONFIG.TeleportDistance = v else TPDistanceInput.Text = tostring(CONFIG.TeleportDistance) end
 end)
 
 TPDelayInput.FocusLost:Connect(function()
@@ -676,18 +662,23 @@ local function UpdateCharacterCache()
     end
 end
 
+-- ============================================================
+-- AUTO SETUP ANTI FALL KHI HỒI SINH (chỉ bật 1 lần mỗi lần spawn)
+-- ============================================================
 LocalPlayer.CharacterAdded:Connect(function(character)
     task.wait(0.1)
     UpdateCharacterCache()
-    antiFallSetupDone = false
+    antiFallSetupDone = false  -- reset flag để cho phép setup lại
     if CONFIG.AntiFallEnabled and not antiFallSetupDone then
         antiFallSetupDone = true
         SetupAntiFall(character)
-        UpdateAntiFallStatus(true)
+        UpdateAntiFallStatus(true)  -- cập nhật badge trên GUI
     end
 end)
 
 UpdateCharacterCache()
+
+-- Setup Anti Fall cho character hiện tại ngay lúc chạy script
 if CONFIG.AntiFallEnabled and cachedCharacter and not antiFallSetupDone then
     antiFallSetupDone = true
     SetupAntiFall(cachedCharacter)
@@ -696,10 +687,6 @@ end
 -- --- VÒNG LẶP CHÍNH ---
 local lastUpdate = tick()
 local updateInterval = 0.016
-
--- Cache lại text để tránh lag GUI do update text liên tục
-local lastCDText = ""
-local lastStunText = ""
 
 RunService.RenderStepped:Connect(function(deltaTime)
     local currentTime = tick()
@@ -714,36 +701,20 @@ RunService.RenderStepped:Connect(function(deltaTime)
 
     BubblePart.Position = cachedRootPart.Position
 
-    -- Fix lag GUI: Chỉ update UI khi text thay đổi thực sự
     if teleportCooldownRemaining > 0 then
         teleportCooldownRemaining = math.max(0, teleportCooldownRemaining - deltaTime)
-        local newText = string.format("%.1fs", teleportCooldownRemaining)
-        if newText ~= lastCDText then
-            CooldownTimer.Text = newText
-            lastCDText = newText
-        end
-        if not CooldownFrame.Visible then CooldownFrame.Visible = true end
+        CooldownTimer.Text = string.format("%.1fs", teleportCooldownRemaining)
         if teleportCooldownRemaining <= 0 then CooldownFrame.Visible = false end
     end
 
     if antiStunCooldownRemaining > 0 then
         antiStunCooldownRemaining = math.max(0, antiStunCooldownRemaining - deltaTime)
-        local newStunText = string.format("%.1fs", antiStunCooldownRemaining)
-        if newStunText ~= lastStunText then
-            AntiStunTimer.Text = newStunText
-            lastStunText = newStunText
-        end
-        if not AntiStunFrame.Visible then AntiStunFrame.Visible = true end
-        
-        local targetColor = isAntiStunActive and Color3.fromRGB(0, 160, 90) or Color3.fromRGB(160, 90, 0)
-        if AntiStunFrame.BackgroundColor3 ~= targetColor then
-            AntiStunFrame.BackgroundColor3 = targetColor
-        end
-        
+        AntiStunTimer.Text = string.format("%.1fs", antiStunCooldownRemaining)
+        AntiStunFrame.Visible = true
+        AntiStunFrame.BackgroundColor3 = isAntiStunActive and Color3.fromRGB(0, 160, 90) or Color3.fromRGB(160, 90, 0)
         if antiStunCooldownRemaining <= 0 then AntiStunFrame.Visible = false end
     end
 
-    -- CHỈ DUY NHẤT AIM GIỮ NGUYÊN (Không đụng chạm logic)
     if isAiming and currentTime - lastUpdate >= updateInterval then
         lastUpdate = currentTime
         local target = GetClosestEnemy(CONFIG.Range + 5)
