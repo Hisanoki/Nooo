@@ -7,7 +7,7 @@ local LocalPlayer = Players.LocalPlayer
 -- --- CẤU HÌNH ---
 local CONFIG = {
     Range = 40,
-    AllyNames = "GrahamScyther,namlkun1407",
+    AllyNames = "GrahamScyther,namlkun1407,memaydemquangonlam",
     BubbleColor = Color3.fromRGB(0, 170, 255),
     BubbleTransparency = 0.6,
     SkillPrefix = "Kamen Rider",
