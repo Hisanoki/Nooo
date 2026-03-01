@@ -268,7 +268,7 @@ local function TriggerAntiStun()
 end
 
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "ModernAimGUI_MobileV2"
+ScreenGui.Name = "Mobile"
 ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
 ScreenGui.ResetOnSpawn = false
 
@@ -293,7 +293,7 @@ Header.Parent = MainFrame
 Header.BackgroundColor3 = Color3.fromRGB(0, 120, 215)
 Header.Size = UDim2.new(1, 0, 0, 40)
 Header.Font = Enum.Font.GothamBold
-Header.Text = "AIM PRO"
+Header.Text = "Blue Sea Hub"
 Header.TextColor3 = Color3.fromRGB(255, 255, 255)
 Header.TextSize = 16
 
