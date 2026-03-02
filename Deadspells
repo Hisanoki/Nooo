@@ -159,6 +159,7 @@ merchantButton.Font = Enum.Font.GothamBold
 merchantButton.TextSize = 12
 merchantButton.Parent = mainFrame
 
+-- Hiệu ứng hover merchant button
 merchantButton.MouseEnter:Connect(function()
     merchantButton.BackgroundColor3 = Color3.fromRGB(255, 210, 80)
 end)
@@ -166,54 +167,23 @@ merchantButton.MouseLeave:Connect(function()
     merchantButton.BackgroundColor3 = Color3.fromRGB(255, 180, 0)
 end)
 
--- Token hủy: mỗi lần bấm tăng lên, coroutine cũ tự thoát khi token lệch
-local merchantToken = 0
-local isMerchantFloating = false
-
+-- Sự kiện click merchant button (cycle qua từng tọa độ)
 merchantButton.MouseButton1Click:Connect(function()
     if character and humanoidRootPart then
         local pos = MERCHANT_POSITIONS[merchantIndex]
         
-        -- Hủy lần bấm trước (nếu đang chờ)
-        merchantToken = merchantToken + 1
-        local myToken = merchantToken
+        -- Hiệu ứng đang teleport
+        merchantButton.Text = "⏳ Đang teleport tới vị trí " .. merchantIndex .. "..."
+        merchantButton.BackgroundColor3 = Color3.fromRGB(255, 215, 0)
         
-        -- Bỏ anchor cũ nếu đang lơ lửng
-        if isMerchantFloating then
-            humanoidRootPart.Anchored = false
-            isMerchantFloating = false
-        end
-
-        -- Teleport
         humanoidRootPart.CFrame = CFrame.new(pos)
         
-        -- Chuyển index trước khi hiện countdown để nút tiếp theo đúng
-        local currentIndex = merchantIndex
+        -- Chuyển sang index tiếp theo (vòng lặp)
         merchantIndex = (merchantIndex % #MERCHANT_POSITIONS) + 1
-
-        -- Anchor để lơ lửng chờ load map
-        humanoidRootPart.Anchored = true
-        isMerchantFloating = true
-
-        task.spawn(function()
-            for i = 5, 1, -1 do
-                -- Kiểm tra token: nếu người dùng bấm lại thì thoát
-                if merchantToken ~= myToken then
-                    return
-                end
-                merchantButton.Text = "⏳ Chờ load map... " .. i .. "s [" .. currentIndex .. "/8]"
-                merchantButton.BackgroundColor3 = Color3.fromRGB(255, 215, 0)
-                task.wait(1)
-            end
-
-            -- Chỉ bỏ anchor nếu vẫn là lần bấm này (chưa bị hủy)
-            if merchantToken == myToken then
-                humanoidRootPart.Anchored = false
-                isMerchantFloating = false
-                merchantButton.Text = "Tìm Mysterious Merchant [" .. merchantIndex .. "/8]"
-                merchantButton.BackgroundColor3 = Color3.fromRGB(255, 180, 0)
-            end
-        end)
+        
+        task.wait(0.5)
+        merchantButton.Text = "🔍 Find Mysterious Merchant [" .. merchantIndex .. "/8]"
+        merchantButton.BackgroundColor3 = Color3.fromRGB(255, 180, 0)
     end
 end)
 
