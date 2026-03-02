@@ -17,55 +17,63 @@ end)
 local BOSS_DATA = {
     ["Điểm xuất phát"] = {
         position = Vector3.new(22, 11, -40001),
-        color = Color3.fromRGB(100, 100, 100),  -- Xám
+        color = Color3.fromRGB(100, 100, 100),
         textColor = Color3.fromRGB(255, 255, 255)
     },
     ["Samurai"] = {
         position = Vector3.new(-198, 38, -3561),
-        color = Color3.fromRGB(220, 20, 60),    -- Đỏ đậm
+        color = Color3.fromRGB(220, 20, 60),
         textColor = Color3.fromRGB(255, 255, 255)
     },
     ["Vam"] = {
         position = Vector3.new(114, 54, 5126),
-        color = Color3.fromRGB(75, 0, 130),     -- Tím
+        color = Color3.fromRGB(75, 0, 130),
         textColor = Color3.fromRGB(255, 255, 255)
     },
     ["Steampunk"] = {
         position = Vector3.new(-7, 91, 26997),
-        color = Color3.fromRGB(210, 180, 140),  -- Nâu vàng
+        color = Color3.fromRGB(210, 180, 140),
         textColor = Color3.fromRGB(0, 0, 0)
     },
     ["Người lùn"] = {
         position = Vector3.new(353, 51, 16077),
-        color = Color3.fromRGB(139, 69, 19),    -- Nâu đất
+        color = Color3.fromRGB(139, 69, 19),
         textColor = Color3.fromRGB(255, 255, 255)
     },
     ["Đảo sky"] = {
         position = Vector3.new(-395, 355, 34959),
-        color = Color3.fromRGB(135, 206, 235),  -- Xanh da trời nhạt
-        textColor = Color3.fromRGB(0, 0, 0)
-    },
-    ["Già Noel"] = {
-        position = Vector3.new(-15, 33, 13960),
-        color = Color3.fromRGB(177, 18, 38),  
+        color = Color3.fromRGB(135, 206, 235),
         textColor = Color3.fromRGB(0, 0, 0)
     },
     ["Vua băng"] = {
         position = Vector3.new(-5, 35, 46465),
-        color = Color3.fromRGB(173, 216, 230),  -- Xanh băng
+        color = Color3.fromRGB(173, 216, 230),
         textColor = Color3.fromRGB(0, 0, 0)
     }
 }
+
+-- Tọa độ Mysterious Merchant (theo thứ tự)
+local MERCHANT_POSITIONS = {
+    Vector3.new(-2, 19, -30001),
+    Vector3.new(3, 27, -20005),
+    Vector3.new(-2, 26, -9995),
+    Vector3.new(3, 27, -13),
+    Vector3.new(-2, 22, 9988),
+    Vector3.new(-12, 41, 20014),
+    Vector3.new(-6, 27, 29992),
+    Vector3.new(0, 24, 39981),
+}
+local merchantIndex = 1
 
 -- Tạo GUI
 local screenGui = Instance.new("ScreenGui")
 screenGui.Name = "BossTeleporter"
 screenGui.ResetOnSpawn = false
 
--- Frame chính (có thể di chuyển) - Dùng ImageLabel
+-- Frame chính (có thể di chuyển)
 local mainFrame = Instance.new("ImageLabel")
 mainFrame.Name = "MainFrame"
-mainFrame.Size = UDim2.new(0, 220, 0, 320)
+mainFrame.Size = UDim2.new(0, 220, 0, 355)
 mainFrame.Position = UDim2.new(0, 50, 0, 50)
 mainFrame.Image = "rbxassetid://136692416310995"
 mainFrame.ScaleType = Enum.ScaleType.Stretch
@@ -96,7 +104,7 @@ titleText.Font = Enum.Font.GothamBold
 titleText.TextSize = 16
 titleText.Parent = titleBar
 
--- Nút đóng/mở GUI (toggle button)
+-- Nút đóng/mở GUI
 local toggleButton = Instance.new("TextButton")
 toggleButton.Name = "ToggleButton"
 toggleButton.Size = UDim2.new(0, 100, 0, 30)
@@ -110,7 +118,7 @@ toggleButton.Font = Enum.Font.Gotham
 toggleButton.TextSize = 13
 toggleButton.Parent = mainFrame
 
--- Hiển thị trạng thái auto-interact
+-- Trạng thái auto-interact
 local autoInteractLabel = Instance.new("TextLabel")
 autoInteractLabel.Name = "AutoInteractLabel"
 autoInteractLabel.Size = UDim2.new(1, -20, 0, 20)
@@ -137,11 +145,83 @@ toggleAutoButton.Font = Enum.Font.Gotham
 toggleAutoButton.TextSize = 12
 toggleAutoButton.Parent = mainFrame
 
--- Danh sách các nút teleport
+-- Nút Find Mysterious Merchant
+local merchantButton = Instance.new("TextButton")
+merchantButton.Name = "MerchantButton"
+merchantButton.Size = UDim2.new(1, -10, 0, 30)
+merchantButton.Position = UDim2.new(0, 5, 0, 132)
+merchantButton.BackgroundColor3 = Color3.fromRGB(255, 180, 0)
+merchantButton.BorderSizePixel = 1
+merchantButton.BorderColor3 = Color3.fromRGB(180, 120, 0)
+merchantButton.Text = "🔍 Find Mysterious Merchant [1/8]"
+merchantButton.TextColor3 = Color3.fromRGB(0, 0, 0)
+merchantButton.Font = Enum.Font.GothamBold
+merchantButton.TextSize = 12
+merchantButton.Parent = mainFrame
+
+merchantButton.MouseEnter:Connect(function()
+    merchantButton.BackgroundColor3 = Color3.fromRGB(255, 210, 80)
+end)
+merchantButton.MouseLeave:Connect(function()
+    merchantButton.BackgroundColor3 = Color3.fromRGB(255, 180, 0)
+end)
+
+-- Token hủy: mỗi lần bấm tăng lên, coroutine cũ tự thoát khi token lệch
+local merchantToken = 0
+local isMerchantFloating = false
+
+merchantButton.MouseButton1Click:Connect(function()
+    if character and humanoidRootPart then
+        local pos = MERCHANT_POSITIONS[merchantIndex]
+        
+        -- Hủy lần bấm trước (nếu đang chờ)
+        merchantToken = merchantToken + 1
+        local myToken = merchantToken
+        
+        -- Bỏ anchor cũ nếu đang lơ lửng
+        if isMerchantFloating then
+            humanoidRootPart.Anchored = false
+            isMerchantFloating = false
+        end
+
+        -- Teleport
+        humanoidRootPart.CFrame = CFrame.new(pos)
+        
+        -- Chuyển index trước khi hiện countdown để nút tiếp theo đúng
+        local currentIndex = merchantIndex
+        merchantIndex = (merchantIndex % #MERCHANT_POSITIONS) + 1
+
+        -- Anchor để lơ lửng chờ load map
+        humanoidRootPart.Anchored = true
+        isMerchantFloating = true
+
+        task.spawn(function()
+            for i = 5, 1, -1 do
+                -- Kiểm tra token: nếu người dùng bấm lại thì thoát
+                if merchantToken ~= myToken then
+                    return
+                end
+                merchantButton.Text = "⏳ Chờ load map... " .. i .. "s [" .. currentIndex .. "/8]"
+                merchantButton.BackgroundColor3 = Color3.fromRGB(255, 215, 0)
+                task.wait(1)
+            end
+
+            -- Chỉ bỏ anchor nếu vẫn là lần bấm này (chưa bị hủy)
+            if merchantToken == myToken then
+                humanoidRootPart.Anchored = false
+                isMerchantFloating = false
+                merchantButton.Text = "Tìm Mysterious Merchant [" .. merchantIndex .. "/8]"
+                merchantButton.BackgroundColor3 = Color3.fromRGB(255, 180, 0)
+            end
+        end)
+    end
+end)
+
+-- Danh sách các nút teleport boss
 local scrollFrame = Instance.new("ScrollingFrame")
 scrollFrame.Name = "ScrollFrame"
 scrollFrame.Size = UDim2.new(1, -10, 0, 140)
-scrollFrame.Position = UDim2.new(0, 5, 0, 130)
+scrollFrame.Position = UDim2.new(0, 5, 0, 168)
 scrollFrame.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
 scrollFrame.BackgroundTransparency = 0.2
 scrollFrame.BorderSizePixel = 1
@@ -161,52 +241,39 @@ for bossName, bossInfo in pairs(BOSS_DATA) do
     teleButton.Name = bossName .. "Button"
     teleButton.Size = UDim2.new(1, -10, 0, buttonHeight)
     teleButton.Position = UDim2.new(0, 5, 0, (buttonHeight + padding) * buttonCount)
-    
-    -- Màu nền theo boss
     teleButton.BackgroundColor3 = bossInfo.color
     teleButton.BorderSizePixel = 1
-    teleButton.BorderColor3 = bossInfo.color:lerp(Color3.new(0, 0, 0), 0.3) -- Viền tối hơn
-    
-    -- Màu chữ
+    teleButton.BorderColor3 = bossInfo.color:lerp(Color3.new(0, 0, 0), 0.3)
     teleButton.Text = bossName
     teleButton.TextColor3 = bossInfo.textColor
     teleButton.Font = Enum.Font.GothamMedium
     teleButton.TextSize = 13
     teleButton.Parent = scrollFrame
-    
-    -- Hiệu ứng hover
+
     teleButton.MouseEnter:Connect(function()
         teleButton.BackgroundColor3 = bossInfo.color:lerp(Color3.new(1, 1, 1), 0.2)
     end)
-    
     teleButton.MouseLeave:Connect(function()
         teleButton.BackgroundColor3 = bossInfo.color
     end)
-    
-    -- Sự kiện click teleport
+
     teleButton.MouseButton1Click:Connect(function()
         if character and humanoidRootPart then
-            -- Thêm hiệu ứng teleport
             teleButton.Text = "Đang teleport..."
-            teleButton.BackgroundColor3 = Color3.fromRGB(255, 215, 0) -- Màu vàng khi teleport
-            
-            -- Teleport
+            teleButton.BackgroundColor3 = Color3.fromRGB(255, 215, 0)
             humanoidRootPart.CFrame = CFrame.new(bossInfo.position)
-            
-            -- Khôi phục nút sau 0.5s
             task.wait(0.5)
             teleButton.Text = bossName
             teleButton.BackgroundColor3 = bossInfo.color
         end
     end)
-    
+
     buttonCount = buttonCount + 1
 end
 
--- Cập nhật kích thước canvas
 scrollFrame.CanvasSize = UDim2.new(0, 0, 0, (buttonHeight + padding) * buttonCount)
 
--- Nút mini trên màn hình khi GUI ẩn - Dùng ImageButton
+-- Nút mini khi GUI ẩn
 local miniButton = Instance.new("ImageButton")
 miniButton.Name = "MiniButton"
 miniButton.Size = UDim2.new(0, 60, 0, 60)
@@ -222,7 +289,6 @@ miniButton.Draggable = true
 miniButton.Selectable = true
 miniButton.Parent = screenGui
 
--- Thêm TextLabel để hiện chữ "Mở GUI" trên nút mini
 local miniButtonText = Instance.new("TextLabel")
 miniButtonText.Size = UDim2.new(1, 0, 1, 0)
 miniButtonText.BackgroundTransparency = 1
@@ -233,26 +299,18 @@ miniButtonText.TextSize = 11
 miniButtonText.TextWrapped = true
 miniButtonText.Parent = miniButton
 
--- Biến trạng thái
+-- Trạng thái GUI
 local isGUIVisible = true
 
--- Hàm toggle GUI
 local function toggleGUI()
     isGUIVisible = not isGUIVisible
     mainFrame.Visible = isGUIVisible
     miniButton.Visible = not isGUIVisible
-    
-    if isGUIVisible then
-        toggleButton.Text = "Ẩn GUI"
-    else
-        toggleButton.Text = "Hiện GUI"
-    end
+    toggleButton.Text = isGUIVisible and "Ẩn GUI" or "Hiện GUI"
 end
 
--- Hàm toggle auto-interact
 local function toggleAutoInteract()
     instantInteractEnabled = not instantInteractEnabled
-    
     if instantInteractEnabled then
         autoInteractLabel.Text = "Mua đồ nhanh: Bật"
         autoInteractLabel.TextColor3 = Color3.fromRGB(0, 255, 0)
@@ -266,15 +324,13 @@ local function toggleAutoInteract()
     end
 end
 
--- Kết nối sự kiện nút
 toggleButton.MouseButton1Click:Connect(toggleGUI)
 miniButton.MouseButton1Click:Connect(toggleGUI)
 toggleAutoButton.MouseButton1Click:Connect(toggleAutoInteract)
 
--- Thêm GUI vào màn hình
 screenGui.Parent = player:WaitForChild("PlayerGui")
 
--- Hiệu ứng khi mở GUI
+-- Hiệu ứng fade in
 task.spawn(function()
     mainFrame.ImageTransparency = 1
     for i = 0, 1, 0.1 do
