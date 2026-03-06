@@ -1,0 +1,376 @@
+-- ============================================================
+--                   Cc Hub - Hero Selector
+-- ============================================================
+
+local Players          = game:GetService("Players")
+local UserInputService = game:GetService("UserInputService")
+local LocalPlayer      = Players.LocalPlayer
+local PlayerGui        = LocalPlayer:WaitForChild("PlayerGui")
+
+-- Xoá GUI cũ nếu có
+if PlayerGui:FindFirstChild("CcHub") then
+    PlayerGui:FindFirstChild("CcHub"):Destroy()
+end
+
+-- >> HEROES
+local HEROES = {
+    "Spider Man [Spectacular]",
+    "Spider Man [SamRaimi]",
+    "Spider Man [Mcfarlane]",
+    "Spider Man [Insomniac]",
+    "Spider Man [TASM2]",
+    "Spider Man [TASM1]",
+    "Spider Man [Ultimate]",
+    "Spider Man [Ultimate 2024]",
+    "Spider Man [Toei]",
+    "Killer Queen",
+    "Kaneki Ken",
+    "Kamen Rider Evol",
+    "Kamen Rider Genm",
+    "Kamen Rider Diend",
+}
+
+-- >> COLORS
+local BLUE       = Color3.fromRGB(30, 100, 220)
+local BLUE_DARK  = Color3.fromRGB(15, 60, 140)
+local BLUE_BTN   = Color3.fromRGB(20, 75, 170)
+local BLUE_HOVER = Color3.fromRGB(55, 140, 255)
+local DARK_BG    = Color3.fromRGB(10, 38, 90)
+local WHITE      = Color3.fromRGB(255, 255, 255)
+
+-- >> HELPER
+local function corner(obj, r)
+    local c = Instance.new("UICorner")
+    c.CornerRadius = UDim.new(0, r or 8)
+    c.Parent = obj
+end
+
+local function addStroke(obj, color, thick)
+    local s = Instance.new("UIStroke")
+    s.Color     = color or BLUE_HOVER
+    s.Thickness = thick or 1.5
+    s.Parent    = obj
+end
+
+-- >> SELECT HERO
+local function selectHero(name)
+    pcall(function()
+        local menu = PlayerGui:WaitForChild("Menu", 5)
+        local re   = menu
+            :WaitForChild("Frame")
+            :WaitForChild("LocalScript")
+            :WaitForChild("RemoteEvent")
+        re:FireServer("Select", name, menu)
+    end)
+end
+
+-- ============================================================
+-- SCREEN GUI
+-- DisplayOrder = 9999  →  đè lên mọi GUI của game
+-- ZIndexBehavior Global  →  ZIndex có hiệu lực toàn cục
+-- ============================================================
+local SG = Instance.new("ScreenGui")
+SG.Name            = "CcHub"
+SG.ResetOnSpawn    = false
+SG.IgnoreGuiInset  = true
+SG.ZIndexBehavior  = Enum.ZIndexBehavior.Global
+SG.DisplayOrder    = 9999
+SG.Parent          = PlayerGui
+
+-- ============================================================
+-- TOGGLE BUTTON  (giữa bên trái, kéo được)
+-- ============================================================
+local ToggleBtn = Instance.new("TextButton")
+ToggleBtn.Name              = "ToggleBtn"
+ToggleBtn.Size              = UDim2.new(0, 90, 0, 34)
+ToggleBtn.Position          = UDim2.new(0, 8, 0.5, -17)  -- giữa trái
+ToggleBtn.BackgroundColor3  = BLUE
+ToggleBtn.TextColor3        = WHITE
+ToggleBtn.Text              = "▶ Cc Hub"
+ToggleBtn.Font              = Enum.Font.GothamBold
+ToggleBtn.TextSize          = 13
+ToggleBtn.BorderSizePixel   = 0
+ToggleBtn.ZIndex            = 9000
+ToggleBtn.Parent            = SG
+corner(ToggleBtn, 8)
+addStroke(ToggleBtn, BLUE_HOVER, 1.5)
+
+-- Nút vô hình (cùng vị trí Toggle, hiện sau khi bấm "Ẩn")
+local InvisBtn = Instance.new("TextButton")
+InvisBtn.Name                   = "InvisBtn"
+InvisBtn.Size                   = UDim2.new(0, 90, 0, 34)
+InvisBtn.Position               = ToggleBtn.Position
+InvisBtn.BackgroundTransparency = 1
+InvisBtn.Text                   = ""
+InvisBtn.BorderSizePixel        = 0
+InvisBtn.Visible                = false
+InvisBtn.ZIndex                 = 9100
+InvisBtn.Parent                 = SG
+
+-- ============================================================
+-- MAIN FRAME  (xuất hiện bên phải ToggleBtn)
+-- ============================================================
+local Main = Instance.new("Frame")
+Main.Name             = "Main"
+Main.Size             = UDim2.new(0, 290, 0, 410)
+Main.Position         = UDim2.new(0, 106, 0.5, -205)
+Main.BackgroundColor3 = DARK_BG
+Main.BorderSizePixel  = 0
+Main.ZIndex           = 8000
+Main.Parent           = SG
+corner(Main, 10)
+addStroke(Main, BLUE_HOVER, 1.8)
+
+-- Title Bar
+local TitleBar = Instance.new("Frame")
+TitleBar.Size             = UDim2.new(1, 0, 0, 44)
+TitleBar.BackgroundColor3 = BLUE
+TitleBar.BorderSizePixel  = 0
+TitleBar.ZIndex           = 8001
+TitleBar.Parent           = Main
+corner(TitleBar, 10)
+
+local TitlePatch = Instance.new("Frame")   -- che góc dưới title
+TitlePatch.Size             = UDim2.new(1, 0, 0, 10)
+TitlePatch.Position         = UDim2.new(0, 0, 1, -10)
+TitlePatch.BackgroundColor3 = BLUE
+TitlePatch.BorderSizePixel  = 0
+TitlePatch.ZIndex           = 8001
+TitlePatch.Parent           = TitleBar
+
+local TitleLbl = Instance.new("TextLabel")
+TitleLbl.Size                 = UDim2.new(1, -12, 1, 0)
+TitleLbl.Position             = UDim2.new(0, 12, 0, 0)
+TitleLbl.BackgroundTransparency = 1
+TitleLbl.Text                 = "Cc Hub"
+TitleLbl.TextColor3           = WHITE
+TitleLbl.Font                 = Enum.Font.GothamBold
+TitleLbl.TextSize             = 18
+TitleLbl.TextXAlignment       = Enum.TextXAlignment.Left
+TitleLbl.ZIndex               = 8002
+TitleLbl.Parent               = TitleBar
+
+local Div = Instance.new("Frame")
+Div.Size                  = UDim2.new(1, -20, 0, 1)
+Div.Position              = UDim2.new(0, 10, 0, 44)
+Div.BackgroundColor3      = BLUE_HOVER
+Div.BorderSizePixel       = 0
+Div.BackgroundTransparency = 0.4
+Div.ZIndex                = 8001
+Div.Parent                = Main
+
+-- Scroll list
+local Scroll = Instance.new("ScrollingFrame")
+Scroll.Size                   = UDim2.new(1, -12, 0, 302)
+Scroll.Position               = UDim2.new(0, 6, 0, 50)
+Scroll.BackgroundTransparency = 1
+Scroll.BorderSizePixel        = 0
+Scroll.ScrollBarThickness     = 4
+Scroll.ScrollBarImageColor3   = BLUE_HOVER
+Scroll.CanvasSize             = UDim2.new(0, 0, 0, 0)
+Scroll.ZIndex                 = 8001
+Scroll.Parent                 = Main
+
+local UIList = Instance.new("UIListLayout")
+UIList.Padding   = UDim.new(0, 6)
+UIList.SortOrder = Enum.SortOrder.LayoutOrder
+UIList.Parent    = Scroll
+
+local UIPad = Instance.new("UIPadding")
+UIPad.PaddingTop   = UDim.new(0, 6)
+UIPad.PaddingLeft  = UDim.new(0, 4)
+UIPad.PaddingRight = UDim.new(0, 4)
+UIPad.Parent       = Scroll
+
+for i, heroName in ipairs(HEROES) do
+    local Btn = Instance.new("TextButton")
+    Btn.Name             = "H" .. i
+    Btn.Size             = UDim2.new(1, 0, 0, 36)
+    Btn.BackgroundColor3 = BLUE_BTN
+    Btn.TextColor3       = WHITE
+    Btn.Text             = heroName
+    Btn.Font             = Enum.Font.Gotham
+    Btn.TextSize         = 13
+    Btn.BorderSizePixel  = 0
+    Btn.LayoutOrder      = i
+    Btn.ZIndex           = 8002
+    Btn.Parent           = Scroll
+    corner(Btn, 7)
+
+    Btn.MouseEnter:Connect(function()  Btn.BackgroundColor3 = BLUE_HOVER end)
+    Btn.MouseLeave:Connect(function()  Btn.BackgroundColor3 = BLUE_BTN  end)
+    Btn.MouseButton1Click:Connect(function() selectHero(heroName) end)
+end
+
+UIList:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+    Scroll.CanvasSize = UDim2.new(0, 0, 0, UIList.AbsoluteContentSize.Y + 12)
+end)
+
+-- Bottom bar
+local BotBar = Instance.new("Frame")
+BotBar.Size             = UDim2.new(1, 0, 0, 52)
+BotBar.Position         = UDim2.new(0, 0, 1, -52)
+BotBar.BackgroundColor3 = BLUE_DARK
+BotBar.BorderSizePixel  = 0
+BotBar.ZIndex           = 8001
+BotBar.Parent           = Main
+corner(BotBar, 10)
+
+local BotPatch = Instance.new("Frame")
+BotPatch.Size             = UDim2.new(1, 0, 0, 10)
+BotPatch.BackgroundColor3 = BLUE_DARK
+BotPatch.BorderSizePixel  = 0
+BotPatch.ZIndex           = 8001
+BotPatch.Parent           = BotBar
+
+local BotDiv = Instance.new("Frame")
+BotDiv.Size                   = UDim2.new(1, -20, 0, 1)
+BotDiv.Position               = UDim2.new(0, 10, 0, 0)
+BotDiv.BackgroundColor3       = BLUE_HOVER
+BotDiv.BorderSizePixel        = 0
+BotDiv.BackgroundTransparency = 0.5
+BotDiv.ZIndex                 = 8002
+BotDiv.Parent                 = BotBar
+
+local HideBtn = Instance.new("TextButton")
+HideBtn.Size             = UDim2.new(0.47, -5, 0, 34)
+HideBtn.Position         = UDim2.new(0, 8, 0.5, -17)
+HideBtn.BackgroundColor3 = BLUE_BTN
+HideBtn.TextColor3       = WHITE
+HideBtn.Text             = "Hide"
+HideBtn.Font             = Enum.Font.GothamBold
+HideBtn.TextSize         = 13
+HideBtn.BorderSizePixel  = 0
+HideBtn.ZIndex           = 8002
+HideBtn.Parent           = BotBar
+corner(HideBtn, 7)
+HideBtn.MouseEnter:Connect(function() HideBtn.BackgroundColor3 = BLUE_HOVER end)
+HideBtn.MouseLeave:Connect(function() HideBtn.BackgroundColor3 = BLUE_BTN  end)
+
+local AnBtn = Instance.new("TextButton")
+AnBtn.Size             = UDim2.new(0.47, -5, 0, 34)
+AnBtn.Position         = UDim2.new(0.53, -3, 0.5, -17)
+AnBtn.BackgroundColor3 = BLUE_BTN
+AnBtn.TextColor3       = WHITE
+AnBtn.Text             = "Ẩn"
+AnBtn.Font             = Enum.Font.GothamBold
+AnBtn.TextSize         = 13
+AnBtn.BorderSizePixel  = 0
+AnBtn.ZIndex           = 8002
+AnBtn.Parent           = BotBar
+corner(AnBtn, 7)
+AnBtn.MouseEnter:Connect(function() AnBtn.BackgroundColor3 = BLUE_HOVER end)
+AnBtn.MouseLeave:Connect(function() AnBtn.BackgroundColor3 = BLUE_BTN  end)
+
+-- ============================================================
+-- LOGIC bật / tắt
+-- ============================================================
+local isOpen = true
+
+ToggleBtn.MouseButton1Click:Connect(function()
+    isOpen = not isOpen
+    Main.Visible   = isOpen
+    ToggleBtn.Text = isOpen and "◀ Cc Hub" or "▶ Cc Hub"
+end)
+
+HideBtn.MouseButton1Click:Connect(function()
+    isOpen         = false
+    Main.Visible   = false
+    ToggleBtn.Text = "▶ Cc Hub"
+end)
+
+AnBtn.MouseButton1Click:Connect(function()
+    isOpen            = false
+    Main.Visible      = false
+    ToggleBtn.Visible = false
+    InvisBtn.Visible  = true
+end)
+
+InvisBtn.MouseButton1Click:Connect(function()
+    InvisBtn.Visible  = false
+    ToggleBtn.Visible = true
+    ToggleBtn.Text    = "◀ Cc Hub"
+    Main.Visible      = true
+    isOpen            = true
+end)
+
+-- ============================================================
+-- DRAG MAIN FRAME (kéo qua TitleBar)
+-- ============================================================
+do
+    local dragging, dragStart, startPos = false, nil, nil
+
+    TitleBar.InputBegan:Connect(function(inp)
+        if inp.UserInputType == Enum.UserInputType.MouseButton1 then
+            dragging  = true
+            dragStart = inp.Position
+            startPos  = Main.Position
+        end
+    end)
+
+    UserInputService.InputEnded:Connect(function(inp)
+        if inp.UserInputType == Enum.UserInputType.MouseButton1 then
+            dragging = false
+        end
+    end)
+
+    UserInputService.InputChanged:Connect(function(inp)
+        if dragging and inp.UserInputType == Enum.UserInputType.MouseMovement then
+            local d = inp.Position - dragStart
+            Main.Position = UDim2.new(
+                startPos.X.Scale, startPos.X.Offset + d.X,
+                startPos.Y.Scale, startPos.Y.Offset + d.Y
+            )
+        end
+    end)
+end
+
+-- ============================================================
+-- DRAG TOGGLE BUTTON (kéo chính nút Toggle)
+-- ============================================================
+do
+    local dragging, dragStart, startPos = false, nil, nil
+    local moved = false   -- phân biệt kéo vs click
+
+    ToggleBtn.InputBegan:Connect(function(inp)
+        if inp.UserInputType == Enum.UserInputType.MouseButton1 then
+            dragging  = true
+            moved     = false
+            dragStart = inp.Position
+            startPos  = ToggleBtn.Position
+        end
+    end)
+
+    UserInputService.InputEnded:Connect(function(inp)
+        if inp.UserInputType == Enum.UserInputType.MouseButton1 and dragging then
+            dragging = false
+            -- Đồng bộ InvisBtn sau khi thả
+            InvisBtn.Position = ToggleBtn.Position
+        end
+    end)
+
+    UserInputService.InputChanged:Connect(function(inp)
+        if dragging and inp.UserInputType == Enum.UserInputType.MouseMovement then
+            local d = inp.Position - dragStart
+            if math.abs(d.X) > 3 or math.abs(d.Y) > 3 then
+                moved = true
+            end
+            if moved then
+                local newPos = UDim2.new(
+                    startPos.X.Scale, startPos.X.Offset + d.X,
+                    startPos.Y.Scale, startPos.Y.Offset + d.Y
+                )
+                ToggleBtn.Position = newPos
+                InvisBtn.Position  = newPos
+            end
+        end
+    end)
+
+    -- Nếu đã kéo thì không kích hoạt click
+    ToggleBtn.MouseButton1Click:Connect(function()
+        if moved then
+            moved = false
+            return
+        end
+    end)
+end
