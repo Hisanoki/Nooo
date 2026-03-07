@@ -14,7 +14,7 @@ local ESP_OUTLINE_TRANSPARENCY = 0
 local TEXT_ESP_COLOR = Color3.fromRGB(255, 255, 255)
 
 local INVIS_CONFIG = {
-    TOGGLE_KEY = Enum.KeyCode.X,
+    TOGGLE_KEY = Enum.KeyCode.C,
     SOUND_ID = "rbxassetid://942127495",
     INVISIBILITY_POSITION = Vector3.new(-25.95, 84, 3537.55),
     NOTIFICATION_DURATION = 3,
