@@ -20,11 +20,7 @@ local BOSS_DATA = {
         color = Color3.fromRGB(100, 100, 100),
         textColor = Color3.fromRGB(255, 255, 255)
     },
-    ["Raumas"] = {
-        position = Vector3.new(-198, 38, -3561),
-        color = Color3.fromRGB(220, 20, 60),
-        textColor = Color3.fromRGB(255, 255, 255)
-    },
+    
     ["Vam"] = {
         position = Vector3.new(114, 54, 5126),
         color = Color3.fromRGB(75, 0, 130),
