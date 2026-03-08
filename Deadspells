@@ -20,8 +20,12 @@ local BOSS_DATA = {
         color = Color3.fromRGB(100, 100, 100),
         textColor = Color3.fromRGB(255, 255, 255)
     },
-    
-    ["Vam"] = {
+    ["Gnome"] = {
+        position = Vector3.new(56, 3, -3542),
+        color = Color3.fromRGB(75, 0, 130),
+        textColor = Color3.fromRGB(255, 255, 255)
+    },
+    ["Vampire"] = {
         position = Vector3.new(114, 54, 5126),
         color = Color3.fromRGB(75, 0, 130),
         textColor = Color3.fromRGB(255, 255, 255)
@@ -36,12 +40,12 @@ local BOSS_DATA = {
         color = Color3.fromRGB(139, 69, 19),
         textColor = Color3.fromRGB(255, 255, 255)
     },
-    ["Đảo sky"] = {
+    ["Sky island"] = {
         position = Vector3.new(-395, 355, 34959),
         color = Color3.fromRGB(135, 206, 235),
         textColor = Color3.fromRGB(0, 0, 0)
     },
-    ["Vua băng"] = {
+    ["King ice"] = {
         position = Vector3.new(-5, 35, 46465),
         color = Color3.fromRGB(173, 216, 230),
         textColor = Color3.fromRGB(0, 0, 0)
