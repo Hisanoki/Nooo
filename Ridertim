@@ -14,13 +14,7 @@ end
 
 -- >> HEROES
 local HEROES = {
-    "Spider Man [Spectacular]",
-    "Spider Man [SamRaimi]",
-    "Spider Man [Mcfarlane]",
-    "Spider Man [Insomniac]",
-    "Spider Man [TASM2]",
-    "Spider Man [TASM1]",
-    "Spider Man [Ultimate]",
+   
     "Spider Man [Ultimate 2024]",
     "Spider Man [Toei]",
     "Killer Queen",
