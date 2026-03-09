@@ -28,6 +28,13 @@ local flyEnabled = false
 local flySpeed = 2
 local flyConnection = nil
 local noclipConnection = nil
+-- INF JUMP
+local infJumpEnabled = false
+local infJumpConnection = nil
+
+-- NOCLIP
+local noclipEnabled = false
+local noclipLoop = nil
 local autoHitboxEnabled = false
 local nameESPEnabled = false
 local boxESPEnabled = false
@@ -569,7 +576,71 @@ local function stopFly()
 
     end
 end
+-- INF JUMP SYSTEM
 
+local function startInfJump()
+
+    infJumpConnection = UserInputService.JumpRequest:Connect(function()
+
+        if infJumpEnabled then
+
+            local char = LocalPlayer.Character
+            if not char then return end
+
+            local humanoid = char:FindFirstChildOfClass("Humanoid")
+
+            if humanoid then
+                humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
+            end
+
+        end
+
+    end)
+
+end
+
+
+local function stopInfJump()
+
+    if infJumpConnection then
+        infJumpConnection:Disconnect()
+        infJumpConnection = nil
+    end
+
+end
+-- NOCLIP SYSTEM
+
+local function startNoclip()
+
+    noclipLoop = RunService.Stepped:Connect(function()
+
+        if noclipEnabled then
+
+            local char = LocalPlayer.Character
+
+            if char then
+                for _,v in pairs(char:GetDescendants()) do
+                    if v:IsA("BasePart") then
+                        v.CanCollide = false
+                    end
+                end
+            end
+
+        end
+
+    end)
+
+end
+
+
+local function stopNoclip()
+
+    if noclipLoop then
+        noclipLoop:Disconnect()
+        noclipLoop = nil
+    end
+
+end
 local function toggleFly()
 
     flyEnabled = not flyEnabled
@@ -729,6 +800,36 @@ local boxESPBtn = createTransparentButton("ESP Box Charm: OFF", Color3.fromRGB(2
 local flyLabel = createTransparentLabel("Fly", rightPanel)
 local flySpeedInput = createTransparentInput("Fly Speed", "2", rightPanel)
 local flyToggle = createTransparentButton("Fly: OFF", Color3.fromRGB(200,120,60), rightPanel)
+local infJumpToggle = createTransparentButton("Inf Jump: OFF", Color3.fromRGB(120,170,255), rightPanel)
+
+infJumpToggle.MouseButton1Click:Connect(function()
+
+    infJumpEnabled = not infJumpEnabled
+
+    if infJumpEnabled then
+        infJumpToggle.Text = "Inf Jump: ON"
+        startInfJump()
+    else
+        infJumpToggle.Text = "Inf Jump: OFF"
+        stopInfJump()
+    end
+
+end)
+local noclipToggle = createTransparentButton("Noclip: OFF", Color3.fromRGB(120,255,120), rightPanel)
+
+noclipToggle.MouseButton1Click:Connect(function()
+
+    noclipEnabled = not noclipEnabled
+
+    if noclipEnabled then
+        noclipToggle.Text = "Noclip: ON"
+        startNoclip()
+    else
+        noclipToggle.Text = "Noclip: OFF"
+        stopNoclip()
+    end
+
+end)
 flyToggle.MouseButton1Click:Connect(function()
 
     flySpeed = tonumber(flySpeedInput.Text) or 2
