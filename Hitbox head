@@ -816,7 +816,46 @@ infJumpToggle.MouseButton1Click:Connect(function()
 
 end)
 local noclipToggle = createTransparentButton("Noclip: OFF", Color3.fromRGB(120,255,120), rightPanel)
+-- separator
+local sep = Instance.new("Frame")
+sep.Size = UDim2.new(1,0,0,2)
+sep.BackgroundColor3 = Color3.fromRGB(120,120,120)
+sep.BorderSizePixel = 0
+sep.Parent = rightPanel
+local tpToolBtn = createTransparentButton("Teleport Tool", Color3.fromRGB(170,120,255), rightPanel)
+tpToolBtn.MouseButton1Click:Connect(function()
 
+    local player = LocalPlayer
+    local mouse = player:GetMouse()
+
+    -- nếu đã có tool thì không tạo lại
+    if player.Backpack:FindFirstChild("Click TP") then
+        createNotification("Teleport Tool", "Tool already in backpack")
+        return
+    end
+
+    local tool = Instance.new("Tool")
+    tool.Name = "Click TP"
+    tool.RequiresHandle = false
+    tool.CanBeDropped = false
+
+    tool.Activated:Connect(function()
+
+        local char = player.Character
+        if not char then return end
+
+        local hrp = char:FindFirstChild("HumanoidRootPart")
+        if not hrp then return end
+
+        hrp.CFrame = mouse.Hit + Vector3.new(0,5,0)
+
+    end)
+
+    tool.Parent = player.Backpack
+
+    createNotification("Teleport Tool", "Tool added to backpack")
+
+end)
 noclipToggle.MouseButton1Click:Connect(function()
 
     noclipEnabled = not noclipEnabled
