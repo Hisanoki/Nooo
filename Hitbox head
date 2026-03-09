@@ -871,7 +871,7 @@ sep.Parent = rightPanel
 local tpTitle = createTransparentLabel("Teleport Player", teleportPanel)
 
 local tpPlayerList = Instance.new("ScrollingFrame")
-tpPlayerList.Size = UDim2.new(1,0,0,200)
+tpPlayerList.Size = UDim2.new(1,0,0,110)
 tpPlayerList.BackgroundTransparency = 1
 tpPlayerList.BorderSizePixel = 0
 tpPlayerList.ScrollBarThickness = 4
@@ -880,6 +880,9 @@ tpPlayerList.Parent = teleportPanel
 local tpListLayout = Instance.new("UIListLayout")
 tpListLayout.Padding = UDim.new(0,2)
 tpListLayout.Parent = tpPlayerList
+tpListLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+tpPlayerList.CanvasSize = UDim2.new(0,0,0,tpListLayout.AbsoluteContentSize.Y + 5)
+end)
 local autoTPBtn = createTransparentButton(
 "Auto Teleport: OFF",
 Color3.fromRGB(200,120,80),
