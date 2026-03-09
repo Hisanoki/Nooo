@@ -32,6 +32,8 @@ local noclipConnection = nil
 local infJumpEnabled = false
 local infJumpConnection = nil
 
+local autoTPEnabled = false
+local autoTPConnection = nil
 -- NOCLIP
 local noclipEnabled = false
 local noclipLoop = nil
@@ -40,6 +42,7 @@ local nameESPEnabled = false
 local boxESPEnabled = false
 local espNameAllState = false
 local selectedPlayers = {}
+local selectedTPPlayers = {}
 local boxESPObjects = {}      -- [character] = BoxHandleAdornment
 local nameESPObjects = {}     -- [player] = BillboardGui
 local processedChars = {}     -- [character] = true (đang có hitbox)
@@ -704,7 +707,8 @@ tabBar.BackgroundTransparency = 1
 tabBar.Parent = mainFrame
 
 local tab1Btn = Instance.new("TextButton")
-tab1Btn.Size = UDim2.new(0.5, -2, 1, 0)
+tab1Btn.Size = UDim2.new(0.333, 0, 1, 0)
+tab1Btn.Position = UDim2.new(0,0,0,0)
 tab1Btn.Text = "HeadHitbox"
 tab1Btn.TextColor3 = Color3.fromRGB(255,255,255)
 tab1Btn.BackgroundColor3 = Color3.fromRGB(220,60,60)
@@ -716,8 +720,23 @@ tab1Btn.Parent = tabBar
 local c4 = Instance.new("UICorner"); c4.CornerRadius = UDim.new(0,6); c4.Parent = tab1Btn
 
 local tab2Btn = Instance.new("TextButton")
-tab2Btn.Size = UDim2.new(0.5, -2, 1, 0)
-tab2Btn.Position = UDim2.new(0.5, 2, 0, 0)
+local tab3Btn = Instance.new("TextButton")
+tab3Btn.Size = UDim2.new(0.334, 0, 1, 0)
+tab3Btn.Position = UDim2.new(0.666, 0, 0, 0)
+tab3Btn.Text = "Teleport"
+tab3Btn.TextColor3 = Color3.fromRGB(255,255,255)
+tab3Btn.BackgroundColor3 = Color3.fromRGB(170,120,255)
+tab3Btn.BackgroundTransparency = 0.2
+tab3Btn.Font = Enum.Font.GothamBold
+tab3Btn.TextSize = 14
+tab3Btn.BorderSizePixel = 0
+tab3Btn.Parent = tabBar
+
+local c6 = Instance.new("UICorner")
+c6.CornerRadius = UDim.new(0,6)
+c6.Parent = tab3Btn
+tab2Btn.Size = UDim2.new(0.333, 0, 1, 0)
+tab2Btn.Position = UDim2.new(0.333, 0, 0, 0)
 tab2Btn.Text = "Other"
 tab2Btn.TextColor3 = Color3.fromRGB(255,255,255)
 tab2Btn.BackgroundColor3 = Color3.fromRGB(60,120,220)
@@ -753,6 +772,27 @@ local rightLayout = Instance.new("UIListLayout")
 rightLayout.SortOrder = Enum.SortOrder.LayoutOrder
 rightLayout.Padding = UDim.new(0, 4)
 rightLayout.Parent = rightPanel
+local teleportPanel = Instance.new("ScrollingFrame")
+teleportPanel.ScrollBarThickness = 4
+teleportPanel.CanvasSize = UDim2.new(0,0,0,0)
+teleportPanel.BorderSizePixel = 0
+teleportPanel.Size = UDim2.new(1, -12, 1, -44)
+teleportPanel.Position = UDim2.new(0, 6, 0, 38)
+teleportPanel.BackgroundTransparency = 1
+teleportPanel.Visible = false
+teleportPanel.Parent = mainFrame
+
+
+
+
+
+local tpLayout = Instance.new("UIListLayout")
+tpLayout.SortOrder = Enum.SortOrder.LayoutOrder
+tpLayout.Padding = UDim.new(0,4)
+tpLayout.Parent = teleportPanel
+tpLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+    teleportPanel.CanvasSize = UDim2.new(0,0,0,tpLayout.AbsoluteContentSize.Y + 10)
+end)
 rightLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
     rightPanel.CanvasSize = UDim2.new(0,0,0,rightLayout.AbsoluteContentSize.Y + 10)
 end)
@@ -792,7 +832,9 @@ local playerListLayout = Instance.new("UIListLayout")
 playerListLayout.SortOrder = Enum.SortOrder.LayoutOrder
 playerListLayout.Padding = UDim.new(0, 2)
 playerListLayout.Parent = playerList
-
+playerListLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+playerList.CanvasSize = UDim2.new(0,0,0,playerListLayout.AbsoluteContentSize.Y + 10)
+end)
 local autoNameESP = createTransparentButton("Auto ESP Name: OFF", Color3.fromRGB(50, 150, 200), rightPanel)
 local refreshBtn = createTransparentButton("Refresh Player List", Color3.fromRGB(80, 80, 180), rightPanel)
 local espNameAllBtn = createTransparentButton("ESP Name All: OFF", Color3.fromRGB(80, 200, 80), rightPanel)
@@ -822,13 +864,85 @@ sep.Size = UDim2.new(1,0,0,2)
 sep.BackgroundColor3 = Color3.fromRGB(120,120,120)
 sep.BorderSizePixel = 0
 sep.Parent = rightPanel
-local tpToolBtn = createTransparentButton("Teleport Tool", Color3.fromRGB(170,120,255), rightPanel)
+
+
+
+
+local tpTitle = createTransparentLabel("Teleport Player", teleportPanel)
+
+local tpPlayerList = Instance.new("ScrollingFrame")
+tpPlayerList.Size = UDim2.new(1,0,0,200)
+tpPlayerList.BackgroundTransparency = 1
+tpPlayerList.BorderSizePixel = 0
+tpPlayerList.ScrollBarThickness = 4
+tpPlayerList.Parent = teleportPanel
+
+local tpListLayout = Instance.new("UIListLayout")
+tpListLayout.Padding = UDim.new(0,2)
+tpListLayout.Parent = tpPlayerList
+local autoTPBtn = createTransparentButton(
+"Auto Teleport: OFF",
+Color3.fromRGB(200,120,80),
+teleportPanel
+)
+autoTPBtn.MouseButton1Click:Connect(function()
+
+    autoTPEnabled = not autoTPEnabled
+
+    autoTPBtn.Text = autoTPEnabled and "Auto Teleport: ON" or "Auto Teleport: OFF"
+    autoTPBtn.BackgroundColor3 = autoTPEnabled and Color3.fromRGB(80,200,80) or Color3.fromRGB(200,120,80)
+
+    if autoTPConnection then
+        autoTPConnection:Disconnect()
+        autoTPConnection = nil
+    end
+
+    if autoTPEnabled then
+
+        autoTPConnection = RunService.Heartbeat:Connect(function()
+
+            local myChar = LocalPlayer.Character
+            if not myChar then return end
+
+            local myHRP = myChar:FindFirstChild("HumanoidRootPart")
+            if not myHRP then return end
+
+            for player,_ in pairs(selectedTPPlayers) do
+
+                local targetChar = player.Character
+                if targetChar then
+
+                    local targetHRP = targetChar:FindFirstChild("HumanoidRootPart")
+
+                    if targetHRP then
+                        myHRP.CFrame = targetHRP.CFrame + Vector3.new(0,3,0)
+                    end
+
+                end
+
+            end
+
+        end)
+
+    end
+
+end)
+local teleportBtn = createTransparentButton(
+"Teleport To Player",
+Color3.fromRGB(80,200,120),
+teleportPanel
+)
+local tpToolBtn = createTransparentButton(
+"Teleport Tool",
+Color3.fromRGB(170,120,255),
+teleportPanel
+)
+
 tpToolBtn.MouseButton1Click:Connect(function()
 
     local player = LocalPlayer
     local mouse = player:GetMouse()
 
-    -- nếu đã có tool thì không tạo lại
     if player.Backpack:FindFirstChild("Click TP") then
         createNotification("Teleport Tool", "Tool already in backpack")
         return
@@ -856,6 +970,46 @@ tpToolBtn.MouseButton1Click:Connect(function()
     createNotification("Teleport Tool", "Tool added to backpack")
 
 end)
+tpPlayerList.Size = UDim2.new(1,0,0,200)
+tpPlayerList.BackgroundTransparency = 1
+tpPlayerList.BorderSizePixel = 0
+tpPlayerList.ScrollBarThickness = 4
+tpPlayerList.Parent = teleportPanel
+
+local tpListLayout = Instance.new("UIListLayout")
+tpListLayout.Padding = UDim.new(0,2)
+tpListLayout.Parent = tpPlayerList
+
+
+teleportBtn.MouseButton1Click:Connect(function()
+
+    local myChar = LocalPlayer.Character
+    if not myChar then return end
+
+    local myHRP = myChar:FindFirstChild("HumanoidRootPart")
+    if not myHRP then return end
+
+    for player,_ in pairs(selectedTPPlayers) do
+
+        local targetChar = player.Character
+        if targetChar then
+
+            local targetHRP = targetChar:FindFirstChild("HumanoidRootPart")
+
+            if targetHRP then
+                myHRP.CFrame = targetHRP.CFrame + Vector3.new(0,3,0)
+                break
+            end
+
+        end
+
+    end
+
+end)
+    
+
+   
+    
 noclipToggle.MouseButton1Click:Connect(function()
 
     noclipEnabled = not noclipEnabled
@@ -900,54 +1054,138 @@ closeButton.Parent = mainFrame
 -- ─── TAB SWITCH ───────────────────────────────────────────────────────────────
 
 local function switchTab(idx)
+
     leftPanel.Visible = idx == 1
     rightPanel.Visible = idx == 2
+    teleportPanel.Visible = idx == 3
+
     tab1Btn.BackgroundTransparency = idx == 1 and 0.2 or 0.6
     tab2Btn.BackgroundTransparency = idx == 2 and 0.2 or 0.6
+    tab3Btn.BackgroundTransparency = idx == 3 and 0.2 or 0.6
+
 end
 tab1Btn.MouseButton1Click:Connect(function() switchTab(1) end)
 tab2Btn.MouseButton1Click:Connect(function() switchTab(2) end)
+tab3Btn.MouseButton1Click:Connect(function()
+switchTab(3)
+end)
 switchTab(1)
 
 -- ─── PLAYER LIST UI ───────────────────────────────────────────────────────────
+local function updateTPList()
 
+
+
+for _,v in pairs(tpPlayerList:GetChildren()) do
+if v:IsA("TextButton") then
+v:Destroy()
+end
+end
+
+for _,player in pairs(Players:GetPlayers()) do
+if player ~= LocalPlayer then
+
+local btn = Instance.new("TextButton")
+btn.Size = UDim2.new(1,-6,0,28)
+btn.Text = player.Name
+btn.BackgroundColor3 =
+selectedTPPlayers[player]
+and Color3.fromRGB(80,200,80)
+or Color3.fromRGB(60,60,60)
+
+btn.BackgroundTransparency = 0.7
+btn.TextColor3 = Color3.new(1,1,1)
+btn.Font = Enum.Font.Gotham
+btn.TextSize = 14
+btn.BorderSizePixel = 0
+btn.Parent = tpPlayerList
+
+local c = Instance.new("UICorner")
+c.CornerRadius = UDim.new(0,4)
+c.Parent = btn
+btn.MouseButton1Click:Connect(function()
+
+-- reset tất cả player
+selectedTPPlayers = {}
+
+-- chọn player mới
+selectedTPPlayers[player] = true
+
+-- cập nhật lại list để đổi màu
+updateTPList()
+
+end)
+
+end
+end
+
+end
+    
+       
+    
 local function updatePlayerList()
+
     for _, child in pairs(playerList:GetChildren()) do
-        if child:IsA("TextButton") then child:Destroy() end
+        if child:IsA("TextButton") then
+            child:Destroy()
+        end
     end
+
     local count = 0
+
     for _, player in pairs(Players:GetPlayers()) do
         if player ~= LocalPlayer then
-            count = count + 1
+            count += 1
+
             local btn = Instance.new("TextButton")
-            btn.Size = UDim2.new(1, -6, 0, 28)
+            btn.Size = UDim2.new(1,-6,0,28)
             btn.Text = player.Name
-            btn.BackgroundColor3 = selectedPlayers[player] and Color3.fromRGB(80,160,80) or Color3.fromRGB(60,60,60)
+            btn.BackgroundColor3 =
+            selectedPlayers[player]
+            and Color3.fromRGB(80,200,80)
+            or Color3.fromRGB(60,60,60)
             btn.BackgroundTransparency = 0.7
             btn.TextColor3 = Color3.new(1,1,1)
             btn.Font = Enum.Font.Gotham
             btn.TextSize = 14
             btn.BorderSizePixel = 0
             btn.Parent = playerList
-            local bc = Instance.new("UICorner"); bc.CornerRadius = UDim.new(0,4); bc.Parent = btn
+
+            local c = Instance.new("UICorner")
+            c.CornerRadius = UDim.new(0,4)
+            c.Parent = btn
             btn.MouseButton1Click:Connect(function()
-                selectedPlayers[player] = not selectedPlayers[player]
-                btn.BackgroundColor3 = selectedPlayers[player] and Color3.fromRGB(80,160,80) or Color3.fromRGB(60,60,60)
-                if nameESPEnabled then
-                    if selectedPlayers[player] and player.Character and isAlive(player.Character) then
-                        createNameESP(player, player.Character)
-                    else
-                        removeNameESP(player)
-                    end
-                end
-            end)
-        end
-    end
-    playerList.CanvasSize = UDim2.new(0, 0, 0, count * 30)
+
+selectedPlayers[player] = not selectedPlayers[player]
+
+updatePlayerList()
+
+if nameESPEnabled then
+
+if selectedPlayers[player] then
+if player.Character then
+createNameESP(player, player.Character)
+end
+else
+removeNameESP(player)
 end
 
--- ─── LOOPSPEED ────────────────────────────────────────────────────────────────
+end
 
+end)
+        end
+    end
+
+end
+-- ─── LOOPSPEED ────────────────────────────────────────────────────────────────
+task.spawn(function()
+
+    while true do
+        task.wait(2)
+        updatePlayerList()
+    end
+
+end)
 local loopspeedEnabled = false
 local loopspeedConnection = nil
 
@@ -1070,19 +1308,45 @@ end)
 invisButton.MouseButton1Click:Connect(toggleInvisibility)
 
 UserInputService.InputBegan:Connect(function(input, gameProcessed)
-    if gameProcessed then return end
-    if input.KeyCode == INVIS_CONFIG.TOGGLE_KEY then toggleInvisibility() end
+
+if gameProcessed then return end
+
+-- INVIS KEY
+if input.KeyCode == INVIS_CONFIG.TOGGLE_KEY then
+toggleInvisibility()
+end
+
+-- CTRL LEFT OPEN MENU
+if input.KeyCode == Enum.KeyCode.LeftControl then
+
+mainFrame.Visible = not mainFrame.Visible
+toggleUIButton.Text = mainFrame.Visible and "☰ Close Menu" or "☰ Open Menu"
+
+end
+
 end)
 
 -- ─── LOCAL PLAYER EVENTS ──────────────────────────────────────────────────────
 
 LocalPlayer.CharacterAdded:Connect(function(character)
+
+    -- reset fly khi respawn
+    flyEnabled = false
+    stopFly()
+    if flyToggle then
+        flyToggle.Text = "Fly: OFF"
+        flyToggle.BackgroundColor3 = Color3.fromRGB(200,120,60)
+    end
+
     isInvisible = false
     invisButton.BackgroundColor3 = INVIS_CONFIG.PRIMARY_COLOR
     invisButton.Text = "INVISIBLE"
+
     local chair = workspace:FindFirstChild("invischair")
     if chair then chair:Destroy() end
+
     setCharacterTransparency(character, 0)
+
 end)
 
 -- ─── PLAYER ADDED/REMOVING ────────────────────────────────────────────────────
@@ -1132,3 +1396,11 @@ end)
 
 statusLabel.Text = "Processing: 0 Players"
 updatePlayerList() 
+task.spawn(function()
+
+while true do
+task.wait(1)
+updateTPList()
+end
+
+end)
