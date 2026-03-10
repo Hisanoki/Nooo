@@ -732,8 +732,49 @@ mainContainer.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
 mainContainer.BackgroundTransparency = 0.7
 mainContainer.BorderSizePixel = 0
 mainContainer.Active = true
-mainContainer.Draggable = true
+mainContainer.Draggable = false
 mainContainer.Parent = gui
+-- DRAG OPEN MENU BUTTON
+local dragging2 = false
+local dragInput2
+local dragStart2
+local startPos2
+
+local function update2(input)
+    local delta = input.Position - dragStart2
+    mainContainer.Position = UDim2.new(
+        startPos2.X.Scale,
+        startPos2.X.Offset + delta.X,
+        startPos2.Y.Scale,
+        startPos2.Y.Offset + delta.Y
+    )
+end
+
+mainContainer.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1 then
+        dragging2 = true
+        dragStart2 = input.Position
+        startPos2 = mainContainer.Position
+
+        input.Changed:Connect(function()
+            if input.UserInputState == Enum.UserInputState.End then
+                dragging2 = false
+            end
+        end)
+    end
+end)
+
+mainContainer.InputChanged:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseMovement then
+        dragInput2 = input
+    end
+end)
+
+UserInputService.InputChanged:Connect(function(input)
+    if input == dragInput2 and dragging2 then
+        update2(input)
+    end
+end)
 local c1 = Instance.new("UICorner"); c1.CornerRadius = UDim.new(0,8); c1.Parent = mainContainer
 
 local toggleUIButton = Instance.new("TextButton")
@@ -757,8 +798,49 @@ mainFrame.BackgroundTransparency = 0.7
 mainFrame.BorderSizePixel = 0
 mainFrame.Visible = false
 mainFrame.Active = true
-mainFrame.Draggable = true
+mainFrame.Draggable = false
 mainFrame.Parent = gui
+-- MOBILE SMOOTH DRAG
+local dragging = false
+local dragInput
+local dragStart
+local startPos
+
+local function update(input)
+local delta = input.Position - dragStart
+mainFrame.Position = UDim2.new(
+startPos.X.Scale,
+startPos.X.Offset + delta.X,
+startPos.Y.Scale,
+startPos.Y.Offset + delta.Y
+)
+end
+
+mainFrame.InputBegan:Connect(function(input)
+if input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1 then
+dragging = true
+dragStart = input.Position
+startPos = mainFrame.Position
+
+input.Changed:Connect(function()
+if input.UserInputState == Enum.UserInputState.End then
+dragging = false
+end
+end)
+end
+end)
+
+mainFrame.InputChanged:Connect(function(input)
+if input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseMovement then
+dragInput = input
+end
+end)
+
+UserInputService.InputChanged:Connect(function(input)
+if input == dragInput and dragging then
+update(input)
+end
+end)
 local c3 = Instance.new("UICorner"); c3.CornerRadius = UDim.new(0,8); c3.Parent = mainFrame
 
 -- Tab Bar
@@ -851,7 +933,15 @@ teleportPanel.BorderSizePixel = 0
 teleportPanel.ScrollBarThickness = 4
 teleportPanel.Visible = false
 teleportPanel.Parent = mainFrame
+teleportPanel.ScrollingDirection = Enum.ScrollingDirection.Y
+teleportPanel.AutomaticCanvasSize = Enum.AutomaticSize.Y
+teleportPanel.ElasticBehavior = Enum.ElasticBehavior.Always
+teleportPanel.ClipsDescendants = true
 local trollPanel = Instance.new("ScrollingFrame")
+trollPanel.ScrollingDirection = Enum.ScrollingDirection.Y
+trollPanel.AutomaticCanvasSize = Enum.AutomaticSize.Y
+trollPanel.ElasticBehavior = Enum.ElasticBehavior.Always
+trollPanel.ClipsDescendants = true
 trollPanel.Size = UDim2.new(1,-12,1,-44)
 trollPanel.Position = UDim2.new(0,6,0,38)
 trollPanel.BackgroundTransparency = 1
@@ -1461,7 +1551,7 @@ end
 task.spawn(function()
 
     while true do
-        task.wait(2)
+        task.wait(5)
 
         updatePlayerList()
         updateTPList()
