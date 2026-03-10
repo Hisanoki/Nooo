@@ -23,6 +23,45 @@ local INVIS_CONFIG = {
 }
 
 -- STATE
+local antiFlingEnabled = false
+-- ANTIFLING BY NOAH
+
+local antiFlingLoop = nil
+
+local function startAntiFling()
+
+    local client = Players.LocalPlayer
+
+    antiFlingLoop = RunService.Heartbeat:Connect(function()
+
+        if not antiFlingEnabled then return end
+
+        for _,player in pairs(Players:GetPlayers()) do
+
+            if player ~= client then
+
+                local char = player.Character
+                if char then
+
+                    local hrp = char:FindFirstChild("HumanoidRootPart")
+
+                    if hrp and not hrp.Anchored then
+
+                        hrp.AssemblyLinearVelocity = Vector3.zero
+                        hrp.AssemblyAngularVelocity = Vector3.zero
+                        hrp.CanCollide = false
+
+                    end
+
+                end
+
+            end
+
+        end
+
+    end)
+
+end
 -- FLY SYSTEM
 local flyEnabled = false
 local flySpeed = 2
@@ -43,6 +82,7 @@ local boxESPEnabled = false
 local espNameAllState = false
 local selectedPlayers = {}
 local selectedTPPlayers = {}
+local selectedTrollPlayer = nil
 local boxESPObjects = {}      -- [character] = BoxHandleAdornment
 local nameESPObjects = {}     -- [player] = BillboardGui
 local processedChars = {}     -- [character] = true (đang có hitbox)
@@ -408,8 +448,7 @@ local function onCharacterReady(player, character)
     end)
 
     -- Lưu connections vào slot character (không phải player, vì player có thể respawn)
-    table.insert(playerConnections[player] or {}, diedConn)
-    table.insert(playerConnections[player] or {}, ancestryConn)
+    
     if playerConnections[player] then
         table.insert(playerConnections[player], diedConn)
         table.insert(playerConnections[player], ancestryConn)
@@ -634,6 +673,7 @@ local function stopInfJump()
 end
 -- NOCLIP SYSTEM
 
+
 local function startNoclip()
 
     noclipLoop = RunService.Stepped:Connect(function()
@@ -710,7 +750,7 @@ toggleUIButton.Parent = mainContainer
 local c2 = Instance.new("UICorner"); c2.CornerRadius = UDim.new(0,6); c2.Parent = toggleUIButton
 
 local mainFrame = Instance.new("Frame")
-mainFrame.Size = UDim2.new(0, 250, 0, 350)
+mainFrame.Size = UDim2.new(0, 320, 0, 350)
 mainFrame.Position = UDim2.new(0.5, -110, 0.5, -160)
 mainFrame.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
 mainFrame.BackgroundTransparency = 0.7
@@ -728,7 +768,7 @@ tabBar.BackgroundTransparency = 1
 tabBar.Parent = mainFrame
 
 local tab1Btn = Instance.new("TextButton")
-tab1Btn.Size = UDim2.new(0.333, 0, 1, 0)
+tab1Btn.Size = UDim2.new(0.25, 0, 1, 0)
 tab1Btn.Position = UDim2.new(0,0,0,0)
 tab1Btn.Text = "HeadHitbox"
 tab1Btn.TextColor3 = Color3.fromRGB(255,255,255)
@@ -742,8 +782,8 @@ local c4 = Instance.new("UICorner"); c4.CornerRadius = UDim.new(0,6); c4.Parent 
 
 local tab2Btn = Instance.new("TextButton")
 local tab3Btn = Instance.new("TextButton")
-tab3Btn.Size = UDim2.new(0.28, 0, 1, 0)
-tab3Btn.Position = UDim2.new(0.66, 0, 0, 0)
+tab3Btn.Size = UDim2.new(0.25, 0, 1, 0)
+tab3Btn.Position = UDim2.new(0.5, 0, 0, 0)
 tab3Btn.Text = "Teleport"
 tab3Btn.TextColor3 = Color3.fromRGB(255,255,255)
 tab3Btn.BackgroundColor3 = Color3.fromRGB(170,120,255)
@@ -752,12 +792,22 @@ tab3Btn.Font = Enum.Font.GothamBold
 tab3Btn.TextSize = 14
 tab3Btn.BorderSizePixel = 0
 tab3Btn.Parent = tabBar
-
+local tab4Btn = Instance.new("TextButton")
+tab4Btn.Size = UDim2.new(0.25,0,1,0)
+tab4Btn.Position = UDim2.new(0.75,0,0,0)
+tab4Btn.Text = "Troll"
+tab4Btn.TextColor3 = Color3.fromRGB(255,255,255)
+tab4Btn.BackgroundColor3 = Color3.fromRGB(255,100,100)
+tab4Btn.BackgroundTransparency = 0.2
+tab4Btn.Font = Enum.Font.GothamBold
+tab4Btn.TextSize = 14
+tab4Btn.BorderSizePixel = 0
+tab4Btn.Parent = tabBar
 local c6 = Instance.new("UICorner")
 c6.CornerRadius = UDim.new(0,6)
 c6.Parent = tab3Btn
-tab2Btn.Size = UDim2.new(0.333, 0, 1, 0)
-tab2Btn.Position = UDim2.new(0.333, 0, 0, 0)
+tab2Btn.Size = UDim2.new(0.25, 0, 1, 0)
+tab2Btn.Position = UDim2.new(0.25, 0, 0, 0)
 tab2Btn.Text = "Other"
 tab2Btn.TextColor3 = Color3.fromRGB(255,255,255)
 tab2Btn.BackgroundColor3 = Color3.fromRGB(60,120,220)
@@ -794,19 +844,186 @@ rightLayout.SortOrder = Enum.SortOrder.LayoutOrder
 rightLayout.Padding = UDim.new(0, 4)
 rightLayout.Parent = rightPanel
 local teleportPanel = Instance.new("ScrollingFrame")
-teleportPanel.ScrollBarThickness = 4
-teleportPanel.CanvasSize = UDim2.new(0,0,0,0)
-teleportPanel.BorderSizePixel = 0
-teleportPanel.Size = UDim2.new(1, -12, 1, -44)
-teleportPanel.Position = UDim2.new(0, 6, 0, 38)
+teleportPanel.Size = UDim2.new(1,-12,1,-44)
+teleportPanel.Position = UDim2.new(0,6,0,38)
 teleportPanel.BackgroundTransparency = 1
+teleportPanel.BorderSizePixel = 0
+teleportPanel.ScrollBarThickness = 4
 teleportPanel.Visible = false
 teleportPanel.Parent = mainFrame
+local trollPanel = Instance.new("ScrollingFrame")
+trollPanel.Size = UDim2.new(1,-12,1,-44)
+trollPanel.Position = UDim2.new(0,6,0,38)
+trollPanel.BackgroundTransparency = 1
+trollPanel.BorderSizePixel = 0
+trollPanel.ScrollBarThickness = 4
+trollPanel.Visible = false
+trollPanel.Parent = mainFrame
+trollPanel.ScrollingDirection = Enum.ScrollingDirection.Y
+trollPanel.ElasticBehavior = Enum.ElasticBehavior.Always
+trollPanel.ScrollBarImageTransparency = 0.4
+trollPanel.BottomImage = ""
+trollPanel.TopImage = ""
+local trollLayout = Instance.new("UIListLayout")
+trollLayout.Padding = UDim.new(0,4)
+trollLayout.SortOrder = Enum.SortOrder.LayoutOrder
+trollLayout.Parent = trollPanel
+trollLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+    trollPanel.CanvasSize = UDim2.new(0,0,0,trollLayout.AbsoluteContentSize.Y + 10)
+end)
+local trollTitle = createTransparentLabel("Troll Player", trollPanel)
+trollTitle.LayoutOrder = 1
+
+local trollPlayerList = Instance.new("ScrollingFrame")
+trollPlayerList.LayoutOrder = 2
 
 
+trollPlayerList.Size = UDim2.new(1,0,0,110)
+trollPlayerList.BackgroundTransparency = 1
+trollPlayerList.BorderSizePixel = 0
+trollPlayerList.ScrollBarThickness = 2
+trollPlayerList.ElasticBehavior = Enum.ElasticBehavior.Never
+trollPlayerList.Parent = trollPanel
 
+local trollListLayout = Instance.new("UIListLayout")
+trollListLayout.Padding = UDim.new(0,2)
+trollListLayout.Parent = trollPlayerList
 
+trollListLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+trollPlayerList.CanvasSize = UDim2.new(0,0,0,trollListLayout.AbsoluteContentSize.Y + 5)
+end)
 
+local flingBtn = createTransparentButton(
+"Fling Player",
+Color3.fromRGB(255,80,80),
+trollPanel
+)
+flingBtn.LayoutOrder = 3
+local antiFlingBtn = createTransparentButton(
+"Anti Fling: OFF",
+Color3.fromRGB(80,200,120),
+trollPanel
+)
+antiFlingBtn.LayoutOrder = 4
+antiFlingBtn.MouseButton1Click:Connect(function()
+
+    antiFlingEnabled = not antiFlingEnabled
+
+    if antiFlingEnabled then
+        antiFlingBtn.Text = "Anti Fling: ON"
+        antiFlingBtn.BackgroundColor3 = Color3.fromRGB(80,200,80)
+
+        startAntiFling()
+
+        createNotification(
+            "Anti Fling Activated",
+            "Script By Noah"
+        )
+
+    else
+        antiFlingBtn.Text = "Anti Fling: OFF"
+        antiFlingBtn.BackgroundColor3 = Color3.fromRGB(80,200,120)
+
+        if antiFlingLoop then
+            antiFlingLoop:Disconnect()
+            antiFlingLoop = nil
+        end
+    end
+
+end)
+
+    
+flingBtn.MouseButton1Click:Connect(function()
+    if not selectedTrollPlayer or not selectedTrollPlayer.Character then return end
+
+    local char = LocalPlayer.Character
+    local humanoid = char and char:FindFirstChildOfClass("Humanoid")
+    local hrp = char and char:FindFirstChild("HumanoidRootPart")
+    
+    if not hrp or not humanoid then return end
+
+    local startCF = hrp.CFrame
+    local targetChar = selectedTrollPlayer.Character
+    local targetHRP = targetChar and targetChar:FindFirstChild("HumanoidRootPart")
+    local targetHum = targetChar and targetChar:FindFirstChildOfClass("Humanoid")
+
+    if not targetHRP or not targetHum or targetHum.Health <= 0 then return end
+
+    -- Lưu vị trí ban đầu của mục tiêu để tính toán
+    local targetStartPos = targetHRP.Position
+    local isTargetFlung = false
+
+    -- 1. TẠO LỰC XOAY
+    local bav = Instance.new("BodyAngularVelocity")
+    bav.AngularVelocity = Vector3.new(0, 999999, 0)
+    bav.MaxTorque = Vector3.new(math.huge, math.huge, math.huge)
+    bav.P = math.huge
+    bav.Name = "FlingForce"
+    bav.Parent = hrp
+
+    -- 2. NOCLIP
+    local noclipConn = RunService.Stepped:Connect(function()
+        for _, part in pairs(char:GetDescendants()) do
+            if part:IsA("BasePart") then part.CanCollide = false end
+        end
+    end)
+
+    local startTime = tick()
+    local duration = 5 
+    local flingLoop
+
+    -- VÒNG LẶP FLING SIÊU CẤP
+    flingLoop = RunService.Heartbeat:Connect(function()
+        -- Kiểm tra điều kiện dừng: Hết thời gian, mục tiêu chết, hoặc ĐÃ BỊ VĂNG
+        if tick() - startTime >= duration or not targetHRP or targetHum.Health <= 0 or isTargetFlung then
+            if flingLoop then flingLoop:Disconnect() end
+            return
+        end
+
+        -- TÍNH TOÁN: Nếu mục tiêu cách vị trí gốc > 50 studs hoặc vận tốc cực lớn -> Đã văng
+        local currentDist = (targetHRP.Position - targetStartPos).Magnitude
+        local targetVel = targetHRP.AssemblyLinearVelocity.Magnitude
+
+        if currentDist > 50 or targetVel > 150 then
+            isTargetFlung = true -- Kích hoạt biến dừng
+            return
+        end
+
+        -- Kỹ thuật Orbit quanh đối thủ
+        local angle = tick() * 25
+        local offset = Vector3.new(math.cos(angle) * 1.5, 0, math.sin(angle) * 1.5)
+        
+        hrp.CFrame = CFrame.new(targetHRP.Position + offset)
+        hrp.Velocity = Vector3.new(5000, 5000, 5000) 
+    end)
+
+    -- Vòng lặp chờ để dọn dẹp
+    repeat 
+        task.wait(0.1)
+    until tick() - startTime >= duration or isTargetFlung or not targetHRP or targetHum.Health <= 0
+
+    -- 3. DỌN DẸP TRIỆT ĐỂ
+    if flingLoop then flingLoop:Disconnect() end
+    if noclipConn then noclipConn:Disconnect() end
+    if bav then bav:Destroy() end
+    
+    hrp.Velocity = Vector3.new(0, 0, 0)
+    hrp.RotVelocity = Vector3.new(0, 0, 0)
+    hrp.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
+    hrp.AssemblyAngularVelocity = Vector3.new(0, 0, 0)
+    
+    task.wait(0.1)
+    
+    -- Quay về vị trí cũ
+    hrp.CFrame = startCF
+    humanoid:ChangeState(Enum.HumanoidStateType.GettingUp)
+    humanoid.Sit = false
+    
+    -- Bật lại va chạm
+    for _, part in pairs(char:GetDescendants()) do
+        if part:IsA("BasePart") then part.CanCollide = true end
+    end
+end)
 local tpLayout = Instance.new("UIListLayout")
 tpLayout.SortOrder = Enum.SortOrder.LayoutOrder
 tpLayout.Padding = UDim.new(0,4)
@@ -1080,10 +1297,11 @@ local function switchTab(idx)
     leftPanel.Visible = idx == 1
     rightPanel.Visible = idx == 2
     teleportPanel.Visible = idx == 3
-
+trollPanel.Visible = idx == 4
     tab1Btn.BackgroundTransparency = idx == 1 and 0.2 or 0.6
     tab2Btn.BackgroundTransparency = idx == 2 and 0.2 or 0.6
     tab3Btn.BackgroundTransparency = idx == 3 and 0.2 or 0.6
+    tab4Btn.BackgroundTransparency = idx == 4 and 0.2 or 0.6
 
 end
 tab1Btn.MouseButton1Click:Connect(function() switchTab(1) end)
@@ -1091,12 +1309,54 @@ tab2Btn.MouseButton1Click:Connect(function() switchTab(2) end)
 tab3Btn.MouseButton1Click:Connect(function()
 switchTab(3)
 end)
+tab4Btn.MouseButton1Click:Connect(function()
+switchTab(4)
+end)
 switchTab(1)
 
 -- ─── PLAYER LIST UI ───────────────────────────────────────────────────────────
+local function updateTrollList()
+
+for _,v in pairs(trollPlayerList:GetChildren()) do
+if v:IsA("TextButton") then
+v:Destroy()
+end
+end
+
+for _,player in pairs(Players:GetPlayers()) do
+if player ~= LocalPlayer then
+
+local btn = Instance.new("TextButton")
+btn.Size = UDim2.new(1,-6,0,28)
+btn.Text = player.Name
+
+btn.BackgroundColor3 =
+(player == selectedTrollPlayer)
+and Color3.fromRGB(80,200,80)
+or Color3.fromRGB(60,60,60)
+
+btn.BackgroundTransparency = 0.7
+btn.TextColor3 = Color3.new(1,1,1)
+btn.Font = Enum.Font.Gotham
+btn.TextSize = 14
+btn.BorderSizePixel = 0
+btn.Parent = trollPlayerList
+
+local c = Instance.new("UICorner")
+c.CornerRadius = UDim.new(0,4)
+c.Parent = btn
+
+btn.MouseButton1Click:Connect(function()
+selectedTrollPlayer = player
+updateTrollList()
+end)
+
+end
+end
+
+end
+
 local function updateTPList()
-
-
 
 for _,v in pairs(tpPlayerList:GetChildren()) do
 if v:IsA("TextButton") then
@@ -1110,6 +1370,7 @@ if player ~= LocalPlayer then
 local btn = Instance.new("TextButton")
 btn.Size = UDim2.new(1,-6,0,28)
 btn.Text = player.Name
+
 btn.BackgroundColor3 =
 selectedTPPlayers[player]
 and Color3.fromRGB(80,200,80)
@@ -1125,15 +1386,12 @@ btn.Parent = tpPlayerList
 local c = Instance.new("UICorner")
 c.CornerRadius = UDim.new(0,4)
 c.Parent = btn
+
 btn.MouseButton1Click:Connect(function()
 
--- reset tất cả player
 selectedTPPlayers = {}
-
--- chọn player mới
 selectedTPPlayers[player] = true
 
--- cập nhật lại list để đổi màu
 updateTPList()
 
 end)
@@ -1142,9 +1400,9 @@ end
 end
 
 end
-    
-       
-    
+
+
+
 local function updatePlayerList()
 
     for _, child in pairs(playerList:GetChildren()) do
@@ -1204,7 +1462,11 @@ task.spawn(function()
 
     while true do
         task.wait(2)
+
         updatePlayerList()
+        updateTPList()
+        updateTrollList()
+
     end
 
 end)
@@ -1241,7 +1503,11 @@ loopspeedToggle.MouseButton1Click:Connect(function() setLoopspeedEnabled(not loo
 toggleUIButton.MouseButton1Click:Connect(function()
     mainFrame.Visible = not mainFrame.Visible
     toggleUIButton.Text = mainFrame.Visible and "Close Menu" or "Open Menu"
-    if mainFrame.Visible then updatePlayerList() end
+   if mainFrame.Visible then
+updatePlayerList()
+updateTPList()
+updateTrollList()
+end 
 end)
 
 closeButton.MouseButton1Click:Connect(function()
@@ -1271,11 +1537,14 @@ autoToggle.MouseButton1Click:Connect(function()
 end)
 
 removeAllBtn.MouseButton1Click:Connect(function()
+
     for char, _ in pairs(processedChars) do
         removeHeadHitbox(char)
     end
+
     statusLabel.Text = "Processing: 0 Players"
-end)
+    end)
+    
 
 autoNameESP.MouseButton1Click:Connect(function()
     nameESPEnabled = not nameESPEnabled
@@ -1417,12 +1686,14 @@ task.spawn(function()
 end)
 
 statusLabel.Text = "Processing: 0 Players"
-updatePlayerList() 
-task.spawn(function()
+Players.PlayerAdded:Connect(function()
+    updatePlayerList()
+    updateTPList()
+    updateTrollList()
+end)
 
-while true do
-task.wait(1)
-updateTPList()
-end
-
+Players.PlayerRemoving:Connect(function()
+    updatePlayerList()
+    updateTPList()
+    updateTrollList()
 end)
