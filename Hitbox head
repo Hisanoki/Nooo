@@ -504,12 +504,24 @@ humanoid.PlatformStand = true
     flyConnection = RunService.RenderStepped:Connect(function()
     local cam = workspace.CurrentCamera
     local move = Vector3.new()
-
     local md = humanoid.MoveDirection
+
     if md.Magnitude > 0 then
-        move += Vector3.new(md.X, 0, md.Z)
+        -- Lấy trục camera ngang (yaw only) để tách joystick
+        local flatLook  = Vector3.new(cam.CFrame.LookVector.X,  0, cam.CFrame.LookVector.Z)
+        local flatRight = Vector3.new(cam.CFrame.RightVector.X, 0, cam.CFrame.RightVector.Z)
+
+        if flatLook.Magnitude > 0.01 and flatRight.Magnitude > 0.01 then
+            local fwdAmt   = md:Dot(flatLook.Unit)   -- bao nhiêu % nhấn lên/xuống joystick
+            local rightAmt = md:Dot(flatRight.Unit)  -- bao nhiêu % nhấn trái/phải joystick
+
+            -- Áp lên LookVector thật (có pitch) → cúi camera = bay xuống
+            move += cam.CFrame.LookVector  * fwdAmt
+            move += cam.CFrame.RightVector * rightAmt
+        end
     end
 
+    -- PC: Space = lên, LeftShift = xuống
     if UserInputService:IsKeyDown(Enum.KeyCode.Space) then
         move += Vector3.new(0, 1, 0)
     end
