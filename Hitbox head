@@ -882,12 +882,12 @@ local tabColors = {
     Color3.fromRGB(170, 120, 255), -- Teleport
     Color3.fromRGB(255, 100, 50),  -- Troll
 }
-local tabNames = {"Hitbox", "Other", "Teleport", "Troll"}
+local tabNames = {"Hitbox", "Universal", "Teleport", "Troll"}
 
 local tabBtns = {}
 for i = 1, 4 do
     local btn = Instance.new("TextButton")
-    btn.Size = UDim2.new(1, 0, 0, 60)
+    btn.Size = UDim2.new(1, 0, 0, 30)
     btn.BackgroundColor3 = tabColors[i]
     btn.BackgroundTransparency = 0.6
     btn.BorderSizePixel = 0
