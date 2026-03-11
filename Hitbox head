@@ -1,9 +1,42 @@
 -- SERVICES
 local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+local Camera = workspace.CurrentCamera
+
+local SpectatingPlayer = nil
+
+function SpectatePlayer(player)
+
+    spectatedPlayer = player
+
+    local function setCamera(character)
+        local humanoid = character:WaitForChild("Humanoid")
+        Camera.CameraSubject = humanoid
+    end
+
+    if player.Character then
+        setCamera(player.Character)
+    end
+
+    player.CharacterAdded:Connect(function(char)
+        setCamera(char)
+    end)
+
+end
+
+function StopSpectate()
+    SpectatingPlayer = nil
+    if LocalPlayer.Character then
+        local humanoid = LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+        if humanoid then
+            Camera.CameraSubject = humanoid
+        end
+    end
+end
 local RunService = game:GetService("RunService")
 local StarterGui = game:GetService("StarterGui")
 local UserInputService = game:GetService("UserInputService")
-local LocalPlayer = Players.LocalPlayer
+
 
 -- CONFIG
 local DEFAULT_HITBOX_SIZE = 4
@@ -953,6 +986,60 @@ sizeInput = createTransparentInput("Size (e.g. 4)", tostring(DEFAULT_HITBOX_SIZE
 local autoToggle = createTransparentButton("Auto Hitbox: OFF", Color3.fromRGB(180, 50, 50), panel1)
 local removeAllBtn = createTransparentButton("Remove All Hitboxes", Color3.fromRGB(180, 50, 50), panel1)
 local statusLabel = createTransparentLabel("Processing: 0 Players", panel1)
+createTransparentLabel("Spectate Player", panel2)
+
+local selectedSpecButton = nil
+local specButtons = {}
+local specContainer = Instance.new("Frame")
+specContainer.Size = UDim2.new(1,0,0,120)
+specContainer.BackgroundTransparency = 1
+specContainer.Parent = panel2
+
+local specLayout = Instance.new("UIListLayout")
+specLayout.Parent = specContainer
+specLayout.Padding = UDim.new(0,4)
+local function refreshSpecList()
+
+    for _,b in pairs(specButtons) do
+        b:Destroy()
+    end
+
+    specButtons = {}
+
+    for _,plr in pairs(Players:GetPlayers()) do
+        if plr ~= LocalPlayer then
+
+            local btn = createTransparentButton(plr.Name, Color3.fromRGB(70,70,70), specContainer)
+            table.insert(specButtons, btn)
+
+            btn.MouseButton1Click:Connect(function()
+
+                if selectedSpecButton then
+                    selectedSpecButton.BackgroundColor3 = Color3.fromRGB(70,70,70)
+                end
+
+                btn.BackgroundColor3 = Color3.fromRGB(0,170,0)
+                selectedSpecButton = btn
+
+                SpectatePlayer(plr)
+
+            end)
+
+        end
+    end
+
+end
+
+refreshSpecList()
+
+Players.PlayerAdded:Connect(refreshSpecList)
+Players.PlayerRemoving:Connect(refreshSpecList)
+
+local stopSpec = createTransparentButton("Stop Spectate", Color3.fromRGB(180,50,50), panel2)
+
+stopSpec.MouseButton1Click:Connect(function()
+    StopSpectate()
+end)
 local loopspeedLabel = createTransparentLabel("Loopspeed", panel2)
 local loopspeedInput = createTransparentInput("Speed (e.g. 16)", "16", panel2)
 local loopspeedToggle = createTransparentButton("Loopspeed: OFF", Color3.fromRGB(80, 80, 200), panel2)
