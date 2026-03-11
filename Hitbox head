@@ -302,8 +302,8 @@ local function createNameESP(player, char)
     nameLabel.Parent = billboard
 
     local distanceLabel = Instance.new("TextLabel")
-    distanceLabel.Size = UDim2.new(1, 0, 0.5, 0)
-    distanceLabel.Position = UDim2.new(0, 0, 0.5, 0)
+distanceLabel.Size = UDim2.new(1, 0, 0.33, 0)
+distanceLabel.Position = UDim2.new(0, 0, 0.33, 0)
     distanceLabel.BackgroundTransparency = 1
     distanceLabel.Text = "0m"
     distanceLabel.TextColor3 = TEXT_ESP_COLOR
@@ -312,7 +312,17 @@ local function createNameESP(player, char)
     distanceLabel.Font = Enum.Font.Gotham
     distanceLabel.TextSize = 12
     distanceLabel.Parent = billboard
-
+local hpLabel = Instance.new("TextLabel")
+hpLabel.Size = UDim2.new(1,0,0.33,0)
+hpLabel.Position = UDim2.new(0,0,0.66,0)
+hpLabel.BackgroundTransparency = 1
+hpLabel.Text = "HP: 100%"
+hpLabel.TextColor3 = Color3.fromRGB(0,255,0)
+hpLabel.TextStrokeTransparency = 0
+hpLabel.TextStrokeColor3 = Color3.new(0,0,0)
+hpLabel.Font = Enum.Font.Gotham
+hpLabel.TextSize = 16
+hpLabel.Parent = billboard
     local conn
     conn = RunService.Heartbeat:Connect(function()
         if not billboard or not billboard.Parent then
@@ -325,6 +335,21 @@ local function createNameESP(player, char)
         if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Head") and head and head.Parent then
             local dist = (head.Position - LocalPlayer.Character.Head.Position).Magnitude
             distanceLabel.Text = string.format("%.1fm", dist)
+            local humanoid = char:FindFirstChildOfClass("Humanoid")
+
+if humanoid then
+    local hpPercent = math.floor((humanoid.Health / humanoid.MaxHealth) * 100)
+
+    hpLabel.Text = "HP: "..hpPercent.."%"
+
+    if hpPercent > 60 then
+        hpLabel.TextColor3 = Color3.fromRGB(0,255,0)
+    elseif hpPercent > 30 then
+        hpLabel.TextColor3 = Color3.fromRGB(255,170,0)
+    else
+        hpLabel.TextColor3 = Color3.fromRGB(255,0,0)
+    end
+end
             nameLabel.TextColor3 = getTeamColor(player)
         end
     end)
@@ -674,7 +699,7 @@ local c1 = Instance.new("UICorner"); c1.CornerRadius = UDim.new(0,8); c1.Parent 
 local toggleUIButton = Instance.new("TextButton")
 toggleUIButton.Size = UDim2.new(0, 110, 0, 28)
 toggleUIButton.Position = UDim2.new(0.5, -55, 0.5, -14)
-toggleUIButton.Text = "☰ Open Menu"
+toggleUIButton.Text = "Open Menu"
 toggleUIButton.TextColor3 = Color3.fromRGB(255, 255, 255)
 toggleUIButton.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
 toggleUIButton.BackgroundTransparency = 0.7
@@ -717,8 +742,8 @@ local c4 = Instance.new("UICorner"); c4.CornerRadius = UDim.new(0,6); c4.Parent 
 
 local tab2Btn = Instance.new("TextButton")
 local tab3Btn = Instance.new("TextButton")
-tab3Btn.Size = UDim2.new(0.334, 0, 1, 0)
-tab3Btn.Position = UDim2.new(0.666, 0, 0, 0)
+tab3Btn.Size = UDim2.new(0.28, 0, 1, 0)
+tab3Btn.Position = UDim2.new(0.66, 0, 0, 0)
 tab3Btn.Text = "Teleport"
 tab3Btn.TextColor3 = Color3.fromRGB(255,255,255)
 tab3Btn.BackgroundColor3 = Color3.fromRGB(170,120,255)
@@ -831,7 +856,7 @@ playerListLayout.Parent = playerList
 playerListLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
 playerList.CanvasSize = UDim2.new(0,0,0,playerListLayout.AbsoluteContentSize.Y + 10)
 end)
-local autoNameESP = createTransparentButton("Auto ESP Name: OFF", Color3.fromRGB(50, 150, 200), rightPanel)
+local autoNameESP = createTransparentButton(" ESP Name: OFF", Color3.fromRGB(50, 150, 200), rightPanel)
 local refreshBtn = createTransparentButton("Refresh Player List", Color3.fromRGB(80, 80, 180), rightPanel)
 local espNameAllBtn = createTransparentButton("ESP Name All: OFF", Color3.fromRGB(80, 200, 80), rightPanel)
 local boxESPBtn = createTransparentButton("ESP Box Charm: OFF", Color3.fromRGB(200, 200, 80), rightPanel)
@@ -969,15 +994,13 @@ tpToolBtn.MouseButton1Click:Connect(function()
     createNotification("Teleport Tool", "Tool added to backpack")
 
 end)
-tpPlayerList.Size = UDim2.new(1,0,0,200)
+
 tpPlayerList.BackgroundTransparency = 1
 tpPlayerList.BorderSizePixel = 0
 tpPlayerList.ScrollBarThickness = 4
 tpPlayerList.Parent = teleportPanel
 
-local tpListLayout = Instance.new("UIListLayout")
-tpListLayout.Padding = UDim.new(0,2)
-tpListLayout.Parent = tpPlayerList
+
 
 
 teleportBtn.MouseButton1Click:Connect(function()
@@ -1041,7 +1064,8 @@ flyToggle.MouseButton1Click:Connect(function()
 end)
 local closeButton = Instance.new("TextButton")
 closeButton.Size = UDim2.new(0, 28, 0, 28)
-closeButton.Position = UDim2.new(1, -32, 0, 2)
+closeButton.AnchorPoint = Vector2.new(1,0)
+closeButton.Position = UDim2.new(1, 8, 0, 4)
 closeButton.Text = "X"
 closeButton.TextColor3 = Color3.fromRGB(255,255,255)
 closeButton.BackgroundTransparency = 1
@@ -1049,7 +1073,6 @@ closeButton.BorderSizePixel = 0
 closeButton.Font = Enum.Font.GothamBold
 closeButton.TextSize = 16
 closeButton.Parent = mainFrame
-
 -- ─── TAB SWITCH ───────────────────────────────────────────────────────────────
 
 local function switchTab(idx)
@@ -1217,13 +1240,13 @@ loopspeedToggle.MouseButton1Click:Connect(function() setLoopspeedEnabled(not loo
 
 toggleUIButton.MouseButton1Click:Connect(function()
     mainFrame.Visible = not mainFrame.Visible
-    toggleUIButton.Text = mainFrame.Visible and "☰ Close Menu" or "☰ Open Menu"
+    toggleUIButton.Text = mainFrame.Visible and "Close Menu" or "Open Menu"
     if mainFrame.Visible then updatePlayerList() end
 end)
 
 closeButton.MouseButton1Click:Connect(function()
     mainFrame.Visible = false
-    toggleUIButton.Text = "☰ Open Menu"
+    toggleUIButton.Text = "Open Menu"
 end)
 
 autoToggle.MouseButton1Click:Connect(function()
@@ -1256,7 +1279,7 @@ end)
 
 autoNameESP.MouseButton1Click:Connect(function()
     nameESPEnabled = not nameESPEnabled
-    autoNameESP.Text = nameESPEnabled and "Auto ESP Name: ON" or "Auto ESP Name: OFF"
+    autoNameESP.Text = nameESPEnabled and "ESP Name: ON" or "ESP Name: OFF"
     autoNameESP.BackgroundColor3 = nameESPEnabled and Color3.fromRGB(50,200,50) or Color3.fromRGB(50,150,200)
     if not nameESPEnabled then
         for player, _ in pairs(nameESPObjects) do removeNameESP(player) end
@@ -1319,7 +1342,7 @@ end
 if input.KeyCode == Enum.KeyCode.LeftControl then
 
 mainFrame.Visible = not mainFrame.Visible
-toggleUIButton.Text = mainFrame.Visible and "☰ Close Menu" or "☰ Open Menu"
+toggleUIButton.Text = mainFrame.Visible and "Close Menu" or "Open Menu"
 
 end
 
