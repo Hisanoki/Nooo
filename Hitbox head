@@ -1033,6 +1033,8 @@ flingBtn.MouseButton1Click:Connect(function()
     if not hrp or not humanoid then return end
 
     local startCF = hrp.CFrame
+    humanoid:ChangeState(Enum.HumanoidStateType.Physics)
+humanoid.AutoRotate = false
     local targetChar = selectedTrollPlayer.Character
     local targetHRP = targetChar and targetChar:FindFirstChild("HumanoidRootPart")
     local targetHum = targetChar and targetChar:FindFirstChildOfClass("Humanoid")
@@ -1044,12 +1046,7 @@ flingBtn.MouseButton1Click:Connect(function()
     local isTargetFlung = false
 
     -- 1. TẠO LỰC XOAY
-    local bav = Instance.new("BodyAngularVelocity")
-    bav.AngularVelocity = Vector3.new(0, 999999, 0)
-    bav.MaxTorque = Vector3.new(math.huge, math.huge, math.huge)
-    bav.P = math.huge
-    bav.Name = "FlingForce"
-    bav.Parent = hrp
+    
 
     -- 2. NOCLIP
     local noclipConn = RunService.Stepped:Connect(function()
@@ -1063,6 +1060,7 @@ flingBtn.MouseButton1Click:Connect(function()
     local flingLoop
 
     -- VÒNG LẶP FLING SIÊU CẤP
+    
     flingLoop = RunService.Heartbeat:Connect(function()
         -- Kiểm tra điều kiện dừng: Hết thời gian, mục tiêu chết, hoặc ĐÃ BỊ VĂNG
         if tick() - startTime >= duration or not targetHRP or targetHum.Health <= 0 or isTargetFlung then
@@ -1080,11 +1078,13 @@ flingBtn.MouseButton1Click:Connect(function()
         end
 
         -- Kỹ thuật Orbit quanh đối thủ
-        local angle = tick() * 25
-        local offset = Vector3.new(math.cos(angle) * 1.5, 0, math.sin(angle) * 1.5)
-        
-        hrp.CFrame = CFrame.new(targetHRP.Position + offset)
-        hrp.Velocity = Vector3.new(5000, 5000, 5000) 
+local angle = tick() * 30
+local offset = Vector3.new(math.cos(angle)*2,0,math.sin(angle)*2)
+
+local predict = targetHRP.Position + (targetHRP.AssemblyLinearVelocity * 0.25)
+
+hrp.CFrame = CFrame.new(predict + offset)
+hrp.AssemblyLinearVelocity = Vector3.new(8000,8000,8000)
     end)
 
     -- Vòng lặp chờ để dọn dẹp
@@ -1095,7 +1095,7 @@ flingBtn.MouseButton1Click:Connect(function()
     -- 3. DỌN DẸP TRIỆT ĐỂ
     if flingLoop then flingLoop:Disconnect() end
     if noclipConn then noclipConn:Disconnect() end
-    if bav then bav:Destroy() end
+    
     
     hrp.Velocity = Vector3.new(0, 0, 0)
     hrp.RotVelocity = Vector3.new(0, 0, 0)
@@ -1107,6 +1107,7 @@ flingBtn.MouseButton1Click:Connect(function()
     -- Quay về vị trí cũ
     hrp.CFrame = startCF
     humanoid:ChangeState(Enum.HumanoidStateType.GettingUp)
+humanoid.AutoRotate = true
     humanoid.Sit = false
     
     -- Bật lại va chạm
@@ -1231,6 +1232,7 @@ autoTPBtn.MouseButton1Click:Connect(function()
     if autoTPEnabled then
 
         autoTPConnection = RunService.Heartbeat:Connect(function()
+        
 
             local myChar = LocalPlayer.Character
             if not myChar then return end
@@ -1551,7 +1553,7 @@ end
 task.spawn(function()
 
     while true do
-        task.wait(5)
+        task.wait(0.5)
 
         updatePlayerList()
         updateTPList()
