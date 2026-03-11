@@ -54,6 +54,7 @@ local invisSound
 
 -- FLING STATE
 local FlingActive = false
+local BangActive = false
 local SelectedFlingTargets = {}
 local FlingPlayerCheckboxes = {}
 
@@ -1044,6 +1045,8 @@ end)
 
 local flingStartBtn = createTransparentButton("START FLING", Color3.fromRGB(0, 180, 0), panel4)
 local flingStopBtn = createTransparentButton("STOP FLING", Color3.fromRGB(180, 0, 0), panel4)
+local bangBtn = createTransparentButton("BANG PLAYER", Color3.fromRGB(255, 80, 150), panel4)
+local stopBangBtn = createTransparentButton("STOP BANG", Color3.fromRGB(200,50,50), panel4)
 local flingSelectAllBtn = createTransparentButton("Select All", Color3.fromRGB(60, 60, 80), panel4)
 local flingDeselectAllBtn = createTransparentButton("Deselect All", Color3.fromRGB(60, 60, 80), panel4)
 local flingRefreshBtn = createTransparentButton("Refresh List", Color3.fromRGB(80, 80, 120), panel4)
@@ -1238,6 +1241,71 @@ end
 
 flingStartBtn.MouseButton1Click:Connect(StartFling)
 flingStopBtn.MouseButton1Click:Connect(StopFling)
+local bangTrack
+bangBtn.MouseButton1Click:Connect(function()
+
+    if BangActive then return end
+    BangActive = true
+
+    local char = LocalPlayer.Character
+    if not char then return end
+
+    local humanoid = char:FindFirstChildOfClass("Humanoid")
+
+    local anim = Instance.new("Animation")
+    anim.AnimationId = "rbxassetid://5918726674"
+
+    bangTrack = humanoid:LoadAnimation(anim)
+    bangTrack:Play()
+
+spawn(function() 
+        while BangActive do
+
+            local char = LocalPlayer.Character
+            if not char then task.wait() continue end
+
+            local hrp = char:FindFirstChild("HumanoidRootPart")
+            if not hrp then task.wait() continue end
+            local humanoid = char:FindFirstChildOfClass("Humanoid")
+
+
+
+            for _,player in pairs(SelectedFlingTargets) do
+                if not BangActive then break end
+
+                if player.Character then
+                    local targetHRP = player.Character:FindFirstChild("HumanoidRootPart")
+
+                    if targetHRP then
+                        hrp.CFrame = targetHRP.CFrame * CFrame.new(0,0,1)
+
+                        for i = 1,15 do
+    hrp.CFrame = targetHRP.CFrame * CFrame.new(0,0,1)
+    task.wait(0.05)
+    hrp.CFrame = targetHRP.CFrame * CFrame.new(0,0,1.5)
+    task.wait(0.05)
+end
+                    end
+                end
+            end
+
+            task.wait()
+
+        end
+
+    end)
+
+end)
+
+        
+
+stopBangBtn.MouseButton1Click:Connect(function()
+
+    BangActive = false
+if bangTrack then
+    bangTrack:Stop()
+end 
+end)
 flingSelectAllBtn.MouseButton1Click:Connect(function() ToggleAllFling(true) end)
 flingDeselectAllBtn.MouseButton1Click:Connect(function() ToggleAllFling(false) end)
 flingRefreshBtn.MouseButton1Click:Connect(function() RefreshFlingPlayerList() end)
