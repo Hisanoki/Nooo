@@ -4,12 +4,14 @@ local LocalPlayer = Players.LocalPlayer
 local Camera = workspace.CurrentCamera
 
 local SpectatingPlayer = nil
-
+local spectating = false
 function SpectatePlayer(player)
 
-    spectatedPlayer = player
+    SpectatingPlayer = player
+    spectating = true
 
     local function setCamera(character)
+        if not spectating then return end
         local humanoid = character:WaitForChild("Humanoid")
         Camera.CameraSubject = humanoid
     end
@@ -19,19 +21,30 @@ function SpectatePlayer(player)
     end
 
     player.CharacterAdded:Connect(function(char)
-        setCamera(char)
+        if spectating then
+            setCamera(char)
+        end
     end)
 
 end
 
 function StopSpectate()
+
+    spectating = false
     SpectatingPlayer = nil
+
+    if selectedSpecButton then
+        selectedSpecButton.BackgroundColor3 = Color3.fromRGB(70,70,70)
+        selectedSpecButton = nil
+    end
+
     if LocalPlayer.Character then
         local humanoid = LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
         if humanoid then
             Camera.CameraSubject = humanoid
         end
     end
+
 end
 local RunService = game:GetService("RunService")
 local StarterGui = game:GetService("StarterGui")
