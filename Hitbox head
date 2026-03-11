@@ -1003,14 +1003,20 @@ createTransparentLabel("Spectate Player", panel2)
 
 local selectedSpecButton = nil
 local specButtons = {}
-local specContainer = Instance.new("Frame")
+local specContainer = Instance.new("ScrollingFrame")
 specContainer.Size = UDim2.new(1,0,0,120)
 specContainer.BackgroundTransparency = 1
+specContainer.BorderSizePixel = 0
+specContainer.ScrollBarThickness = 4
+specContainer.CanvasSize = UDim2.new(0,0,0,0)
 specContainer.Parent = panel2
 
 local specLayout = Instance.new("UIListLayout")
 specLayout.Parent = specContainer
 specLayout.Padding = UDim.new(0,4)
+specLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+    specContainer.CanvasSize = UDim2.new(0,0,0,specLayout.AbsoluteContentSize.Y + 10)
+end)
 local function refreshSpecList()
 
     for _,b in pairs(specButtons) do
