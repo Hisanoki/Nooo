@@ -832,7 +832,7 @@ local titleLabel = Instance.new("TextLabel")
 titleLabel.Size = UDim2.new(1, -36, 1, 0)
 titleLabel.Position = UDim2.new(0, 8, 0, 0)
 titleLabel.BackgroundTransparency = 1
-titleLabel.Text = "ESP Multi-Tool"
+titleLabel.Text = "Universal"
 titleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
 titleLabel.Font = Enum.Font.GothamBold
 titleLabel.TextSize = 13
@@ -878,15 +878,17 @@ sidePad.Parent = sideBar
 
 -- Tab button factory
 local tabColors = {
-    Color3.fromRGB(220, 60, 60),   -- HeadHitbox
-    Color3.fromRGB(60, 120, 220),  -- Other
-    Color3.fromRGB(170, 120, 255), -- Teleport
-    Color3.fromRGB(255, 100, 50),  -- Troll
+    Color3.fromRGB(25,25,25), -- Hitbox
+    Color3.fromRGB(25,25,25), -- Universal
+    Color3.fromRGB(25,25,25), -- ESP
+    Color3.fromRGB(25,25,25), -- Teleport
+    Color3.fromRGB(25,25,25)  -- Troll
 }
-local tabNames = {"Hitbox", "Universal", "Teleport", "Troll"}
+
+local tabNames = {"Hitbox","Universal","ESP","Teleport","Troll"}
 
 local tabBtns = {}
-for i = 1, 4 do
+for i = 1, 5 do
     local btn = Instance.new("TextButton")
     btn.Size = UDim2.new(1, 0, 0, 30)
     btn.BackgroundColor3 = tabColors[i]
@@ -934,10 +936,11 @@ local function makeScrollPanel()
     return panel, layout
 end
 
-local panel1, layout1 = makeScrollPanel() -- HeadHitbox
-local panel2, layout2 = makeScrollPanel() -- Other
-local panel3, layout3 = makeScrollPanel() -- Teleport
-local panel4, layout4 = makeScrollPanel() -- Troll
+local panel1, layout1 = makeScrollPanel() -- Hitbox
+local panel2, layout2 = makeScrollPanel() -- Universal
+local panel3, layout3 = makeScrollPanel() -- ESP
+local panel4, layout4 = makeScrollPanel() -- Teleport
+local panel5, layout5 = makeScrollPanel() -- Troll
 
 -- ─── PANEL 1: HEAD HITBOX ─────────────────────────────────────────────────────
 
@@ -950,10 +953,10 @@ sizeInput = createTransparentInput("Size (e.g. 4)", tostring(DEFAULT_HITBOX_SIZE
 local autoToggle = createTransparentButton("Auto Hitbox: OFF", Color3.fromRGB(180, 50, 50), panel1)
 local removeAllBtn = createTransparentButton("Remove All Hitboxes", Color3.fromRGB(180, 50, 50), panel1)
 local statusLabel = createTransparentLabel("Processing: 0 Players", panel1)
-local loopspeedLabel = createTransparentLabel("Loopspeed", panel1)
-local loopspeedInput = createTransparentInput("Speed (e.g. 16)", "16", panel1)
-local loopspeedToggle = createTransparentButton("Loopspeed: OFF", Color3.fromRGB(80, 80, 200), panel1)
-invisButton = createTransparentButton("INVISIBLE", INVIS_CONFIG.PRIMARY_COLOR, panel1)
+local loopspeedLabel = createTransparentLabel("Loopspeed", panel2)
+local loopspeedInput = createTransparentInput("Speed (e.g. 16)", "16", panel2)
+local loopspeedToggle = createTransparentButton("Loopspeed: OFF", Color3.fromRGB(80, 80, 200), panel2)
+invisButton = createTransparentButton("INVISIBLE", INVIS_CONFIG.PRIMARY_COLOR, panel2)
 invisSound = Instance.new("Sound")
 invisSound.SoundId = INVIS_CONFIG.SOUND_ID
 invisSound.Volume = 0.5
@@ -961,7 +964,7 @@ invisSound.Parent = gui
 
 -- ─── PANEL 2: OTHER (ESP / Fly) ───────────────────────────────────────────────
 
-local rightTitle = createTransparentLabel("ESP & Other Features", panel2)
+local rightTitle = createTransparentLabel("ESP", panel3)
 rightTitle.TextColor3 = Color3.fromRGB(150, 200, 255)
 rightTitle.Font = Enum.Font.GothamBold
 rightTitle.TextSize = 14
@@ -972,7 +975,7 @@ playerList.BackgroundTransparency = 1
 playerList.BorderSizePixel = 0
 playerList.ScrollBarThickness = 4
 playerList.CanvasSize = UDim2.new(0, 0, 0, 0)
-playerList.Parent = panel2
+playerList.Parent = panel3
 local playerListLayout = Instance.new("UIListLayout")
 playerListLayout.SortOrder = Enum.SortOrder.LayoutOrder
 playerListLayout.Padding = UDim.new(0, 2)
@@ -981,10 +984,9 @@ playerListLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(functio
     playerList.CanvasSize = UDim2.new(0,0,0,playerListLayout.AbsoluteContentSize.Y + 10)
 end)
 
-local autoNameESP = createTransparentButton("ESP Name: OFF", Color3.fromRGB(50, 150, 200), panel2)
-local refreshBtn = createTransparentButton("Refresh Player List", Color3.fromRGB(80, 80, 180), panel2)
-local espNameAllBtn = createTransparentButton("ESP Name All: OFF", Color3.fromRGB(80, 200, 80), panel2)
-local boxESPBtn = createTransparentButton("ESP Box Charm: OFF", Color3.fromRGB(200, 200, 80), panel2)
+local autoNameESP = createTransparentButton("ESP Name: OFF", Color3.fromRGB(50, 150, 200), panel3)
+local espNameAllBtn = createTransparentButton("ESP Name All: OFF", Color3.fromRGB(80, 200, 80), panel3)
+local boxESPBtn = createTransparentButton("ESP Box Charm: OFF", Color3.fromRGB(200, 200, 80), panel3)
 local flyLabel = createTransparentLabel("Fly", panel2)
 local flySpeedInput = createTransparentInput("Fly Speed", "2", panel2)
 local flyToggle = createTransparentButton("Fly: OFF", Color3.fromRGB(200,120,60), panel2)
@@ -993,7 +995,7 @@ local noclipToggle = createTransparentButton("Noclip: OFF", Color3.fromRGB(120,2
 
 -- ─── PANEL 3: TELEPORT ────────────────────────────────────────────────────────
 
-local tpTitle = createTransparentLabel("Teleport Player", panel3)
+local tpTitle = createTransparentLabel("Teleport Player", panel4)
 tpTitle.TextColor3 = Color3.fromRGB(170,120,255)
 tpTitle.Font = Enum.Font.GothamBold
 tpTitle.TextSize = 14
@@ -1004,7 +1006,7 @@ tpPlayerList.BackgroundTransparency = 1
 tpPlayerList.BorderSizePixel = 0
 tpPlayerList.ScrollBarThickness = 4
 tpPlayerList.CanvasSize = UDim2.new(0,0,0,0)
-tpPlayerList.Parent = panel3
+tpPlayerList.Parent = panel4
 local tpListLayout = Instance.new("UIListLayout")
 tpListLayout.Padding = UDim.new(0,2)
 tpListLayout.Parent = tpPlayerList
@@ -1012,18 +1014,18 @@ tpListLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
     tpPlayerList.CanvasSize = UDim2.new(0,0,0,tpListLayout.AbsoluteContentSize.Y + 5)
 end)
 
-local autoTPBtn = createTransparentButton("Auto Teleport: OFF", Color3.fromRGB(200,120,80), panel3)
-local teleportBtn = createTransparentButton("Teleport To Player", Color3.fromRGB(80,200,120), panel3)
-local tpToolBtn = createTransparentButton("Teleport Tool", Color3.fromRGB(170,120,255), panel3)
+local autoTPBtn = createTransparentButton("Auto Teleport: OFF", Color3.fromRGB(200,120,80), panel4)
+local teleportBtn = createTransparentButton("Teleport To Player", Color3.fromRGB(80,200,120), panel4)
+local tpToolBtn = createTransparentButton("Teleport Tool", Color3.fromRGB(170,120,255), panel4)
 
--- ─── PANEL 4: TROLL (FLING) ───────────────────────────────────────────────────
+-- ─── PANEL 5: TROLL (FLING) ───────────────────────────────────────────────────
 
-local trollTitle = createTransparentLabel("Troll / Fling", panel4)
+local trollTitle = createTransparentLabel("Troll / Fling", panel5)
 trollTitle.TextColor3 = Color3.fromRGB(255,100,50)
 trollTitle.Font = Enum.Font.GothamBold
 trollTitle.TextSize = 14
 
-local flingStatusLabel = createTransparentLabel("Select targets to fling", panel4)
+local flingStatusLabel = createTransparentLabel("Select targets to fling", panel5)
 flingStatusLabel.TextColor3 = Color3.fromRGB(255,255,255)
 
 -- Fling player list
@@ -1034,7 +1036,7 @@ flingPlayerList.BackgroundTransparency = 0.5
 flingPlayerList.BorderSizePixel = 0
 flingPlayerList.ScrollBarThickness = 5
 flingPlayerList.CanvasSize = UDim2.new(0, 0, 0, 0)
-flingPlayerList.Parent = panel4
+flingPlayerList.Parent = panel5
 local flingListLayout = Instance.new("UIListLayout")
 flingListLayout.SortOrder = Enum.SortOrder.LayoutOrder
 flingListLayout.Padding = UDim.new(0, 3)
@@ -1043,13 +1045,11 @@ flingListLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function
     flingPlayerList.CanvasSize = UDim2.new(0,0,0,flingListLayout.AbsoluteContentSize.Y + 10)
 end)
 
-local flingStartBtn = createTransparentButton("START FLING", Color3.fromRGB(0, 180, 0), panel4)
-local flingStopBtn = createTransparentButton("STOP FLING", Color3.fromRGB(180, 0, 0), panel4)
-local bangBtn = createTransparentButton("BANG PLAYER", Color3.fromRGB(255, 80, 150), panel4)
-local stopBangBtn = createTransparentButton("STOP BANG", Color3.fromRGB(200,50,50), panel4)
-local flingSelectAllBtn = createTransparentButton("Select All", Color3.fromRGB(60, 60, 80), panel4)
-local flingDeselectAllBtn = createTransparentButton("Deselect All", Color3.fromRGB(60, 60, 80), panel4)
-local flingRefreshBtn = createTransparentButton("Refresh List", Color3.fromRGB(80, 80, 120), panel4)
+local flingStartBtn = createTransparentButton("START FLING", Color3.fromRGB(0, 180, 0), panel5)
+local bangBtn = createTransparentButton("BANG PLAYER", Color3.fromRGB(255, 80, 150), panel5)
+local flingSelectAllBtn = createTransparentButton("Select All", Color3.fromRGB(60, 60, 80), panel5)
+local flingDeselectAllBtn = createTransparentButton("Deselect All", Color3.fromRGB(60, 60, 80), panel5)
+
 
 -- Separator
 local trollSep = Instance.new("Frame")
@@ -1057,17 +1057,17 @@ trollSep.Size = UDim2.new(1, 0, 0, 2)
 trollSep.BackgroundColor3 = Color3.fromRGB(120, 120, 120)
 trollSep.BackgroundTransparency = 0.5
 trollSep.BorderSizePixel = 0
-trollSep.Parent = panel4
+trollSep.Parent = panel5
 
-local antiFlingLabel = createTransparentLabel("Anti-Fling", panel4)
+local antiFlingLabel = createTransparentLabel("Anti-Fling", panel5)
 antiFlingLabel.TextColor3 = Color3.fromRGB(180, 220, 255)
 antiFlingLabel.Font = Enum.Font.GothamBold
 
-local antiFlingBtn = createTransparentButton("Anti-Fling: OFF", Color3.fromRGB(60, 100, 180), panel4)
+local antiFlingBtn = createTransparentButton("Anti-Fling: OFF", Color3.fromRGB(60, 100, 180), panel5)
 
 -- ─── TAB SWITCH ───────────────────────────────────────────────────────────────
 
-local panels = {panel1, panel2, panel3, panel4}
+local panels = {panel1, panel2, panel3, panel4, panel5}
 
 local function switchTab(idx)
     for i, p in ipairs(panels) do
@@ -1238,14 +1238,38 @@ local function StopFling()
 end
 
 -- ─── FLING BUTTON EVENTS ──────────────────────────────────────────────────────
+flingStartBtn.MouseButton1Click:Connect(function()
 
-flingStartBtn.MouseButton1Click:Connect(StartFling)
-flingStopBtn.MouseButton1Click:Connect(StopFling)
+    if FlingActive then
+        StopFling()
+        flingStartBtn.Text = "FLING PLAYER : OFF"
+        flingStartBtn.BackgroundColor3 = Color3.fromRGB(200,0,0)
+    else
+        flingStartBtn.Text = "FLING PLAYER : ON"
+        flingStartBtn.BackgroundColor3 = Color3.fromRGB(0,200,0)
+        StartFling()
+    end
+
+end)
+
 local bangTrack
 bangBtn.MouseButton1Click:Connect(function()
 
-    if BangActive then return end
-    BangActive = true
+    BangActive = not BangActive
+
+    if BangActive then
+        bangBtn.Text = "BANG PLAYER : ON"
+        bangBtn.BackgroundColor3 = Color3.fromRGB(0,200,0)
+    else
+        bangBtn.Text = "BANG PLAYER : OFF"
+        bangBtn.BackgroundColor3 = Color3.fromRGB(200,0,0)
+        if bangTrack then
+            bangTrack:Stop()
+        end
+        return
+    end
+
+    
 
     local char = LocalPlayer.Character
     if not char then return end
@@ -1280,10 +1304,17 @@ spawn(function()
                         hrp.CFrame = targetHRP.CFrame * CFrame.new(0,0,1)
 
                         for i = 1,15 do
+
+    if not BangActive then break end
+
     hrp.CFrame = targetHRP.CFrame * CFrame.new(0,0,1)
     task.wait(0.05)
+
+    if not BangActive then break end
+
     hrp.CFrame = targetHRP.CFrame * CFrame.new(0,0,1.5)
     task.wait(0.05)
+
 end
                     end
                 end
@@ -1299,16 +1330,10 @@ end)
 
         
 
-stopBangBtn.MouseButton1Click:Connect(function()
 
-    BangActive = false
-if bangTrack then
-    bangTrack:Stop()
-end 
-end)
 flingSelectAllBtn.MouseButton1Click:Connect(function() ToggleAllFling(true) end)
 flingDeselectAllBtn.MouseButton1Click:Connect(function() ToggleAllFling(false) end)
-flingRefreshBtn.MouseButton1Click:Connect(function() RefreshFlingPlayerList() end)
+
 
 antiFlingBtn.MouseButton1Click:Connect(function()
     antiFlingEnabled = not antiFlingEnabled
@@ -1406,7 +1431,7 @@ autoNameESP.MouseButton1Click:Connect(function()
     end
 end)
 
-refreshBtn.MouseButton1Click:Connect(function() updatePlayerList() end)
+
 
 espNameAllBtn.MouseButton1Click:Connect(function()
     espNameAllState = not espNameAllState
