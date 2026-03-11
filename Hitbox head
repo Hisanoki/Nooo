@@ -1059,12 +1059,57 @@ trollSep.BackgroundTransparency = 0.5
 trollSep.BorderSizePixel = 0
 trollSep.Parent = panel5
 
-local antiFlingLabel = createTransparentLabel("Anti-Fling", panel5)
+local antiFlingLabel = createTransparentLabel("Anti", panel5)
 antiFlingLabel.TextColor3 = Color3.fromRGB(180, 220, 255)
 antiFlingLabel.Font = Enum.Font.GothamBold
 
 local antiFlingBtn = createTransparentButton("Anti-Fling: OFF", Color3.fromRGB(60, 100, 180), panel5)
+local antiVoidBtn = createTransparentButton("Anti Void: OFF", Color3.fromRGB(120,200,120), panel5)
+local antiAfkBtn = createTransparentButton("Anti AFK: OFF", Color3.fromRGB(120,180,255), panel5)
+local antiAfkEnabled = false
 
+antiAfkBtn.MouseButton1Click:Connect(function()
+    antiAfkEnabled = not antiAfkEnabled
+    antiAfkBtn.Text = "Anti AFK: "..(antiAfkEnabled and "ON" or "OFF")
+end)
+
+local VirtualUser = game:GetService("VirtualUser")
+
+game:GetService("Players").LocalPlayer.Idled:Connect(function()
+    if antiAfkEnabled then
+        VirtualUser:Button2Down(Vector2.new(0,0), workspace.CurrentCamera.CFrame)
+        task.wait(1)
+        VirtualUser:Button2Up(Vector2.new(0,0), workspace.CurrentCamera.CFrame)
+    end
+end)
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+
+local player = Players.LocalPlayer
+
+local antiVoidEnabled = false
+
+antiVoidBtn.MouseButton1Click:Connect(function()
+    antiVoidEnabled = not antiVoidEnabled
+    antiVoidBtn.Text = "Anti Void: "..(antiVoidEnabled and "ON" or "OFF")
+end)
+
+RunService.RenderStepped:Connect(function()
+
+    if not antiVoidEnabled then return end
+
+    local char = player.Character
+    if not char then return end
+
+    local hrp = char:FindFirstChild("HumanoidRootPart")
+    if not hrp then return end
+
+    if hrp.Position.Y < -15 then
+        hrp.CFrame = CFrame.new(hrp.Position.X, 50, hrp.Position.Z)
+        hrp.AssemblyLinearVelocity = Vector3.zero
+    end
+
+end)
 -- ─── TAB SWITCH ───────────────────────────────────────────────────────────────
 
 local panels = {panel1, panel2, panel3, panel4, panel5}
