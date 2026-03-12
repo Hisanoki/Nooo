@@ -943,13 +943,13 @@ local tabColors = {
     Color3.fromRGB(25,25,25), -- Teleport
     Color3.fromRGB(25,25,25), -- Troll
     Color3.fromRGB(25,25,25), -- Misc   
-    Color3.fromRGB(25,25,25), -- Sever
-    Color3.fromRGB(25,25,25)  -- FE Tool
+    Color3.fromRGB(25,25,25)  -- Sever
 }
 
-local tabNames = {"Player","ESP","Teleport","Troll","Misc","Server","FeTool"}
+local tabNames = {"Player","ESP","Teleport","Troll","Misc","Server"}
+
 local tabBtns = {}
-for i = 1, 7 do
+for i = 1, 6 do
     local btn = Instance.new("TextButton")
     btn.Size = UDim2.new(1, 0, 0, 30)
     btn.BackgroundColor3 = tabColors[i]
@@ -1003,7 +1003,6 @@ local panel4, layout4 = makeScrollPanel() -- Teleport
 local panel5, layout5 = makeScrollPanel() -- Troll
 local panel6, layout6 = makeScrollPanel() -- Misc   
 local panel7, layout7 = makeScrollPanel() -- Server 
-local panel8, layout8 = makeScrollPanel() -- FE Tool
 
 -- ─── PANEL 1: HEAD HITBOX ─────────────────────────────────────────────────────
 
@@ -1266,275 +1265,11 @@ jobIdInput.BackgroundColor3 = Color3.fromRGB(40,40,40)
 jobIdInput.TextColor3 = Color3.new(1,1,1)
 
 local joinJobBtn = createTransparentButton("Join", Color3.fromRGB(120,200,255), panel7)
+
 local copyJobBtn = createTransparentButton("Copy JobId", Color3.fromRGB(255,200,120), panel7)
-
--- ─── PANEL 8: FE TOOL ─────────────────────────────────────────────────────────
-    local feTitle = createTransparentLabel("FE Tool", panel8)
-    feTitle.TextColor3 = Color3.fromRGB(100, 180, 255)
-    feTitle.Font = Enum.Font.GothamBold
-    feTitle.TextSize = 14
-
-    -- STATE
-    local feDropEnabled = false
-    local feDropFloat = nil
-    local feDropDragConn = nil
-    local feDropBtnSize = 30
-
-    local feAuraEnabled = false
-    local feAuraFloat = nil
-    local feAuraDragConn = nil
-    local feAuraKeybind = nil -- Enum.KeyCode
-    local feAuraKeybindConn = nil
-    local feAuraListeningForKey = false
-
-    -- HELPERS
-    local function feDestroyDrop()
-        if feDropDragConn then feDropDragConn:Disconnect(); feDropDragConn = nil end
-        if feDropFloat then feDropFloat:Destroy(); feDropFloat = nil end
-    end
-
-    local function feDestroyAura()
-        if feAuraDragConn then feAuraDragConn:Disconnect(); feAuraDragConn = nil end
-        if feAuraFloat then feAuraFloat:Destroy(); feAuraFloat = nil end
-        if feAuraKeybindConn then feAuraKeybindConn:Disconnect(); feAuraKeybindConn = nil end
-    end
-
-    local function doToolAura()
-        local char = LocalPlayer.Character
-        if not char then return end
-        local root = char:FindFirstChild("HumanoidRootPart")
-        if not root then return end
-        for _, obj in pairs(workspace:GetDescendants()) do
-            if obj:IsA("Tool") then
-                local owned = false
-                for _, p in pairs(Players:GetPlayers()) do
-                    if (p.Character and obj:IsDescendantOf(p.Character))
-                    or (p.Backpack and obj:IsDescendantOf(p.Backpack)) then
-                        owned = true; break
-                    end
-                end
-                if not owned then
-                    local handle = obj:FindFirstChild("Handle")
-                    if handle then
-                        local ok = pcall(function() firetouchinterest(root, handle, 0) end)
-                        if ok then task.wait(0.04); pcall(function() firetouchinterest(root, handle, 1) end) end
-                    else
-                        pcall(function() obj.Parent = LocalPlayer.Backpack end)
-                    end
-                    task.wait(0.04)
-                end
-            end
-        end
-    end
-
-    -- FLOAT BUTTON FACTORY (dùng chung cho Drop và Aura)
-    local function makeFloat(labelText, color, strokeColor, offsetX, onClickFn)
-        local btn = Instance.new("TextButton")
-        btn.Parent = gui
-        btn.Size = UDim2.new(0, 60, 0, 60)
-        btn.Position = UDim2.new(0.5, offsetX, 0.5, -30)
-        btn.BackgroundColor3 = color
-        btn.BorderSizePixel = 0
-        btn.Text = labelText
-        btn.TextColor3 = Color3.fromRGB(255, 255, 255)
-        btn.TextScaled = true
-        btn.Font = Enum.Font.GothamBold
-        btn.Active = true
-        btn.ZIndex = 10
-        local fc = Instance.new("UICorner"); fc.CornerRadius = UDim.new(0, 8); fc.Parent = btn
-        local fs = Instance.new("UIStroke"); fs.Color = strokeColor; fs.Thickness = 2; fs.Parent = btn
-
-        local dragging, moved, dragStart, dragPos = false, false, nil, nil
-        btn.InputBegan:Connect(function(input)
-            if input.UserInputType == Enum.UserInputType.MouseButton1
-            or input.UserInputType == Enum.UserInputType.Touch then
-                dragging = true; moved = false
-                dragStart = input.Position; dragPos = btn.Position
-            end
-        end)
-        local dragConn = UserInputService.InputChanged:Connect(function(input)
-            if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement
-            or input.UserInputType == Enum.UserInputType.Touch) then
-                local delta = input.Position - dragStart
-                if delta.Magnitude > 6 then moved = true end
-                btn.Position = UDim2.new(dragPos.X.Scale, dragPos.X.Offset + delta.X,
-                    dragPos.Y.Scale, dragPos.Y.Offset + delta.Y)
-            end
-        end)
-        UserInputService.InputEnded:Connect(function(input)
-            if input.UserInputType == Enum.UserInputType.MouseButton1
-            or input.UserInputType == Enum.UserInputType.Touch then
-                dragging = false
-            end
-        end)
-        btn.MouseButton1Click:Connect(function()
-            if moved then moved = false; return end
-            onClickFn()
-        end)
-        return btn, dragConn
-    end
-
-    -- DROP TOOL TOGGLE
-    local feDropToggle = createTransparentButton("Drop Tool: OFF", Color3.fromRGB(60, 60, 180), panel8)
-    feDropToggle.MouseButton1Click:Connect(function()
-        feDropEnabled = not feDropEnabled
-        if feDropEnabled then
-            feDropToggle.Text = "Drop Tool: ON"
-            feDropToggle.BackgroundColor3 = Color3.fromRGB(0, 110, 220)
-            feDestroyDrop()
-            feDropFloat, feDropDragConn = makeFloat("Drop\nTool", Color3.fromRGB(0, 110, 255),
-                Color3.fromRGB(100, 180, 255), -70, function()
-                    local char = LocalPlayer.Character
-                    if not char then return end
-                    local tool = char:FindFirstChildOfClass("Tool")
-                    if tool then tool.Parent = workspace end
-                end)
-            feDropFloat.Size = UDim2.new(0, feDropBtnSize, 0, feDropBtnSize)
-            feDropFloat.Position = UDim2.new(0.5, -feDropBtnSize/2 - 40, 0.5, -feDropBtnSize/2)
-        else
-            feDropToggle.Text = "Drop Tool: OFF"
-            feDropToggle.BackgroundColor3 = Color3.fromRGB(60, 60, 180)
-            feDestroyDrop()
-        end
-    end)
-
-    -- SIZE LABEL + SLIDER
-    local feSizeLabel = createTransparentLabel("Kich co nut: 30", panel8)
-    feSizeLabel.TextColor3 = Color3.fromRGB(180, 220, 255)
-    feSizeLabel.TextSize = 13
-
-    local feSliderBg = Instance.new("Frame")
-    feSliderBg.Size = UDim2.new(1, 0, 0, 36)
-    feSliderBg.BackgroundColor3 = Color3.fromRGB(30, 30, 50)
-    feSliderBg.BackgroundTransparency = 0.4
-    feSliderBg.BorderSizePixel = 0
-    feSliderBg.Parent = panel8
-    local fsc = Instance.new("UICorner"); fsc.CornerRadius = UDim.new(0, 6); fsc.Parent = feSliderBg
-
-    local feTrack = Instance.new("Frame")
-    feTrack.Size = UDim2.new(1, -24, 0, 6)
-    feTrack.Position = UDim2.new(0, 12, 0.5, -3)
-    feTrack.BackgroundColor3 = Color3.fromRGB(60, 60, 100)
-    feTrack.BorderSizePixel = 0
-    feTrack.Parent = feSliderBg
-    local ftc = Instance.new("UICorner"); ftc.CornerRadius = UDim.new(0, 3); ftc.Parent = feTrack
-
-    local feFill = Instance.new("Frame")
-    feFill.Size = UDim2.new((30-10)/90, 0, 1, 0)
-    feFill.BackgroundColor3 = Color3.fromRGB(0, 110, 255)
-    feFill.BorderSizePixel = 0
-    feFill.Parent = feTrack
-    local ffc = Instance.new("UICorner"); ffc.CornerRadius = UDim.new(0, 3); ffc.Parent = feFill
-
-    local feHandle = Instance.new("Frame")
-    feHandle.Size = UDim2.new(0, 16, 0, 16)
-    feHandle.AnchorPoint = Vector2.new(0.5, 0.5)
-    feHandle.Position = UDim2.new((30-10)/90, 0, 0.5, 0)
-    feHandle.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-    feHandle.BorderSizePixel = 0
-    feHandle.ZIndex = 2
-    feHandle.Parent = feTrack
-    local fhc = Instance.new("UICorner"); fhc.CornerRadius = UDim.new(1, 0); fhc.Parent = feHandle
-
-    local feSliding = false
-    local function feUpdateSlider(pos)
-        local ap = feTrack.AbsolutePosition; local as = feTrack.AbsoluteSize
-        local pct = math.clamp((pos.X - ap.X) / as.X, 0, 1)
-        local val = math.floor(10 + pct * 90 + 0.5)
-        feDropBtnSize = val
-        feSizeLabel.Text = "Kich co nut: " .. val
-        feFill.Size = UDim2.new(pct, 0, 1, 0)
-        feHandle.Position = UDim2.new(pct, 0, 0.5, 0)
-        if feDropEnabled and feDropFloat then
-            feDropFloat.Size = UDim2.new(0, val, 0, val)
-            local c = feDropFloat:FindFirstChildOfClass("UICorner")
-            if c then c.CornerRadius = UDim.new(0, math.max(6, math.floor(val*0.15))) end
-        end
-    end
-    feSliderBg.InputBegan:Connect(function(i)
-        if i.UserInputType == Enum.UserInputType.MouseButton1
-        or i.UserInputType == Enum.UserInputType.Touch then
-            feSliding = true; feUpdateSlider(i.Position)
-        end
-    end)
-    feSliderBg.InputEnded:Connect(function(i)
-        if i.UserInputType == Enum.UserInputType.MouseButton1
-        or i.UserInputType == Enum.UserInputType.Touch then feSliding = false end
-    end)
-    feHandle.InputBegan:Connect(function(i)
-        if i.UserInputType == Enum.UserInputType.MouseButton1
-        or i.UserInputType == Enum.UserInputType.Touch then feSliding = true end
-    end)
-    UserInputService.InputChanged:Connect(function(i)
-        if feSliding and (i.UserInputType == Enum.UserInputType.MouseMovement
-        or i.UserInputType == Enum.UserInputType.Touch) then feUpdateSlider(i.Position) end
-    end)
-
-    -- TOOL AURA TOGGLE
-    local feAuraSep = createTransparentLabel("── Tool Aura ──", panel8)
-    feAuraSep.TextColor3 = Color3.fromRGB(100, 100, 120); feAuraSep.TextSize = 11
-
-    local feAuraToggle = createTransparentButton("Tool Aura: OFF", Color3.fromRGB(180, 30, 30), panel8)
-    feAuraToggle.MouseButton1Click:Connect(function()
-        feAuraEnabled = not feAuraEnabled
-        if feAuraEnabled then
-            feAuraToggle.Text = "Tool Aura: ON"
-            feAuraToggle.BackgroundColor3 = Color3.fromRGB(220, 60, 60)
-            feDestroyAura()
-            -- Mobile float button
-            feAuraFloat, feAuraDragConn = makeFloat("Tool\nAura", Color3.fromRGB(180, 30, 30),
-                Color3.fromRGB(255, 120, 120), 40, function()
-                    doToolAura()
-                end)
-            -- PC keybind listener
-            if feAuraKeybind then
-                feAuraKeybindConn = UserInputService.InputBegan:Connect(function(input, gp)
-                    if not gp and input.KeyCode == feAuraKeybind then doToolAura() end
-                end)
-            end
-        else
-            feAuraToggle.Text = "Tool Aura: OFF"
-            feAuraToggle.BackgroundColor3 = Color3.fromRGB(180, 30, 30)
-            feDestroyAura()
-        end
-    end)
-
-    -- KEYBIND BUTTON (PC)
-    local feKeybindBtn = createTransparentButton("Keybind: [None]", Color3.fromRGB(50, 50, 70), panel8)
-    feKeybindBtn.MouseButton1Click:Connect(function()
-        if feAuraListeningForKey then return end
-        feAuraListeningForKey = true
-        feKeybindBtn.Text = "Nhan phim..."
-        feKeybindBtn.BackgroundColor3 = Color3.fromRGB(80, 80, 20)
-        local conn; conn = UserInputService.InputBegan:Connect(function(input, gp)
-            if input.UserInputType ~= Enum.UserInputType.Keyboard then return end
-            conn:Disconnect()
-            feAuraKeybind = input.KeyCode
-            feAuraListeningForKey = false
-            feKeybindBtn.Text = "Keybind: [" .. input.KeyCode.Name .. "]"
-            feKeybindBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 70)
-            -- Cập nhật listener nếu đang bật
-            if feAuraEnabled then
-                if feAuraKeybindConn then feAuraKeybindConn:Disconnect() end
-                feAuraKeybindConn = UserInputService.InputBegan:Connect(function(inp, gp2)
-                    if not gp2 and inp.KeyCode == feAuraKeybind then doToolAura() end
-                end)
-            end
-        end)
-    end)
-
-    -- DROP ALL
-    local feDropAllBtn = createTransparentButton("Drop All Tools", Color3.fromRGB(100, 40, 40), panel8)
-    feDropAllBtn.MouseButton1Click:Connect(function()
-        local char = LocalPlayer.Character; if not char then return end
-        for _, item in pairs(char:GetChildren()) do
-            if item:IsA("Tool") then pcall(function() item.Parent = workspace end) end
-        end
-        createNotification("FE Tool", "Dropped all tools", 2)
-    end)
 -- ─── TAB SWITCH ───────────────────────────────────────────────────────────────
 
-local panels = {panel2, panel3, panel4, panel5, panel6, panel7, panel8}
+local panels = {panel2, panel3, panel4, panel5, panel6, panel7}
 
 local function switchTab(idx)
     for i, p in ipairs(panels) do
