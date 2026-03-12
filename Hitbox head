@@ -1532,7 +1532,6 @@ local copyJobBtn = createTransparentButton("Copy JobId", Color3.fromRGB(255,200,
         end
         createNotification("FE Tool", "Dropped all tools", 2)
     end)
-end
 -- ─── TAB SWITCH ───────────────────────────────────────────────────────────────
 
 local panels = {panel2, panel3, panel4, panel5, panel6, panel7, panel8}
