@@ -1214,13 +1214,14 @@ local RunService = game:GetService("RunService")
 local player = Players.LocalPlayer
 
 local antiVoidEnabled = false
+local lastSafePos = nil
 
 antiVoidBtn.MouseButton1Click:Connect(function()
     antiVoidEnabled = not antiVoidEnabled
     antiVoidBtn.Text = "Anti Void: "..(antiVoidEnabled and "ON" or "OFF")
 end)
 
-RunService.RenderStepped:Connect(function()
+RunService.Heartbeat:Connect(function()
 
     if not antiVoidEnabled then return end
 
@@ -1230,9 +1231,17 @@ RunService.RenderStepped:Connect(function()
     local hrp = char:FindFirstChild("HumanoidRootPart")
     if not hrp then return end
 
-    if hrp.Position.Y < -15 then
-        hrp.CFrame = CFrame.new(hrp.Position.X, 50, hrp.Position.Z)
-        hrp.AssemblyLinearVelocity = Vector3.zero
+    -- lưu vị trí an toàn khi đang trên map
+    if hrp.Position.Y > -5 then
+        lastSafePos = hrp.CFrame
+    end
+
+    -- nếu rơi void thì quay lại vị trí an toàn
+    if hrp.Position.Y < -30 then
+        if lastSafePos then
+            hrp.CFrame = lastSafePos
+            hrp.AssemblyLinearVelocity = Vector3.zero
+        end
     end
 
 end)
