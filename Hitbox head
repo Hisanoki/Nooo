@@ -826,7 +826,10 @@ local function disableAntiFling()
 end
 
 -- ─── GUI SETUP ────────────────────────────────────────────────────────────────
-
+local old = LocalPlayer.PlayerGui:FindFirstChild("Gui")
+if old then
+    old:Destroy()
+end
 local gui = Instance.new("ScreenGui")
 gui.Name = "Gui"
 gui.ResetOnSpawn = false
