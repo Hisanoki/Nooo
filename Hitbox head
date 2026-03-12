@@ -1179,22 +1179,15 @@ local bangBtn = createTransparentButton("BANG PLAYER", Color3.fromRGB(255, 80, 1
 local flingSelectAllBtn = createTransparentButton("Select All", Color3.fromRGB(60, 60, 80), panel5)
 local flingDeselectAllBtn = createTransparentButton("Deselect All", Color3.fromRGB(60, 60, 80), panel5)
 
+-- ─── PANEL 6: MISC ────────────────────────────────────────────────────────────
+local miscTitle = createTransparentLabel("Misc", panel6)
+miscTitle.TextColor3 = Color3.fromRGB(180, 255, 180)
+miscTitle.Font = Enum.Font.GothamBold
+miscTitle.TextSize = 14
 
--- Separator
-local trollSep = Instance.new("Frame")
-trollSep.Size = UDim2.new(1, 0, 0, 2)
-trollSep.BackgroundColor3 = Color3.fromRGB(120, 120, 120)
-trollSep.BackgroundTransparency = 0.5
-trollSep.BorderSizePixel = 0
-trollSep.Parent = panel5
-
-local antiFlingLabel = createTransparentLabel("Anti", panel5)
-antiFlingLabel.TextColor3 = Color3.fromRGB(180, 220, 255)
-antiFlingLabel.Font = Enum.Font.GothamBold
-
-local antiFlingBtn = createTransparentButton("Anti-Fling: OFF", Color3.fromRGB(60, 100, 180), panel5)
-local antiVoidBtn = createTransparentButton("Anti Void: OFF", Color3.fromRGB(120,200,120), panel5)
-local antiAfkBtn = createTransparentButton("Anti AFK: OFF", Color3.fromRGB(120,180,255), panel5)
+local antiFlingBtn = createTransparentButton("Anti-Fling: OFF", Color3.fromRGB(60, 100, 180), panel6)
+local antiVoidBtn = createTransparentButton("Anti Void: OFF", Color3.fromRGB(120,200,120), panel6)
+local antiAfkBtn = createTransparentButton("Anti AFK: OFF", Color3.fromRGB(120,180,255), panel6)
 local antiAfkEnabled = false
 
 antiAfkBtn.MouseButton1Click:Connect(function()
@@ -1239,12 +1232,6 @@ RunService.RenderStepped:Connect(function()
     end
 
 end)
--- ─── PANEL 6: MISC ────────────────────────────────────────────────────────────
-local miscTitle = createTransparentLabel("Misc", panel6)
-miscTitle.TextColor3 = Color3.fromRGB(180, 255, 180)
-miscTitle.Font = Enum.Font.GothamBold
-miscTitle.TextSize = 14
-
 
 -- ─── PANEL 7: SERVER ──────────────────────────────────────────────────────────
 local serverTitle = createTransparentLabel("Server", panel7)
