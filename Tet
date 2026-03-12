@@ -1366,7 +1366,7 @@ feKBBtn.MouseButton1Click:Connect(function()
 end)
 
 -- ─── FLOAT BUTTON HELPER ──────────────────────────────────────────────────────
--- Tạo nút nổi có thể kéo, không bị joystick ảnh hưởng
+-- Trả về {btn, cleanup} — gọi cleanup() khi muốn destroy để disconnect hết connection
 local function makeFloatBtn(labelText, bgColor, strokeColor, defaultPos, onTap)
     local btn = Instance.new("TextButton")
     btn.Size = UDim2.new(0, 75, 0, 75)
@@ -1381,13 +1381,11 @@ local function makeFloatBtn(labelText, bgColor, strokeColor, defaultPos, onTap)
     btn.Active = true
     btn.ZIndex = 20
     btn.Parent = gui
-    local corner = Instance.new("UICorner", btn)
-    corner.CornerRadius = UDim.new(0, 12)
+    Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 12)
     local stroke = Instance.new("UIStroke", btn)
     stroke.Color = strokeColor
     stroke.Thickness = 2
 
-    -- Drag: track input object cụ thể để tránh joystick
     local fDragging = false
     local fMoved = false
     local fDragInput = nil
@@ -1411,21 +1409,22 @@ local function makeFloatBtn(labelText, bgColor, strokeColor, defaultPos, onTap)
         end
     end)
 
-    UserInputService.InputChanged:Connect(function(input)
-        -- Chỉ xử lý đúng input đã bắt đầu drag, bỏ qua mọi input khác (joystick)
-        if fDragging and input == fDragInput
-            and (input.UserInputType == Enum.UserInputType.MouseMovement
-                or input.UserInputType == Enum.UserInputType.Touch) then
-            local delta = input.Position - fDragStart
-            if delta.Magnitude > 6 then fMoved = true end
-            btn.Position = UDim2.new(
-                fDragPos.X.Scale, fDragPos.X.Offset + delta.X,
-                fDragPos.Y.Scale, fDragPos.Y.Offset + delta.Y
-            )
-        end
+    -- Lưu connection để disconnect khi cleanup
+    local connChanged = UserInputService.InputChanged:Connect(function(input)
+        if not fDragging or input ~= fDragInput then return end
+        if input.UserInputType ~= Enum.UserInputType.MouseMovement
+            and input.UserInputType ~= Enum.UserInputType.Touch then return end
+        -- Guard: btn đã bị destroy thì thoát
+        if not btn or not btn.Parent then return end
+        local delta = input.Position - fDragStart
+        if delta.Magnitude > 6 then fMoved = true end
+        btn.Position = UDim2.new(
+            fDragPos.X.Scale, fDragPos.X.Offset + delta.X,
+            fDragPos.Y.Scale, fDragPos.Y.Offset + delta.Y
+        )
     end)
 
-    UserInputService.InputEnded:Connect(function(input)
+    local connEnded = UserInputService.InputEnded:Connect(function(input)
         if input == fDragInput then
             fDragging = false
             fDragInput = nil
@@ -1433,16 +1432,26 @@ local function makeFloatBtn(labelText, bgColor, strokeColor, defaultPos, onTap)
     end)
 
     btn.MouseButton1Click:Connect(function()
-        if fMoved then fMoved = false return end
+        if fMoved then
+            fMoved = false
+            return
+        end
         onTap()
     end)
 
-    return btn
+    -- cleanup: disconnect + destroy
+    local function cleanup()
+        pcall(function() connChanged:Disconnect() end)
+        pcall(function() connEnded:Disconnect() end)
+        pcall(function() btn:Destroy() end)
+    end
+
+    return cleanup
 end
 
 -- ─── AURA FLOAT TOGGLE ────────────────────────────────────────────────────────
 local auraFloatEnabled = false
-local auraFloatBtn = nil
+local auraFloatCleanup = nil
 
 local feAuraFloatToggle = createTransparentButton("Aura Float: OFF", Color3.fromRGB(70, 70, 70), panel8)
 feAuraFloatToggle.MouseButton1Click:Connect(function()
@@ -1450,7 +1459,7 @@ feAuraFloatToggle.MouseButton1Click:Connect(function()
     if auraFloatEnabled then
         feAuraFloatToggle.Text = "Aura Float: ON"
         feAuraFloatToggle.BackgroundColor3 = Color3.fromRGB(180, 20, 20)
-        auraFloatBtn = makeFloatBtn(
+        auraFloatCleanup = makeFloatBtn(
             "Aura",
             Color3.fromRGB(200, 25, 25),
             Color3.fromRGB(255, 100, 100),
@@ -1460,7 +1469,7 @@ feAuraFloatToggle.MouseButton1Click:Connect(function()
     else
         feAuraFloatToggle.Text = "Aura Float: OFF"
         feAuraFloatToggle.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
-        if auraFloatBtn then auraFloatBtn:Destroy(); auraFloatBtn = nil end
+        if auraFloatCleanup then auraFloatCleanup(); auraFloatCleanup = nil end
     end
 end)
 
@@ -1475,7 +1484,7 @@ end)
 
 -- ─── DROP FLOAT TOGGLE ────────────────────────────────────────────────────────
 local dropFloatEnabled = false
-local dropFloatBtn = nil
+local dropFloatCleanup = nil
 
 local feDropFloatToggle = createTransparentButton("Drop Float: OFF", Color3.fromRGB(70, 70, 70), panel8)
 feDropFloatToggle.MouseButton1Click:Connect(function()
@@ -1483,7 +1492,7 @@ feDropFloatToggle.MouseButton1Click:Connect(function()
     if dropFloatEnabled then
         feDropFloatToggle.Text = "Drop Float: ON"
         feDropFloatToggle.BackgroundColor3 = Color3.fromRGB(0, 110, 220)
-        dropFloatBtn = makeFloatBtn(
+        dropFloatCleanup = makeFloatBtn(
             "Drop\nTool",
             Color3.fromRGB(0, 110, 220),
             Color3.fromRGB(100, 180, 255),
@@ -1498,7 +1507,7 @@ feDropFloatToggle.MouseButton1Click:Connect(function()
     else
         feDropFloatToggle.Text = "Drop Float: OFF"
         feDropFloatToggle.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
-        if dropFloatBtn then dropFloatBtn:Destroy(); dropFloatBtn = nil end
+        if dropFloatCleanup then dropFloatCleanup(); dropFloatCleanup = nil end
     end
 end)
 
