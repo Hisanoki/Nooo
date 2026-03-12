@@ -1268,15 +1268,44 @@ jobIdInput.TextColor3 = Color3.new(1,1,1)
 
 local joinJobBtn = createTransparentButton("Join", Color3.fromRGB(120,200,255), panel7)
 local copyJobBtn = createTransparentButton("Copy JobId", Color3.fromRGB(255,200,120), panel7)
--- ─── PANEL 8: Tool ──────────────────────────────────────────────────────────
-local feTitle = createTransparentLabel("Fe Tool", panel8)
-feTitle.TextColor3 = Color3.fromRGB(255,255,255)
-feTitle.Font = Enum.Font.GothamBold
-feTitle.TextSize = 14
 
--- Tool Aura Button
-local feAuraBtn = createTransparentButton("Tool Aura", Color3.fromRGB(200,25,25), panel8)
-feAuraBtn.MouseButton1Click:Connect(function()
+-- ─── PANEL 8: Tool ──────────────────────────────────────────────────────────
+createTransparentLabel("── Tool Aura ──", panel8)
+
+local AuraBtn8 = createTransparentButton("Tool Aura", Color3.fromRGB(200, 25, 25), panel8)
+
+-- Keybind row
+local auraKey8 = Enum.KeyCode.E
+local auraListening8 = false
+local kbRow8 = Instance.new("Frame")
+kbRow8.BackgroundTransparency = 1
+kbRow8.Size = UDim2.new(1, 0, 0, 26)
+kbRow8.Parent = panel8
+local kbLayout8 = Instance.new("UIListLayout", kbRow8)
+kbLayout8.FillDirection = Enum.FillDirection.Horizontal
+kbLayout8.VerticalAlignment = Enum.VerticalAlignment.Center
+kbLayout8.Padding = UDim.new(0, 4)
+
+local kbLabel8 = Instance.new("TextLabel", kbRow8)
+kbLabel8.BackgroundTransparency = 1
+kbLabel8.Size = UDim2.new(0, 72, 1, 0)
+kbLabel8.Text = "PC Key:"
+kbLabel8.TextColor3 = Color3.fromRGB(180,180,180)
+kbLabel8.TextScaled = true
+kbLabel8.Font = Enum.Font.Gotham
+kbLabel8.TextXAlignment = Enum.TextXAlignment.Left
+
+local kbBtn8 = Instance.new("TextButton", kbRow8)
+kbBtn8.Size = UDim2.new(0, 75, 1, 0)
+kbBtn8.BackgroundColor3 = Color3.fromRGB(40,40,40)
+kbBtn8.BorderSizePixel = 0
+kbBtn8.Text = auraKey8.Name
+kbBtn8.TextColor3 = Color3.fromRGB(255,220,80)
+kbBtn8.TextScaled = true
+kbBtn8.Font = Enum.Font.GothamBold
+Instance.new("UICorner", kbBtn8).CornerRadius = UDim.new(0,4)
+
+local function runToolAura8()
     local char = LocalPlayer.Character
     if not char then return end
     local root = char:FindFirstChild("HumanoidRootPart")
@@ -1301,39 +1330,179 @@ feAuraBtn.MouseButton1Click:Connect(function()
             if not owned then stealOne(obj) task.wait(0.04) end
         end
     end
+end
+
+AuraBtn8.MouseButton1Click:Connect(runToolAura8)
+
+kbBtn8.MouseButton1Click:Connect(function()
+    if auraListening8 then return end
+    auraListening8 = true
+    kbBtn8.Text = "..."
+    kbBtn8.TextColor3 = Color3.fromRGB(255,255,255)
+    local conn
+    conn = UserInputService.InputBegan:Connect(function(input, gpe)
+        if gpe then return end
+        if input.UserInputType == Enum.UserInputType.Keyboard then
+            auraKey8 = input.KeyCode
+            kbBtn8.Text = auraKey8.Name
+            kbBtn8.TextColor3 = Color3.fromRGB(255,220,80)
+            auraListening8 = false
+            conn:Disconnect()
+        end
+    end)
 end)
 
--- Drop Tool Button
-local feDropBtn = createTransparentButton("Drop Tool", Color3.fromRGB(0,110,220), panel8)
-feDropBtn.MouseButton1Click:Connect(function()
-    local char = LocalPlayer.Character
-    if not char then return end
-    local tool = char:FindFirstChildOfClass("Tool")
-    if tool then tool.Parent = workspace end
+UserInputService.InputBegan:Connect(function(input, gpe)
+    if gpe or auraListening8 then return end
+    if input.UserInputType == Enum.UserInputType.Keyboard and input.KeyCode == auraKey8 then
+        runToolAura8()
+    end
 end)
 
--- Equip Tool section
-local feEquipLabel = createTransparentLabel("-- Equip Tool --", panel8)
+-- Aura Float
+local auraFloat8Enabled = false
+local auraFloatBtn8, auraDragConn8 = nil, nil
 
-local feToolScroll = Instance.new("ScrollingFrame")
-feToolScroll.Size = UDim2.new(1, 0, 0, 120)
-feToolScroll.BackgroundColor3 = Color3.fromRGB(25,25,25)
-feToolScroll.BackgroundTransparency = 0.5
-feToolScroll.BorderSizePixel = 0
-feToolScroll.ScrollBarThickness = 4
-feToolScroll.CanvasSize = UDim2.new(0,0,0,0)
-feToolScroll.AutomaticCanvasSize = Enum.AutomaticSize.Y
-feToolScroll.Parent = panel8
-local feTSLayout = Instance.new("UIListLayout", feToolScroll)
-feTSLayout.Padding = UDim.new(0,3)
-local feTSPad = Instance.new("UIPadding", feToolScroll)
-feTSPad.PaddingLeft = UDim.new(0,4) feTSPad.PaddingRight = UDim.new(0,4)
-feTSPad.PaddingTop = UDim.new(0,4) feTSPad.PaddingBottom = UDim.new(0,4)
-Instance.new("UICorner", feToolScroll).CornerRadius = UDim.new(0,5)
+local function destroyAuraFloat8()
+    if auraDragConn8 then auraDragConn8:Disconnect() auraDragConn8 = nil end
+    if auraFloatBtn8 then auraFloatBtn8:Destroy() auraFloatBtn8 = nil end
+end
 
-local function feRefreshTools()
-    for _, child in pairs(feToolScroll:GetChildren()) do
-        if child:IsA("TextButton") or (child:IsA("TextLabel") and child.Name == "EmptyLabel") then child:Destroy() end
+local function createAuraFloat8()
+    destroyAuraFloat8()
+    auraFloatBtn8 = Instance.new("TextButton", gui)
+    auraFloatBtn8.Size = UDim2.new(0,80,0,80)
+    auraFloatBtn8.Position = UDim2.new(0.5,50,0.5,-40)
+    auraFloatBtn8.BackgroundColor3 = Color3.fromRGB(200,25,25)
+    auraFloatBtn8.BorderSizePixel = 0
+    auraFloatBtn8.Text = "Aura"
+    auraFloatBtn8.TextColor3 = Color3.fromRGB(255,255,255)
+    auraFloatBtn8.TextScaled = true
+    auraFloatBtn8.Font = Enum.Font.GothamBold
+    auraFloatBtn8.Active = true
+    auraFloatBtn8.ZIndex = 10
+    Instance.new("UICorner", auraFloatBtn8).CornerRadius = UDim.new(0,10)
+    local fDrag, fMoved, fStart, fPos, fInput = false, false, nil, nil, nil
+    auraFloatBtn8.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            fDrag=true fMoved=false fStart=input.Position fPos=auraFloatBtn8.Position fInput=input
+            input.Changed:Connect(function()
+                if input.UserInputState == Enum.UserInputState.End then fDrag=false fInput=nil end
+            end)
+        end
+    end)
+    auraDragConn8 = UserInputService.InputChanged:Connect(function(input)
+        if fDrag and input==fInput and (input.UserInputType==Enum.UserInputType.MouseMovement or input.UserInputType==Enum.UserInputType.Touch) then
+            local d=input.Position-fStart
+            if d.Magnitude>6 then fMoved=true end
+            auraFloatBtn8.Position=UDim2.new(fPos.X.Scale,fPos.X.Offset+d.X,fPos.Y.Scale,fPos.Y.Offset+d.Y)
+        end
+    end)
+    auraFloatBtn8.MouseButton1Click:Connect(function()
+        if fMoved then fMoved=false return end
+        runToolAura8()
+    end)
+end
+
+local AuraFloatToggle8 = createTransparentButton("Aura Float: OFF", Color3.fromRGB(70,70,70), panel8)
+AuraFloatToggle8.MouseButton1Click:Connect(function()
+    auraFloat8Enabled = not auraFloat8Enabled
+    if auraFloat8Enabled then
+        AuraFloatToggle8.Text = "Aura Float: ON"
+        AuraFloatToggle8.BackgroundColor3 = Color3.fromRGB(180,20,20)
+        createAuraFloat8()
+    else
+        AuraFloatToggle8.Text = "Aura Float: OFF"
+        AuraFloatToggle8.BackgroundColor3 = Color3.fromRGB(70,70,70)
+        destroyAuraFloat8()
+    end
+end)
+
+-- Drop Tool
+createTransparentLabel("── Drop Tool ──", panel8)
+local dropEnabled8 = false
+local dropFloatBtn8, dropDragConn8 = nil, nil
+
+local function destroyDropFloat8()
+    if dropDragConn8 then dropDragConn8:Disconnect() dropDragConn8=nil end
+    if dropFloatBtn8 then dropFloatBtn8:Destroy() dropFloatBtn8=nil end
+end
+
+local function createDropFloat8()
+    destroyDropFloat8()
+    dropFloatBtn8 = Instance.new("TextButton", gui)
+    dropFloatBtn8.Size = UDim2.new(0,80,0,80)
+    dropFloatBtn8.Position = UDim2.new(0.5,-40,0.5,-40)
+    dropFloatBtn8.BackgroundColor3 = Color3.fromRGB(0,110,255)
+    dropFloatBtn8.BorderSizePixel = 0
+    dropFloatBtn8.Text = "Drop\nTool"
+    dropFloatBtn8.TextColor3 = Color3.fromRGB(255,255,255)
+    dropFloatBtn8.TextScaled = true
+    dropFloatBtn8.Font = Enum.Font.GothamBold
+    dropFloatBtn8.Active = true
+    dropFloatBtn8.ZIndex = 10
+    Instance.new("UICorner", dropFloatBtn8).CornerRadius = UDim.new(0,10)
+    local fDrag, fMoved, fStart, fPos = false, false, nil, nil
+    dropFloatBtn8.InputBegan:Connect(function(input)
+        if input.UserInputType==Enum.UserInputType.MouseButton1 or input.UserInputType==Enum.UserInputType.Touch then
+            fDrag=true fMoved=false fStart=input.Position fPos=dropFloatBtn8.Position
+        end
+    end)
+    dropDragConn8 = UserInputService.InputChanged:Connect(function(input)
+        if fDrag and (input.UserInputType==Enum.UserInputType.MouseMovement or input.UserInputType==Enum.UserInputType.Touch) then
+            local d=input.Position-fStart
+            if d.Magnitude>6 then fMoved=true end
+            dropFloatBtn8.Position=UDim2.new(fPos.X.Scale,fPos.X.Offset+d.X,fPos.Y.Scale,fPos.Y.Offset+d.Y)
+        end
+    end)
+    UserInputService.InputEnded:Connect(function(input)
+        if input.UserInputType==Enum.UserInputType.MouseButton1 or input.UserInputType==Enum.UserInputType.Touch then fDrag=false end
+    end)
+    dropFloatBtn8.MouseButton1Click:Connect(function()
+        if fMoved then fMoved=false return end
+        local char=LocalPlayer.Character
+        if not char then return end
+        local tool=char:FindFirstChildOfClass("Tool")
+        if tool then tool.Parent=workspace end
+    end)
+end
+
+local DropToggle8 = createTransparentButton("Drop Tool: OFF", Color3.fromRGB(70,70,70), panel8)
+DropToggle8.MouseButton1Click:Connect(function()
+    dropEnabled8 = not dropEnabled8
+    if dropEnabled8 then
+        DropToggle8.Text="Drop Tool: ON"
+        DropToggle8.BackgroundColor3=Color3.fromRGB(0,110,220)
+        createDropFloat8()
+    else
+        DropToggle8.Text="Drop Tool: OFF"
+        DropToggle8.BackgroundColor3=Color3.fromRGB(70,70,70)
+        destroyDropFloat8()
+    end
+end)
+
+-- Equip Tool
+createTransparentLabel("── Equip Tool ──", panel8)
+
+local ToolScroll8 = Instance.new("ScrollingFrame", panel8)
+ToolScroll8.Size = UDim2.new(1,0,0,100)
+ToolScroll8.BackgroundColor3 = Color3.fromRGB(25,25,25)
+ToolScroll8.BackgroundTransparency = 0.5
+ToolScroll8.BorderSizePixel = 0
+ToolScroll8.ScrollBarThickness = 4
+ToolScroll8.CanvasSize = UDim2.new(0,0,0,0)
+ToolScroll8.AutomaticCanvasSize = Enum.AutomaticSize.Y
+Instance.new("UICorner", ToolScroll8).CornerRadius = UDim.new(0,5)
+local TSLayout8 = Instance.new("UIListLayout", ToolScroll8)
+TSLayout8.SortOrder = Enum.SortOrder.LayoutOrder
+TSLayout8.Padding = UDim.new(0,3)
+local TSPad8 = Instance.new("UIPadding", ToolScroll8)
+TSPad8.PaddingLeft = UDim.new(0,4) TSPad8.PaddingRight = UDim.new(0,4)
+TSPad8.PaddingTop = UDim.new(0,4) TSPad8.PaddingBottom = UDim.new(0,4)
+
+local function refreshTools8()
+    for _, child in pairs(ToolScroll8:GetChildren()) do
+        if child:IsA("TextButton") or (child:IsA("TextLabel") and child.Name=="EmptyLabel8") then child:Destroy() end
     end
     local seen, order = {}, 0
     local sources = {LocalPlayer.Backpack}
@@ -1341,25 +1510,26 @@ local function feRefreshTools()
     for _, src in pairs(sources) do
         for _, obj in pairs(src:GetChildren()) do
             if obj:IsA("Tool") and not seen[obj.Name] then
-                seen[obj.Name] = true; order = order + 1
-                local tName = obj.Name
-                local tBtn = Instance.new("TextButton", feToolScroll)
-                tBtn.Size = UDim2.new(1,0,0,28)
-                tBtn.BackgroundColor3 = Color3.fromRGB(40,40,40)
-                tBtn.BorderSizePixel = 0
-                tBtn.Text = tName
-                tBtn.TextColor3 = Color3.fromRGB(220,220,220)
-                tBtn.TextScaled = true
-                tBtn.Font = Enum.Font.Gotham
-                tBtn.LayoutOrder = order
-                Instance.new("UICorner", tBtn).CornerRadius = UDim.new(0,4)
+                seen[obj.Name]=true order=order+1
+                local tName=obj.Name
+                local tBtn=Instance.new("TextButton", ToolScroll8)
+                tBtn.Size=UDim2.new(1,0,0,28)
+                tBtn.BackgroundColor3=Color3.fromRGB(40,40,40)
+                tBtn.BackgroundTransparency=0.5
+                tBtn.BorderSizePixel=0
+                tBtn.Text=tName
+                tBtn.TextColor3=Color3.fromRGB(220,220,220)
+                tBtn.TextScaled=true
+                tBtn.Font=Enum.Font.Gotham
+                tBtn.LayoutOrder=order
+                Instance.new("UICorner", tBtn).CornerRadius=UDim.new(0,4)
                 tBtn.MouseButton1Click:Connect(function()
-                    local char = LocalPlayer.Character
+                    local char=LocalPlayer.Character
                     if not char then return end
                     for _, s in pairs({LocalPlayer.Backpack, char}) do
                         for _, item in pairs(s:GetChildren()) do
-                            if item:IsA("Tool") and item.Name == tName then
-                                pcall(function() item.Parent = char end)
+                            if item:IsA("Tool") and item.Name==tName then
+                                pcall(function() item.Parent=char end)
                             end
                         end
                     end
@@ -1367,20 +1537,24 @@ local function feRefreshTools()
             end
         end
     end
-    if order == 0 then
-        local empty = Instance.new("TextLabel", feToolScroll)
-        empty.Name = "EmptyLabel"; empty.Size = UDim2.new(1,0,0,28)
-        empty.BackgroundTransparency = 1; empty.Text = "Backpack trong"
-        empty.TextColor3 = Color3.fromRGB(100,100,100)
-        empty.TextScaled = true; empty.Font = Enum.Font.Gotham
+    if order==0 then
+        local empty=Instance.new("TextLabel", ToolScroll8)
+        empty.Name="EmptyLabel8"
+        empty.Size=UDim2.new(1,0,0,28)
+        empty.BackgroundTransparency=1
+        empty.Text="Backpack trống"
+        empty.TextColor3=Color3.fromRGB(100,100,100)
+        empty.TextScaled=true
+        empty.Font=Enum.Font.Gotham
     end
 end
 
-local feRefreshBtn = createTransparentButton("Refresh", Color3.fromRGB(30,110,30), panel8)
-feRefreshBtn.MouseButton1Click:Connect(feRefreshTools)
-LocalPlayer.Backpack.ChildAdded:Connect(function() task.wait(0.1) feRefreshTools() end)
-LocalPlayer.Backpack.ChildRemoved:Connect(function() task.wait(0.1) feRefreshTools() end)
-feRefreshTools()
+local RefreshBtn8 = createTransparentButton("Refresh", Color3.fromRGB(30,110,30), panel8)
+RefreshBtn8.MouseButton1Click:Connect(refreshTools8)
+
+LocalPlayer.Backpack.ChildAdded:Connect(function() task.wait(0.1) refreshTools8() end)
+LocalPlayer.Backpack.ChildRemoved:Connect(function() task.wait(0.1) refreshTools8() end)
+refreshTools8()
 
 -- ─── TAB SWITCH ───────────────────────────────────────────────────────────────
 
