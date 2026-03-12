@@ -1747,7 +1747,14 @@ rejoinBtn.MouseButton1Click:Connect(function()
     local TeleportService = game:GetService("TeleportService")
     local Players = game:GetService("Players")
 
-    TeleportService:Teleport(game.PlaceId, Players.LocalPlayer)
+    -- chạy lại script sau khi rejoin
+    queue_on_teleport('loadstring(game:HttpGet("https://raw.githubusercontent.com/Hisanoki/Nooo/main/Hitbox%20head"))()')
+
+    TeleportService:TeleportToPlaceInstance(
+        game.PlaceId,
+        game.JobId,
+        Players.LocalPlayer
+    )
 
 end)
 serverHopBtn.MouseButton1Click:Connect(function()
