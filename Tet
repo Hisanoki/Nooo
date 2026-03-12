@@ -2100,11 +2100,11 @@ FEOpenBtn.MouseButton1Click:Connect(function()
     if not showing then
         mainFrame.Visible = false
         toggleUIButton.Text = "Open Menu"
-        FEOpenBtn.Text = "Close FE Tool"
+        FEOpenBtn.Text = "🧠 Close FE Tool"
         FEOpenBtn.BackgroundColor3 = Color3.fromRGB(160, 40, 40)
     else
         mainFrame.Visible = false
-        FEOpenBtn.Text = "Open FE Tool"
+        FEOpenBtn.Text = "🧠 Open FE Tool"
         FEOpenBtn.BackgroundColor3 = Color3.fromRGB(0, 100, 200)
     end
 end)
