@@ -5,10 +5,16 @@ local Camera = workspace.CurrentCamera
 
 local SpectatingPlayer = nil
 local spectating = false
+local specConnection = nil
 function SpectatePlayer(player)
 
     SpectatingPlayer = player
     spectating = true
+
+    if specConnection then
+        specConnection:Disconnect()
+        specConnection = nil
+    end
 
     local function setCamera(character)
         if not spectating then return end
@@ -20,7 +26,7 @@ function SpectatePlayer(player)
         setCamera(player.Character)
     end
 
-    player.CharacterAdded:Connect(function(char)
+    specConnection = player.CharacterAdded:Connect(function(char)
         if spectating then
             setCamera(char)
         end
@@ -32,6 +38,11 @@ function StopSpectate()
 
     spectating = false
     SpectatingPlayer = nil
+
+    if specConnection then
+        specConnection:Disconnect()
+        specConnection = nil
+    end
 
     if selectedSpecButton then
         selectedSpecButton.BackgroundColor3 = Color3.fromRGB(70,70,70)
@@ -931,10 +942,10 @@ local tabColors = {
     Color3.fromRGB(25,25,25)  -- Troll
 }
 
-local tabNames = {"Hitbox","Universal","ESP","Teleport","Troll"}
+local tabNames = {"Player","ESP","Teleport","Troll"}
 
 local tabBtns = {}
-for i = 1, 5 do
+for i = 1, 4 do
     local btn = Instance.new("TextButton")
     btn.Size = UDim2.new(1, 0, 0, 30)
     btn.BackgroundColor3 = tabColors[i]
@@ -982,23 +993,23 @@ local function makeScrollPanel()
     return panel, layout
 end
 
-local panel1, layout1 = makeScrollPanel() -- Hitbox
-local panel2, layout2 = makeScrollPanel() -- Universal
+
+local panel2, layout2 = makeScrollPanel() -- Player
 local panel3, layout3 = makeScrollPanel() -- ESP
 local panel4, layout4 = makeScrollPanel() -- Teleport
 local panel5, layout5 = makeScrollPanel() -- Troll
 
 -- ─── PANEL 1: HEAD HITBOX ─────────────────────────────────────────────────────
 
-local leftTitle = createTransparentLabel("Head Hitbox", panel1)
+local leftTitle = createTransparentLabel("Head Hitbox", panel2)
 leftTitle.TextColor3 = Color3.fromRGB(255,150,150)
 leftTitle.Font = Enum.Font.GothamBold
 leftTitle.TextSize = 14
 
-sizeInput = createTransparentInput("Size (e.g. 4)", tostring(DEFAULT_HITBOX_SIZE), panel1)
-local autoToggle = createTransparentButton("Auto Hitbox: OFF", Color3.fromRGB(180, 50, 50), panel1)
-local removeAllBtn = createTransparentButton("Remove All Hitboxes", Color3.fromRGB(180, 50, 50), panel1)
-local statusLabel = createTransparentLabel("Processing: 0 Players", panel1)
+sizeInput = createTransparentInput("Size (e.g. 15)", tostring(DEFAULT_HITBOX_SIZE), panel2)
+local autoToggle = createTransparentButton("Auto Hitbox: OFF", Color3.fromRGB(180, 50, 50), panel2)
+local removeAllBtn = createTransparentButton("Remove All Hitboxes", Color3.fromRGB(180, 50, 50), panel2)
+local statusLabel = createTransparentLabel("Processing: 0 Players", panel2)
 createTransparentLabel("Spectate Player", panel2)
 
 local selectedSpecButton = nil
@@ -1057,8 +1068,18 @@ Players.PlayerRemoving:Connect(refreshSpecList)
 local stopSpec = createTransparentButton("Stop Spectate", Color3.fromRGB(180,50,50), panel2)
 
 stopSpec.MouseButton1Click:Connect(function()
+
     StopSpectate()
+
+    for _,v in pairs(specContainer:GetChildren()) do
+        if v:IsA("TextButton") then
+            v.BackgroundColor3 = Color3.fromRGB(40,40,40)
+        end
+    end
+
 end)
+
+
 local loopspeedLabel = createTransparentLabel("Loopspeed", panel2)
 local loopspeedInput = createTransparentInput("Speed (e.g. 16)", "16", panel2)
 local loopspeedToggle = createTransparentButton("Loopspeed: OFF", Color3.fromRGB(80, 80, 200), panel2)
@@ -1218,7 +1239,7 @@ RunService.RenderStepped:Connect(function()
 end)
 -- ─── TAB SWITCH ───────────────────────────────────────────────────────────────
 
-local panels = {panel1, panel2, panel3, panel4, panel5}
+local panels = {panel2, panel3, panel4, panel5}
 
 local function switchTab(idx)
     for i, p in ipairs(panels) do
