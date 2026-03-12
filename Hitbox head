@@ -1409,7 +1409,7 @@ local copyJobBtn = createTransparentButton("Copy JobId", Color3.fromRGB(255,200,
     feSliderBg.BackgroundTransparency = 0.4
     feSliderBg.BorderSizePixel = 0
     feSliderBg.Parent = panel8
-    Instance.new("UICorner").CornerRadius = UDim.new(0, 6); Instance.new("UICorner").Parent = feSliderBg
+    local fsc = Instance.new("UICorner"); fsc.CornerRadius = UDim.new(0, 6); fsc.Parent = feSliderBg
 
     local feTrack = Instance.new("Frame")
     feTrack.Size = UDim2.new(1, -24, 0, 6)
