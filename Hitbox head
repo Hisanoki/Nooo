@@ -935,17 +935,18 @@ sidePad.Parent = sideBar
 
 -- Tab button factory
 local tabColors = {
-    Color3.fromRGB(25,25,25), -- Hitbox
-    Color3.fromRGB(25,25,25), -- Universal
+    Color3.fromRGB(25,25,25), -- Player
     Color3.fromRGB(25,25,25), -- ESP
     Color3.fromRGB(25,25,25), -- Teleport
-    Color3.fromRGB(25,25,25)  -- Troll
+    Color3.fromRGB(25,25,25), -- Troll
+    Color3.fromRGB(25,25,25), -- Misc   
+    Color3.fromRGB(25,25,25)  -- Sever
 }
 
-local tabNames = {"Player","ESP","Teleport","Troll"}
+local tabNames = {"Player","ESP","Teleport","Troll","Misc","Server"}
 
 local tabBtns = {}
-for i = 1, 4 do
+for i = 1, 6 do
     local btn = Instance.new("TextButton")
     btn.Size = UDim2.new(1, 0, 0, 30)
     btn.BackgroundColor3 = tabColors[i]
@@ -960,7 +961,6 @@ for i = 1, 4 do
     local bc = Instance.new("UICorner"); bc.CornerRadius = UDim.new(0,6); bc.Parent = btn
     tabBtns[i] = btn
 end
-
 -- ─── CONTENT PANELS ───────────────────────────────────────────────────────────
 
 local PANEL_W = 320 - TAB_W - 8
@@ -998,6 +998,8 @@ local panel2, layout2 = makeScrollPanel() -- Player
 local panel3, layout3 = makeScrollPanel() -- ESP
 local panel4, layout4 = makeScrollPanel() -- Teleport
 local panel5, layout5 = makeScrollPanel() -- Troll
+local panel6, layout6 = makeScrollPanel() -- Misc   
+local panel7, layout7 = makeScrollPanel() -- Server 
 
 -- ─── PANEL 1: HEAD HITBOX ─────────────────────────────────────────────────────
 
@@ -1237,9 +1239,22 @@ RunService.RenderStepped:Connect(function()
     end
 
 end)
+-- ─── PANEL 6: MISC ────────────────────────────────────────────────────────────
+local miscTitle = createTransparentLabel("Misc", panel6)
+miscTitle.TextColor3 = Color3.fromRGB(180, 255, 180)
+miscTitle.Font = Enum.Font.GothamBold
+miscTitle.TextSize = 14
+
+
+-- ─── PANEL 7: SERVER ──────────────────────────────────────────────────────────
+local serverTitle = createTransparentLabel("Server", panel7)
+serverTitle.TextColor3 = Color3.fromRGB(255, 220, 100)
+serverTitle.Font = Enum.Font.GothamBold
+serverTitle.TextSize = 14
+
 -- ─── TAB SWITCH ───────────────────────────────────────────────────────────────
 
-local panels = {panel2, panel3, panel4, panel5}
+local panels = {panel2, panel3, panel4, panel5, panel6, panel7}
 
 local function switchTab(idx)
     for i, p in ipairs(panels) do
