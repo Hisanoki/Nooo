@@ -1275,7 +1275,7 @@ createTransparentLabel("── Tool Aura ──", panel8)
 local AuraBtn8 = createTransparentButton("Tool Aura", Color3.fromRGB(200, 25, 25), panel8)
 
 -- Keybind row
-local auraKey8 = Enum.KeyCode.E
+local auraKey8 = Enum.KeyCode.U
 local auraListening8 = false
 local kbRow8 = Instance.new("Frame")
 kbRow8.BackgroundTransparency = 1
@@ -1341,8 +1341,15 @@ kbBtn8.MouseButton1Click:Connect(function()
     kbBtn8.TextColor3 = Color3.fromRGB(255,255,255)
     local conn
     conn = UserInputService.InputBegan:Connect(function(input, gpe)
-        if gpe then return end
         if input.UserInputType == Enum.UserInputType.Keyboard then
+            if input.KeyCode == Enum.KeyCode.Escape then
+                -- Hủy chọn key
+                kbBtn8.Text = auraKey8.Name
+                kbBtn8.TextColor3 = Color3.fromRGB(255,220,80)
+                auraListening8 = false
+                conn:Disconnect()
+                return
+            end
             auraKey8 = input.KeyCode
             kbBtn8.Text = auraKey8.Name
             kbBtn8.TextColor3 = Color3.fromRGB(255,220,80)
@@ -1350,7 +1357,6 @@ kbBtn8.MouseButton1Click:Connect(function()
             conn:Disconnect()
         end
     end)
-end)
 
 UserInputService.InputBegan:Connect(function(input, gpe)
     if gpe or auraListening8 then return end
