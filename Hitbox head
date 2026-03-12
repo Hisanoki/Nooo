@@ -1188,8 +1188,12 @@ miscTitle.TextSize = 14
 local antiFlingBtn = createTransparentButton("Anti-Fling: OFF", Color3.fromRGB(60, 100, 180), panel6)
 local antiVoidBtn = createTransparentButton("Anti Void: OFF", Color3.fromRGB(120,200,120), panel6)
 local antiAfkBtn = createTransparentButton("Anti AFK: OFF", Color3.fromRGB(120,180,255), panel6)
+local loopFBBtn = createTransparentButton("LoopFullBright: OFF", Color3.fromRGB(180,50,50), panel6)
+local noFogBtn = createTransparentButton("No Fog", Color3.fromRGB(120,200,255), panel6)
 local antiAfkEnabled = false
 
+local loopFullBright = false
+local fbConnection = nil
 antiAfkBtn.MouseButton1Click:Connect(function()
     antiAfkEnabled = not antiAfkEnabled
     antiAfkBtn.Text = "Anti AFK: "..(antiAfkEnabled and "ON" or "OFF")
@@ -1521,7 +1525,57 @@ antiFlingBtn.MouseButton1Click:Connect(function()
         disableAntiFling()
     end
 end)
+loopFBBtn.MouseButton1Click:Connect(function()
 
+    loopFullBright = not loopFullBright
+
+    if loopFullBright then
+        loopFBBtn.Text = "LoopFullBright: ON"
+        loopFBBtn.BackgroundColor3 = Color3.fromRGB(0,200,0)
+
+        if fbConnection then
+            fbConnection:Disconnect()
+        end
+
+        fbConnection = RunService.RenderStepped:Connect(function()
+
+            local lighting = game:GetService("Lighting")
+
+            lighting.Brightness = 2
+            lighting.ClockTime = 14
+            lighting.FogEnd = 100000
+            lighting.GlobalShadows = false
+            lighting.OutdoorAmbient = Color3.fromRGB(128,128,128)
+
+        end)
+
+    else
+        loopFBBtn.Text = "LoopFullBright: OFF"
+        loopFBBtn.BackgroundColor3 = Color3.fromRGB(180,50,50)
+
+        if fbConnection then
+            fbConnection:Disconnect()
+            fbConnection = nil
+        end
+
+    end
+
+end)
+noFogBtn.MouseButton1Click:Connect(function()
+
+    local lighting = game:GetService("Lighting")
+
+    lighting.FogStart = 0
+    lighting.FogEnd = 1000000
+
+    -- xóa atmosphere nếu có
+    for _,v in pairs(lighting:GetChildren()) do
+        if v:IsA("Atmosphere") then
+            v:Destroy()
+        end
+    end
+
+end)
 -- ─── LOOPSPEED ────────────────────────────────────────────────────────────────
 
 local loopspeedEnabled = false
