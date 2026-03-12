@@ -1344,11 +1344,13 @@ feToolScroll.BorderSizePixel = 0
 feToolScroll.ScrollBarThickness = 4
 feToolScroll.ScrollBarImageColor3 = Color3.fromRGB(180,20,20)
 feToolScroll.CanvasSize = UDim2.new(0,0,0,0)
-feToolScroll.AutomaticCanvasSize = Enum.AutomaticSize.Y
 Instance.new("UICorner", feToolScroll).CornerRadius = UDim.new(0, 5)
 local feTSLayout = Instance.new("UIListLayout", feToolScroll)
 feTSLayout.SortOrder = Enum.SortOrder.LayoutOrder
 feTSLayout.Padding = UDim.new(0, 3)
+feTSLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+    feToolScroll.CanvasSize = UDim2.new(0, 0, 0, feTSLayout.AbsoluteContentSize.Y + 10)
+end)
 local feTSPad = Instance.new("UIPadding", feToolScroll)
 feTSPad.PaddingLeft = UDim.new(0, 4)
 feTSPad.PaddingRight = UDim.new(0, 4)
