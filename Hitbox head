@@ -1251,7 +1251,8 @@ local serverTitle = createTransparentLabel("Server", panel7)
 serverTitle.TextColor3 = Color3.fromRGB(255, 220, 100)
 serverTitle.Font = Enum.Font.GothamBold
 serverTitle.TextSize = 14
-
+local rejoinBtn = createTransparentButton("Rejoin", Color3.fromRGB(120,200,255), panel7)
+local serverHopBtn = createTransparentButton("Server Hop", Color3.fromRGB(120,255,120), panel7)
 -- ─── TAB SWITCH ───────────────────────────────────────────────────────────────
 
 local panels = {panel2, panel3, panel4, panel5, panel6, panel7}
@@ -1741,7 +1742,38 @@ flyToggle.MouseButton1Click:Connect(function()
         startFly()
     end
 end)
+rejoinBtn.MouseButton1Click:Connect(function()
 
+    local TeleportService = game:GetService("TeleportService")
+    local Players = game:GetService("Players")
+
+    TeleportService:Teleport(game.PlaceId, Players.LocalPlayer)
+
+end)
+serverHopBtn.MouseButton1Click:Connect(function()
+
+    local TeleportService = game:GetService("TeleportService")
+    local HttpService = game:GetService("HttpService")
+    local Players = game:GetService("Players")
+
+    -- tự chạy lại script sau khi hop
+    queue_on_teleport('loadstring(game:HttpGet("https://raw.githubusercontent.com/Hisanoki/Nooo/refs/heads/main/Hitbox%20head"))()')
+
+    local PlaceID = game.PlaceId
+    local JobID = game.JobId
+
+    local servers = HttpService:JSONDecode(game:HttpGet(
+        "https://games.roblox.com/v1/games/"..PlaceID.."/servers/Public?sortOrder=Asc&limit=100"
+    ))
+
+    for _,v in pairs(servers.data) do
+        if v.playing < v.maxPlayers and v.id ~= JobID then
+            TeleportService:TeleportToPlaceInstance(PlaceID, v.id, Players.LocalPlayer)
+            break
+        end
+    end
+
+end)
 -- ─── TP BUTTON EVENTS ─────────────────────────────────────────────────────────
 
 autoTPBtn.MouseButton1Click:Connect(function()
