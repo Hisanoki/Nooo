@@ -127,8 +127,8 @@ local feAuraFloatBtn, feAuraDragConn = nil, nil
 local feDropEnabled = false
 local feDropFloatBtn, feDropDragConn = nil, nil
 
-getgenv().OldPos = nil
-getgenv().FPDH = workspace.FallenPartsDestroyHeight
+_G.OldPos = nil
+_G.FPDH = workspace.FallenPartsDestroyHeight
 
 -- ─── HELPERS ──────────────────────────────────────────────────────────────────
 
@@ -696,7 +696,7 @@ local function SkidFling(TargetPlayer)
 
     if Character and Humanoid and RootPart then
         if RootPart.Velocity.Magnitude < 50 then
-            getgenv().OldPos = RootPart.CFrame
+            _G.OldPos = RootPart.CFrame
         end
         if THumanoid and THumanoid.Sit then
             return FlingMessage("Error", TargetPlayer.Name .. " is sitting", 2)
@@ -780,10 +780,10 @@ local function SkidFling(TargetPlayer)
         Humanoid:SetStateEnabled(Enum.HumanoidStateType.Seated, true)
         workspace.CurrentCamera.CameraSubject = Humanoid
 
-        if getgenv().OldPos then
+        if _G.OldPos then
             repeat
-                RootPart.CFrame = getgenv().OldPos * CFrame.new(0, .5, 0)
-                Character:SetPrimaryPartCFrame(getgenv().OldPos * CFrame.new(0, .5, 0))
+                RootPart.CFrame = _G.OldPos * CFrame.new(0, .5, 0)
+                Character:SetPrimaryPartCFrame(_G.OldPos * CFrame.new(0, .5, 0))
                 Humanoid:ChangeState("GettingUp")
                 for _, part in pairs(Character:GetChildren()) do
                     if part:IsA("BasePart") then
@@ -791,8 +791,8 @@ local function SkidFling(TargetPlayer)
                     end
                 end
                 task.wait()
-            until (RootPart.Position - getgenv().OldPos.p).Magnitude < 25
-            workspace.FallenPartsDestroyHeight = getgenv().FPDH
+            until (RootPart.Position - _G.OldPos.p).Magnitude < 25
+            workspace.FallenPartsDestroyHeight = _G.FPDH
         end
     else
         return FlingMessage("Error", "Your character is not ready", 2)
