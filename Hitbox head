@@ -828,7 +828,7 @@ end
 -- ─── GUI SETUP ────────────────────────────────────────────────────────────────
 
 local gui = Instance.new("ScreenGui")
-gui.Name = "Mobile_ESP_GUI_Fixed"
+gui.Name = "Gui"
 gui.ResetOnSpawn = false
 gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 if LocalPlayer:FindFirstChild("PlayerGui") then
