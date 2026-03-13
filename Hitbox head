@@ -1469,31 +1469,29 @@ local feKBBtn
 do
     local feKBRow = Instance.new("Frame")
     feKBRow.BackgroundTransparency = 1
-    feKBRow.Size = UDim2.new(1, 0, 0, 28)
+    feKBRow.Size = UDim2.new(1, 0, 0, 42)
     feKBRow.Parent = panel8
-    local feKBLayout = Instance.new("UIListLayout", feKBRow)
-    feKBLayout.FillDirection = Enum.FillDirection.Horizontal
-    feKBLayout.VerticalAlignment = Enum.VerticalAlignment.Center
-    feKBLayout.Padding = UDim.new(0, 4)
-    local feKBLabel = Instance.new("TextLabel", feKBRow)
-    feKBLabel.BackgroundTransparency = 1
-    feKBLabel.Size = UDim2.new(0, 60, 1, 0)
-    feKBLabel.Text = "PC Key:"
-    feKBLabel.TextColor3 = Color3.fromRGB(180, 180, 180)
-    feKBLabel.TextScaled = true
-    feKBLabel.Font = Enum.Font.Gotham
-    feKBLabel.TextXAlignment = Enum.TextXAlignment.Left
-    feKBBtn = Instance.new("TextButton", feKBRow)
-feKBBtn.Size = UDim2.new(0, 80, 1, 0)
-feKBBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
-feKBBtn.BackgroundTransparency = 0.5
-feKBBtn.BorderSizePixel = 0
-feKBBtn.Text = auraKey.Name
-feKBBtn.TextColor3 = Color3.fromRGB(255, 220, 80)
-feKBBtn.TextScaled = true
+
+    feKBBtn = Instance.new("TextButton")
+    feKBBtn.Parent = feKBRow
+    feKBBtn.Size = UDim2.new(1, 0, 1, 0)
+    feKBBtn.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
+    feKBBtn.BackgroundTransparency = 0.2
+    feKBBtn.BorderSizePixel = 0
+    feKBBtn.Text = auraKey.Name
+feKBBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+feKBBtn.TextScaled = false
+feKBBtn.TextSize = 18
 feKBBtn.Font = Enum.Font.GothamBold
-_mkCorner(4, feKBBtn)
-end -- feKBRow do
+    feKBBtn.AutoButtonColor = true
+    _mkCorner(6, feKBBtn)
+
+    local stroke = Instance.new("UIStroke")
+    stroke.Parent = feKBBtn
+    stroke.Color = Color3.fromRGB(60, 60, 60)
+    stroke.Thickness = 1
+    stroke.Transparency = 0.35
+end
 
 feKBBtn.MouseButton1Click:Connect(function()
     if auraListening then return end
@@ -1664,11 +1662,11 @@ do
 end
 
 local feToolScroll = Instance.new("ScrollingFrame")
-feToolScroll.Size = UDim2.new(1, 0, 0, 130)
-feToolScroll.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
-feToolScroll.BackgroundTransparency = 0.5
+feToolScroll.Size = UDim2.new(1, 0, 0, 95) -- nhỏ hơn
+feToolScroll.BackgroundColor3 = Color3.fromRGB(22, 22, 22)
+feToolScroll.BackgroundTransparency = 0.35
 feToolScroll.BorderSizePixel = 0
-feToolScroll.ScrollBarThickness = 4
+feToolScroll.ScrollBarThickness = 3 -- mỏng hơn
 feToolScroll.ScrollBarImageColor3 = Color3.fromRGB(200, 25, 25)
 feToolScroll.CanvasSize = UDim2.new(0, 0, 0, 0)
 feToolScroll.AutomaticCanvasSize = Enum.AutomaticSize.Y
@@ -1676,12 +1674,12 @@ feToolScroll.Parent = panel8
 do
     local feTSLayout = Instance.new("UIListLayout", feToolScroll)
     feTSLayout.SortOrder = Enum.SortOrder.LayoutOrder
-    feTSLayout.Padding = UDim.new(0, 3)
+    feTSLayout.Padding = UDim.new(0, 2) -- sát hơn
     local feTSPad = Instance.new("UIPadding", feToolScroll)
-    feTSPad.PaddingLeft = UDim.new(0, 4)
-    feTSPad.PaddingRight = UDim.new(0, 4)
-    feTSPad.PaddingTop = UDim.new(0, 4)
-    feTSPad.PaddingBottom = UDim.new(0, 4)
+    feTSPad.PaddingLeft = UDim.new(0, 3)
+    feTSPad.PaddingRight = UDim.new(0, 3)
+    feTSPad.PaddingTop = UDim.new(0, 3)
+    feTSPad.PaddingBottom = UDim.new(0, 3)
     _mkCorner(5, feToolScroll)
 end
 
@@ -1700,18 +1698,24 @@ local function refreshFeTools()
                 seen[obj.Name] = true
                 order = order + 1
                 local tName = obj.Name
-                local tBtn = Instance.new("TextButton", feToolScroll)
-                tBtn.Size = UDim2.new(1, 0, 0, 28)
-                tBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
-                tBtn.BackgroundTransparency = 0.5
-                tBtn.BorderSizePixel = 0
-                tBtn.Text = tName
-                tBtn.TextColor3 = Color3.fromRGB(220, 220, 220)
-                tBtn.TextScaled = true
-                tBtn.Font = Enum.Font.Gotham
-                tBtn.LayoutOrder = order
-                local tc = Instance.new("UICorner", tBtn)
-                tc.CornerRadius = UDim.new(0, 4)
+             local tBtn = Instance.new("TextButton", feToolScroll)
+tBtn.Size = UDim2.new(1, 0, 0, 22) -- thấp hơn
+tBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
+tBtn.BackgroundTransparency = 0.35
+tBtn.BorderSizePixel = 0
+tBtn.Text = tName
+tBtn.TextColor3 = Color3.fromRGB(230, 230, 230)
+tBtn.TextScaled = false -- bỏ scaled để đỡ phồng chữ
+tBtn.TextSize = 11      -- chữ nhỏ gọn
+tBtn.Font = Enum.Font.GothamMedium
+tBtn.TextXAlignment = Enum.TextXAlignment.Left -- can trái gọn hơn
+tBtn.LayoutOrder = order
+local tc = Instance.new("UICorner", tBtn)
+tc.CornerRadius = UDim.new(0, 4)
+
+local pad = Instance.new("UIPadding", tBtn)
+pad.PaddingLeft = UDim.new(0, 8)
+pad.PaddingRight = UDim.new(0, 6)
                 tBtn.MouseButton1Click:Connect(function()
                     local char = LocalPlayer.Character
                     if not char then return end
@@ -1728,13 +1732,14 @@ local function refreshFeTools()
     end
     if order == 0 then
         local empty = Instance.new("TextLabel", feToolScroll)
-        empty.Name = "EmptyLabel"
-        empty.Size = UDim2.new(1, 0, 0, 28)
-        empty.BackgroundTransparency = 1
-        empty.Text = "Backpack trong"
-        empty.TextColor3 = Color3.fromRGB(100, 100, 100)
-        empty.TextScaled = true
-        empty.Font = Enum.Font.Gotham
+empty.Name = "EmptyLabel"
+empty.Size = UDim2.new(1, 0, 0, 22)
+empty.BackgroundTransparency = 1
+empty.Text = "Backpack trống"
+empty.TextColor3 = Color3.fromRGB(120, 120, 120)
+empty.TextScaled = false
+empty.TextSize = 11
+empty.Font = Enum.Font.Gotham
     end
 end
 
@@ -2539,4 +2544,4 @@ end)
 
 statusLabel.Text = "Processing: 0 Players"
 updatePlayerList()
-RefreshFlingPlayerList()
+RefreshFlingPlayerList()  
