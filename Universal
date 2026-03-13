@@ -942,14 +942,15 @@ local tabColors = {
     Color3.fromRGB(25,25,25), -- ESP
     Color3.fromRGB(25,25,25), -- Teleport
     Color3.fromRGB(25,25,25), -- Troll
-    Color3.fromRGB(25,25,25), -- Misc   
-    Color3.fromRGB(25,25,25)  -- Sever
+    Color3.fromRGB(25,25,25), -- Misc
+    Color3.fromRGB(25,25,25), -- Server
+    Color3.fromRGB(25,25,25)  -- Fetool
 }
 
-local tabNames = {"Player","ESP","Teleport","Troll","Misc","Server"}
+local tabNames = {"Player","ESP","Teleport","Troll","Misc","Server","Fetool"}
 
 local tabBtns = {}
-for i = 1, 6 do
+for i = 1, 7 do
     local btn = Instance.new("TextButton")
     btn.Size = UDim2.new(1, 0, 0, 30)
     btn.BackgroundColor3 = tabColors[i]
@@ -1003,7 +1004,7 @@ local panel4, layout4 = makeScrollPanel() -- Teleport
 local panel5, layout5 = makeScrollPanel() -- Troll
 local panel6, layout6 = makeScrollPanel() -- Misc   
 local panel7, layout7 = makeScrollPanel() -- Server 
-
+local panel8, layout8 = makeScrollPanel() -- Fetool 
 -- ─── PANEL 1: HEAD HITBOX ─────────────────────────────────────────────────────
 
 local leftTitle = createTransparentLabel("Head Hitbox", panel2)
@@ -1267,9 +1268,17 @@ jobIdInput.TextColor3 = Color3.new(1,1,1)
 local joinJobBtn = createTransparentButton("Join", Color3.fromRGB(120,200,255), panel7)
 
 local copyJobBtn = createTransparentButton("Copy JobId", Color3.fromRGB(255,200,120), panel7)
--- ─── TAB SWITCH ───────────────────────────────────────────────────────────────
+-- ─── PANEL 8: FETOOL ──────────────────────────────────────────────────────────
+local fetoolTitle = createTransparentLabel("Fetool", panel8)
+fetoolTitle.TextColor3 = Color3.fromRGB(255,255,255)
+fetoolTitle.Font = Enum.Font.GothamBold
+fetoolTitle.TextSize = 14
 
-local panels = {panel2, panel3, panel4, panel5, panel6, panel7}
+local infoLabel = createTransparentLabel("Coming soon...", panel8)
+infoLabel.TextColor3 = Color3.fromRGB(200,200,200)
+infoLabel.TextSize = 12
+-- ─── TAB SWITCH ───────────────────────────────────────────────────────────────
+local panels = {panel2, panel3, panel4, panel5, panel6, panel7, panel8} 
 
 local function switchTab(idx)
     for i, p in ipairs(panels) do
