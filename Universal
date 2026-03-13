@@ -1481,7 +1481,7 @@ do
     feKBBtn.Text = auraKey.Name
 feKBBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 feKBBtn.TextScaled = false
-feKBBtn.TextSize = 18
+feKBBtn.TextSize 10
 feKBBtn.Font = Enum.Font.GothamBold
     feKBBtn.AutoButtonColor = true
     _mkCorner(6, feKBBtn)
@@ -2114,16 +2114,14 @@ loopspeedToggle.MouseButton1Click:Connect(function() setLoopspeedEnabled(not loo
 
 -- ─── BUTTON EVENTS ────────────────────────────────────────────────────────────
 toggleUIButton.MouseButton1Click:Connect(function()
-    mainFrame.Visible = true
-    toggleUIButton.Visible = false -- ẩn nút Open Menu khi menu mở
-    if mainFrame.Visible then
-        updatePlayerList()
-    end
+    mainFrame.Parent.Visible = true -- hiện cả cụm menu
+    toggleUIButton.Visible = false
+    updatePlayerList()
 end)
 
 closeButton.MouseButton1Click:Connect(function()
-    mainFrame.Visible = false
-    toggleUIButton.Visible = true -- hiện lại nút Open Menu khi bấm X
+    mainFrame.Parent.Visible = false -- ẩn cả cụm menu
+    toggleUIButton.Visible = true
 end)
 
 
