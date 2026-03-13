@@ -568,7 +568,22 @@ local function createTransparentLabel(text, parent)
     label.Parent = parent
     return label
 end
+local function flashButton(btn)
+    if not btn then return end
 
+    local oldColor = btn.BackgroundColor3
+    local oldTransparency = btn.BackgroundTransparency
+
+    btn.BackgroundColor3 = Color3.fromRGB(50, 200, 120)
+    btn.BackgroundTransparency = 0
+
+    task.delay(0.15, function()
+        if btn and btn.Parent then
+            btn.BackgroundColor3 = oldColor
+            btn.BackgroundTransparency = oldTransparency
+        end
+    end)
+end
 -- ─── FLY SYSTEM ───────────────────────────────────────────────────────────────
 
 local function startFly()
@@ -1040,7 +1055,11 @@ end
 
 sizeInput = createTransparentInput("Size (e.g. 15)", tostring(DEFAULT_HITBOX_SIZE), panel2)
 local autoToggle = createTransparentButton("Auto Hitbox: OFF", Color3.fromRGB(180, 50, 50), panel2)
+autoToggle.BackgroundColor3 = Color3.fromRGB(38,38,38)
+autoToggle.BackgroundTransparency = 0.35
 local removeAllBtn = createTransparentButton("Remove All Hitboxes", Color3.fromRGB(180, 50, 50), panel2)
+removeAllBtn.BackgroundColor3 = Color3.fromRGB(38,38,38)
+removeAllBtn.BackgroundTransparency = 0.35
 local statusLabel = createTransparentLabel("Processing: 0 Players", panel2)
 createTransparentLabel("Spectate Player", panel2)
 
@@ -1098,8 +1117,11 @@ Players.PlayerAdded:Connect(refreshSpecList)
 Players.PlayerRemoving:Connect(refreshSpecList)
 
 local stopSpec = createTransparentButton("Stop Spectate", Color3.fromRGB(180,50,50), panel2)
-
+stopSpec.BackgroundColor3 = Color3.fromRGB(38,38,38)
+stopSpec.BackgroundTransparency = 0.35
 stopSpec.MouseButton1Click:Connect(function()
+    stopSpec.BackgroundColor3 = Color3.fromRGB(50, 200, 120)
+    stopSpec.BackgroundTransparency = 0
 
     StopSpectate()
 
@@ -1109,8 +1131,13 @@ stopSpec.MouseButton1Click:Connect(function()
         end
     end
 
+    task.delay(0.2, function()
+        if stopSpec then
+            stopSpec.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
+            stopSpec.BackgroundTransparency = 0.35
+        end
+    end)
 end)
-
 
 createTransparentLabel("Loopspeed", panel2)
 
@@ -1202,13 +1229,13 @@ local autoTPBtn = createTransparentButton("Auto TP: OFF", Color3.fromRGB(80, 200
 autoTPBtn.BackgroundTransparency = 1
 autoTPBtn.BackgroundColor3 = Color3.fromRGB(80, 200, 80)
 
-local teleportBtn = createTransparentButton("TP", Color3.fromRGB(80, 200, 80), panel4)
-teleportBtn.BackgroundTransparency = 1
-teleportBtn.BackgroundColor3 = Color3.fromRGB(80, 200, 80)
+local teleportBtn = createTransparentButton("TP", Color3.fromRGB(38, 38, 38), panel4)
+teleportBtn.BackgroundTransparency = 0.35
+teleportBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
 
-local tpToolBtn = createTransparentButton("TP Tool", Color3.fromRGB(80, 200, 80), panel4)
-tpToolBtn.BackgroundTransparency = 1
-tpToolBtn.BackgroundColor3 = Color3.fromRGB(80, 200, 80)
+local tpToolBtn = createTransparentButton("TP Tool", Color3.fromRGB(38, 38, 38), panel4)
+tpToolBtn.BackgroundTransparency = 0.35
+tpToolBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
 
 -- ─── PANEL 5: TROLL (FLING) ───────────────────────────────────────────────────
 
@@ -2255,8 +2282,17 @@ end)
 autoToggle.MouseButton1Click:Connect(function()
     autoHitboxEnabled = not autoHitboxEnabled
     autoToggle.Text = autoHitboxEnabled and "Auto Hitbox: ON" or "Auto Hitbox: OFF"
-    autoToggle.BackgroundColor3 = autoHitboxEnabled and Color3.fromRGB(50,180,50) or Color3.fromRGB(180,50,50)
+
+    if autoHitboxEnabled then
+        autoToggle.BackgroundColor3 = Color3.fromRGB(50, 200, 120)
+        autoToggle.BackgroundTransparency = 0
+    else
+        autoToggle.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
+        autoToggle.BackgroundTransparency = 0.35
+    end
+
     local size = tonumber(sizeInput.Text) or DEFAULT_HITBOX_SIZE
+
     if autoHitboxEnabled then
         for _, player in pairs(Players:GetPlayers()) do
             if player ~= LocalPlayer and player.Character and isAlive(player.Character) then
@@ -2268,14 +2304,26 @@ autoToggle.MouseButton1Click:Connect(function()
             removeHeadHitbox(char)
         end
     end
+
     statusLabel.Text = "Processing: " .. tableCount(processedChars) .. " Players"
 end)
 
 removeAllBtn.MouseButton1Click:Connect(function()
+    removeAllBtn.BackgroundColor3 = Color3.fromRGB(50, 200, 120)
+    removeAllBtn.BackgroundTransparency = 0
+
     for char, _ in pairs(processedChars) do
         removeHeadHitbox(char)
     end
+
     statusLabel.Text = "Processing: 0 Players"
+
+    task.delay(0.2, function()
+        if removeAllBtn then
+            removeAllBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
+            removeAllBtn.BackgroundTransparency = 0.35
+        end
+    end)
 end)
 
 autoNameESP.MouseButton1Click:Connect(function()
@@ -2525,6 +2573,9 @@ autoTPBtn.MouseButton1Click:Connect(function()
 end)
 
 teleportBtn.MouseButton1Click:Connect(function()
+flashButton(teleportBtn)
+teleportBtn.BackgroundColor3 = Color3.fromRGB(50, 200, 120)
+teleportBtn.BackgroundTransparency = 0
     local myChar = LocalPlayer.Character
     if not myChar then return end
     local myHRP = myChar:FindFirstChild("HumanoidRootPart")
@@ -2541,8 +2592,16 @@ teleportBtn.MouseButton1Click:Connect(function()
         end
     end
 end)
-
+task.delay(0.2, function()
+    if teleportBtn then
+        teleportBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
+        teleportBtn.BackgroundTransparency = 0.35
+    end
+end)
 tpToolBtn.MouseButton1Click:Connect(function()
+flashButton(tpToolBtn)
+tpToolBtn.BackgroundColor3 = Color3.fromRGB(50, 200, 120)
+tpToolBtn.BackgroundTransparency = 0
     local player = LocalPlayer
     local mouse = player:GetMouse()
 
@@ -2567,7 +2626,12 @@ tpToolBtn.MouseButton1Click:Connect(function()
     tool.Parent = player.Backpack
     createNotification("Teleport Tool", "Click TP tool added")
 end)
-
+task.delay(0.2, function()
+    if tpToolBtn then
+        tpToolBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
+        tpToolBtn.BackgroundTransparency = 0.35
+    end
+end)
 
 
 -- ─── INPUT EVENTS ─────────────────────────────────────────────────────────────
