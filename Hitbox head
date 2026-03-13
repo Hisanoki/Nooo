@@ -2223,17 +2223,33 @@ mainFrame.Visible = false
 mainContainer.Visible = true
 toggleUIButton.Text = "Open Menu"
 
--- Bấm Open Menu -> mở menu + ẩn luôn thanh mở menu
-toggleUIButton.MouseButton1Click:Connect(function()
+local function openMenu()
     mainFrame.Visible = true
     mainContainer.Visible = false
     updatePlayerList()
+end
+
+local function closeMenu()
+    mainFrame.Visible = false
+    mainContainer.Visible = true
+end
+
+local function toggleMenu()
+    if mainFrame.Visible then
+        closeMenu()
+    else
+        openMenu()
+    end
+end
+
+-- Bấm Open Menu -> mở menu + ẩn luôn thanh mở menu
+toggleUIButton.MouseButton1Click:Connect(function()
+    openMenu()
 end)
 
 -- Bấm X -> đóng menu + hiện lại thanh mở menu
 closeButton.MouseButton1Click:Connect(function()
-    mainFrame.Visible = false
-    mainContainer.Visible = true
+    closeMenu()
 end)
 
 autoToggle.MouseButton1Click:Connect(function()
@@ -2562,12 +2578,8 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
         toggleInvisibility()
     end
     if input.KeyCode == Enum.KeyCode.LeftControl then
-        mainFrame.Visible = not mainFrame.Visible
-        toggleUIButton.Text = mainFrame.Visible and "Close Menu" or "Open Menu"
-    end
-    if input.UserInputType == Enum.UserInputType.Keyboard and input.KeyCode == auraKey and not auraListening then
-        runToolAura()
-    end
+    toggleMenu()
+end
 end)
 
 -- ─── LOCAL PLAYER EVENTS ──────────────────────────────────────────────────────
