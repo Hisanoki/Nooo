@@ -2402,13 +2402,23 @@ end)
 
 UserInputService.InputBegan:Connect(function(input, gameProcessed)
     if gameProcessed then return end
+
     if input.KeyCode == INVIS_CONFIG.TOGGLE_KEY then
         toggleInvisibility()
     end
+
+    -- LeftControl mở/đóng menu giống nút bấm mới
     if input.KeyCode == Enum.KeyCode.LeftControl then
-        mainFrame.Visible = not mainFrame.Visible
-        toggleUIButton.Text = mainFrame.Visible and "Close Menu" or "Open Menu"
+        if mainFrame.Visible then
+            mainFrame.Visible = false
+            toggleUIButton.Visible = true
+        else
+            mainFrame.Visible = true
+            toggleUIButton.Visible = false
+            updatePlayerList()
+        end
     end
+
     if input.UserInputType == Enum.UserInputType.Keyboard and input.KeyCode == auraKey and not auraListening then
         runToolAura()
     end
