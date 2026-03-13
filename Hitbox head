@@ -1273,6 +1273,11 @@ flingStartBtn.BackgroundColor3 = Color3.fromRGB(80, 200, 80)
 local bangBtn = createTransparentButton("BANG PLAYER : OFF", Color3.fromRGB(80, 200, 80), panel5)
 bangBtn.BackgroundTransparency = 1
 bangBtn.BackgroundColor3 = Color3.fromRGB(80, 200, 80)
+local loopBringActive = false
+
+local loopBringBtn = createTransparentButton("LOOP BRING PLAYER : OFF", Color3.fromRGB(38, 38, 38), panel5)
+loopBringBtn.BackgroundTransparency = 0.35
+loopBringBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
 local flingSelectAllBtn = createTransparentButton("Select All", Color3.fromRGB(60, 60, 80), panel5)
 local flingDeselectAllBtn = createTransparentButton("Deselect All", Color3.fromRGB(60, 60, 80), panel5)
 
@@ -2187,6 +2192,82 @@ end)
 
 end)
     
+
+loopBringBtn.MouseButton1Click:Connect(function()
+
+    loopBringActive = not loopBringActive
+
+    if loopBringActive then
+        if CountFlingTargets() == 0 then
+            loopBringActive = false
+            loopBringBtn.Text = "LOOP BRING PLAYER : OFF"
+            loopBringBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
+            loopBringBtn.BackgroundTransparency = 0.35
+            flingStatusLabel.Text = "No targets selected for LoopBring!"
+            task.delay(1.5, function()
+                UpdateFlingStatus()
+            end)
+            return
+        end
+
+        loopBringBtn.Text = "LOOP BRING PLAYER : ON"
+        loopBringBtn.BackgroundColor3 = Color3.fromRGB(50, 200, 120)
+        loopBringBtn.BackgroundTransparency = 0
+
+        task.spawn(function()
+            while loopBringActive do
+                local char = LocalPlayer.Character
+                if not char then
+                    task.wait(0.1)
+                    continue
+                end
+
+                local hrp = char:FindFirstChild("HumanoidRootPart")
+                if not hrp then
+                    task.wait(0.1)
+                    continue
+                end
+
+                local validTargets = {}
+
+                for name, player in pairs(SelectedFlingTargets) do
+                    if player and player.Parent then
+                        validTargets[name] = player
+                    else
+                        SelectedFlingTargets[name] = nil
+                        local cb = FlingPlayerCheckboxes[name]
+                        if cb then
+                            cb.Checkmark.Visible = false
+                        end
+                    end
+                end
+
+                for _, player in pairs(validTargets) do
+                    if not loopBringActive then break end
+
+                    if player.Character then
+                        local targetHRP = player.Character:FindFirstChild("HumanoidRootPart")
+
+                        if targetHRP then
+                            targetHRP.CFrame = hrp.CFrame * CFrame.new(3, 1, 0)
+                        end
+                    end
+
+                    task.wait(0.1)
+                end
+
+                UpdateFlingStatus()
+                task.wait(0.1)
+            end
+        end)
+
+    else
+        loopBringBtn.Text = "LOOP BRING PLAYER : OFF"
+        loopBringBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
+        loopBringBtn.BackgroundTransparency = 0.35
+    end
+
+end)
 
 flingSelectAllBtn.MouseButton1Click:Connect(function() ToggleAllFling(true) end)
 flingDeselectAllBtn.MouseButton1Click:Connect(function() ToggleAllFling(false) end)
