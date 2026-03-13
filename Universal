@@ -1481,7 +1481,7 @@ do
     feKBBtn.Text = auraKey.Name
 feKBBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 feKBBtn.TextScaled = false
-feKBBtn.TextSize = 9
+feKBBtn.TextSize = 10
 feKBBtn.Font = Enum.Font.GothamBold
     feKBBtn.AutoButtonColor = true
     _mkCorner(6, feKBBtn)
