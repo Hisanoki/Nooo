@@ -1504,7 +1504,7 @@ feKBBtn.MouseButton1Click:Connect(function()
         if input.UserInputType == Enum.UserInputType.Keyboard then
             auraKey = input.KeyCode
             feKBBtn.Text = auraKey.Name
-            feKBBtn.TextColor3 = Color3.fromRGB(255, 220, 80)
+            feKBBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
             feAuraBtn.Text = "Tool Aura [" .. auraKey.Name .. "]"
             auraListening = false
             conn:Disconnect()
