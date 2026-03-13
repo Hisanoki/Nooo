@@ -1269,14 +1269,165 @@ local joinJobBtn = createTransparentButton("Join", Color3.fromRGB(120,200,255), 
 
 local copyJobBtn = createTransparentButton("Copy JobId", Color3.fromRGB(255,200,120), panel7)
 -- ─── PANEL 8: FETOOL ──────────────────────────────────────────────────────────
-local fetoolTitle = createTransparentLabel("Fetool", panel8)
+local FTPlayers = game:GetService("Players")
+local FTUserInputService = game:GetService("UserInputService")
+local FTPlayer = FTPlayers.LocalPlayer
+
+local fetoolTitle = createTransparentLabel("FeTool", panel8)
 fetoolTitle.TextColor3 = Color3.fromRGB(255,255,255)
 fetoolTitle.Font = Enum.Font.GothamBold
 fetoolTitle.TextSize = 14
 
-local infoLabel = createTransparentLabel("Coming soon...", panel8)
-infoLabel.TextColor3 = Color3.fromRGB(200,200,200)
-infoLabel.TextSize = 12
+-- TOOL AURA
+local auraBtn = createTransparentButton("Tool Aura [E]", Color3.fromRGB(120,200,255), panel8)
+
+local auraKeyInput = Instance.new("TextBox")
+auraKeyInput.Parent = panel8
+auraKeyInput.Size = UDim2.new(1,-10,0,30)
+auraKeyInput.PlaceholderText = "Tool Aura Key (default: E)"
+auraKeyInput.Text = "E"
+auraKeyInput.BackgroundColor3 = Color3.fromRGB(40,40,40)
+auraKeyInput.TextColor3 = Color3.new(1,1,1)
+auraKeyInput.ClearTextOnFocus = false
+auraKeyInput.Font = Enum.Font.Gotham
+auraKeyInput.TextSize = 14
+
+local auraKey = Enum.KeyCode.E
+
+auraKeyInput.FocusLost:Connect(function()
+	local txt = string.upper(auraKeyInput.Text)
+	if Enum.KeyCode[txt] then
+		auraKey = Enum.KeyCode[txt]
+		auraBtn.Text = "Tool Aura [" .. txt .. "]"
+	else
+		auraKeyInput.Text = auraKey.Name
+	end
+end)
+
+local function runToolAura()
+	local char = FTPlayer.Character or FTPlayer.CharacterAdded:Wait()
+	local root = char:FindFirstChild("HumanoidRootPart")
+	if not root then return end
+
+	for _, obj in ipairs(workspace:GetDescendants()) do
+		if obj:IsA("Tool") then
+			local owned = false
+			for _, p in ipairs(FTPlayers:GetPlayers()) do
+				local bp = p:FindFirstChild("Backpack")
+				if (p.Character and obj:IsDescendantOf(p.Character)) or (bp and obj:IsDescendantOf(bp)) then
+					owned = true
+					break
+				end
+			end
+
+			if not owned then
+				local handle = obj:FindFirstChild("Handle")
+				if handle then
+					pcall(function()
+						firetouchinterest(root, handle, 0)
+						task.wait(0.05)
+						firetouchinterest(root, handle, 1)
+					end)
+				else
+					pcall(function()
+						obj.Parent = FTPlayer.Backpack
+					end)
+				end
+				task.wait(0.03)
+			end
+		end
+	end
+end
+
+auraBtn.MouseButton1Click:Connect(runToolAura)
+
+FTUserInputService.InputBegan:Connect(function(input, gpe)
+	if gpe then return end
+	if input.UserInputType == Enum.UserInputType.Keyboard and input.KeyCode == auraKey then
+		runToolAura()
+	end
+end)
+
+-- DROP TOOL
+local dropToolBtn = createTransparentButton("Drop Tool", Color3.fromRGB(255,170,120), panel8)
+
+local function runDropTool()
+	local char = FTPlayer.Character
+	if not char then return end
+
+	local tool = char:FindFirstChildWhichIsA("Tool")
+	if tool then
+		pcall(function()
+			tool.Parent = workspace
+		end)
+		return
+	end
+
+	local backpack = FTPlayer:FindFirstChild("Backpack")
+	if backpack then
+		local bpTool = backpack:FindFirstChildWhichIsA("Tool")
+		if bpTool then
+			pcall(function()
+				bpTool.Parent = char
+				task.wait(0.05)
+				bpTool.Parent = workspace
+			end)
+		end
+	end
+end
+
+dropToolBtn.MouseButton1Click:Connect(runDropTool)
+
+-- EQUIP TOOL
+local equipToolBtn = createTransparentButton("Equip Tool", Color3.fromRGB(180,255,120), panel8)
+
+local function runEquipTool()
+	local char = FTPlayer.Character
+	local backpack = FTPlayer:FindFirstChild("Backpack")
+	if not char or not backpack then return end
+
+	local tool = backpack:FindFirstChildWhichIsA("Tool")
+	if tool then
+		pcall(function()
+			tool.Parent = char
+		end)
+	end
+end
+
+equipToolBtn.MouseButton1Click:Connect(runEquipTool)
+
+-- REFRESH TOOLS
+local refreshToolBtn = createTransparentButton("Refresh Tools", Color3.fromRGB(200,120,255), panel8)
+
+local function runRefreshTools()
+	local backpack = FTPlayer:FindFirstChild("Backpack")
+	if not backpack then return end
+
+	local names = {}
+	for _, v in ipairs(backpack:GetChildren()) do
+		if v:IsA("Tool") then
+			table.insert(names, v.Name)
+		end
+	end
+
+	if #names > 0 then
+		refreshToolBtn.Text = "Tools: " .. table.concat(names, ", ")
+		task.delay(3, function()
+			if refreshToolBtn and refreshToolBtn.Parent then
+				refreshToolBtn.Text = "Refresh Tools"
+			end
+		end)
+	else
+		refreshToolBtn.Text = "No Tools Found"
+		task.delay(2, function()
+			if refreshToolBtn and refreshToolBtn.Parent then
+				refreshToolBtn.Text = "Refresh Tools"
+			end
+		end)
+	end
+end
+
+refreshToolBtn.MouseButton1Click:Connect(runRefreshTools)
 -- ─── TAB SWITCH ───────────────────────────────────────────────────────────────
 local panels = {panel2, panel3, panel4, panel5, panel6, panel7, panel8} 
 
