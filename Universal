@@ -1312,51 +1312,41 @@ local function runToolAura()
     if not char then return end
     local root = char:FindFirstChild("HumanoidRootPart")
     if not root then return end
-
     local function stealOne(tool)
         if not tool or not tool:IsA("Tool") then return end
         local handle = tool:FindFirstChild("Handle")
         if handle then
-            local ok = pcall(function()
-                firetouchinterest(root, handle, 0)
-            end)
+            local ok = pcall(function() firetouchinterest(root, handle, 0) end)
             if ok then
                 task.wait(0.04)
-                pcall(function()
-                    firetouchinterest(root, handle, 1)
-                end)
+                pcall(function() firetouchinterest(root, handle, 1) end)
                 return
             end
         end
-        pcall(function()
-            tool.Parent = LocalPlayer.Backpack
-        end)
+        pcall(function() tool.Parent = LocalPlayer.Backpack end)
     end
-
     for _, obj in pairs(workspace:GetDescendants()) do
         if obj:IsA("Tool") then
             local owned = false
             for _, p in pairs(Players:GetPlayers()) do
                 if (p.Character and obj:IsDescendantOf(p.Character)) or (p.Backpack and obj:IsDescendantOf(p.Backpack)) then
-                    owned = true
-                    break
+                    owned = true; break
                 end
             end
-            if not owned then
-                stealOne(obj)
-                task.wait(0.04)
-            end
+            if not owned then stealOne(obj); task.wait(0.04) end
         end
     end
 end
 
 -- ─── FLOAT BUTTON HELPERS ─────────────────────────────────────────────────────
+-- Tạo drag logic riêng cho từng nút, track đúng input object để tránh joystick
+
 local function makeDraggableFloat(btn)
     local fDragging = false
     local fMoved = false
     local fDragStart = nil
     local fDragPos = nil
-    local fDragInput = nil
+    local fDragInput = nil  -- track đúng input object
 
     btn.InputBegan:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1
@@ -1366,7 +1356,6 @@ local function makeDraggableFloat(btn)
             fDragStart = input.Position
             fDragPos = btn.Position
             fDragInput = input
-
             input.Changed:Connect(function()
                 if input.UserInputState == Enum.UserInputState.End then
                     fDragging = false
@@ -1377,11 +1366,10 @@ local function makeDraggableFloat(btn)
     end)
 
     UserInputService.InputChanged:Connect(function(input)
+        -- Chỉ move khi đúng input object đã bắt đầu drag → joystick không can thiệp
         if fDragging and input == fDragInput then
             local delta = input.Position - fDragStart
-            if delta.Magnitude > 6 then
-                fMoved = true
-            end
+            if delta.Magnitude > 6 then fMoved = true end
             btn.Position = UDim2.new(
                 fDragPos.X.Scale, fDragPos.X.Offset + delta.X,
                 fDragPos.Y.Scale, fDragPos.Y.Offset + delta.Y
@@ -1393,6 +1381,7 @@ local function makeDraggableFloat(btn)
 end
 
 -- ─── AURA FLOAT ───────────────────────────────────────────────────────────────
+
 local function destroyAuraFloat()
     if auraFloatBtn then
         auraFloatBtn:Destroy()
@@ -1402,7 +1391,6 @@ end
 
 local function createAuraFloat()
     destroyAuraFloat()
-
     auraFloatBtn = Instance.new("TextButton")
     auraFloatBtn.Size = UDim2.new(0, floatBtnSize, 0, floatBtnSize)
     auraFloatBtn.Position = UDim2.new(0.85, 0, 0.5, -(floatBtnSize + 6))
@@ -1416,10 +1404,8 @@ local function createAuraFloat()
     auraFloatBtn.Active = true
     auraFloatBtn.ZIndex = 15
     auraFloatBtn.Parent = gui
-
     local c = Instance.new("UICorner", auraFloatBtn)
     c.CornerRadius = UDim.new(0, 8)
-
     local s = Instance.new("UIStroke", auraFloatBtn)
     s.Color = Color3.fromRGB(220, 60, 60)
     s.Thickness = 1.5
@@ -1427,15 +1413,13 @@ local function createAuraFloat()
     local getWasMoved, clearMoved = makeDraggableFloat(auraFloatBtn)
 
     auraFloatBtn.MouseButton1Click:Connect(function()
-        if getWasMoved() then
-            clearMoved()
-            return
-        end
+        if getWasMoved() then clearMoved(); return end
         runToolAura()
     end)
 end
 
 -- ─── DROP FLOAT ───────────────────────────────────────────────────────────────
+
 local function destroyDropFloat()
     if dropFloatBtn then
         dropFloatBtn:Destroy()
@@ -1445,7 +1429,6 @@ end
 
 local function createDropFloat()
     destroyDropFloat()
-
     dropFloatBtn = Instance.new("TextButton")
     dropFloatBtn.Size = UDim2.new(0, floatBtnSize, 0, floatBtnSize)
     dropFloatBtn.Position = UDim2.new(0.85, 0, 0.5, 6)
@@ -1459,10 +1442,8 @@ local function createDropFloat()
     dropFloatBtn.Active = true
     dropFloatBtn.ZIndex = 15
     dropFloatBtn.Parent = gui
-
     local c = Instance.new("UICorner", dropFloatBtn)
     c.CornerRadius = UDim.new(0, 8)
-
     local s = Instance.new("UIStroke", dropFloatBtn)
     s.Color = Color3.fromRGB(60, 140, 255)
     s.Thickness = 1.5
@@ -1470,96 +1451,73 @@ local function createDropFloat()
     local getWasMoved, clearMoved = makeDraggableFloat(dropFloatBtn)
 
     dropFloatBtn.MouseButton1Click:Connect(function()
-        if getWasMoved() then
-            clearMoved()
-            return
-        end
-
+        if getWasMoved() then clearMoved(); return end
         local char = LocalPlayer.Character
         if not char then return end
         local tool = char:FindFirstChildOfClass("Tool")
-        if tool then
-            tool.Parent = workspace
-        end
+        if tool then tool.Parent = workspace end
     end)
 end
 
 -- ─── FETOOL BUTTONS ───────────────────────────────────────────────────────────
 
--- Tool Aura button (nút thường, không ON/OFF)
 local feAuraBtn = createTransparentButton("Tool Aura [" .. auraKey.Name .. "]", Color3.fromRGB(200, 25, 25), panel8)
 feAuraBtn.MouseButton1Click:Connect(runToolAura)
 
--- Key input title
+-- Keybind row
+local feKBBtn
 do
-    local keyTitle = createTransparentLabel("Aura Key", panel8)
-    keyTitle.TextColor3 = Color3.fromRGB(180, 180, 180)
-    keyTitle.Font = Enum.Font.Gotham
-    keyTitle.TextSize = 12
-end
+    local feKBRow = Instance.new("Frame")
+    feKBRow.BackgroundTransparency = 1
+    feKBRow.Size = UDim2.new(1, 0, 0, 28)
+    feKBRow.Parent = panel8
+    local feKBLayout = Instance.new("UIListLayout", feKBRow)
+    feKBLayout.FillDirection = Enum.FillDirection.Horizontal
+    feKBLayout.VerticalAlignment = Enum.VerticalAlignment.Center
+    feKBLayout.Padding = UDim.new(0, 4)
+    local feKBLabel = Instance.new("TextLabel", feKBRow)
+    feKBLabel.BackgroundTransparency = 1
+    feKBLabel.Size = UDim2.new(0, 60, 1, 0)
+    feKBLabel.Text = "PC Key:"
+    feKBLabel.TextColor3 = Color3.fromRGB(180, 180, 180)
+    feKBLabel.TextScaled = true
+    feKBLabel.Font = Enum.Font.Gotham
+    feKBLabel.TextXAlignment = Enum.TextXAlignment.Left
+    feKBBtn = Instance.new("TextButton", feKBRow)
+feKBBtn.Size = UDim2.new(0, 80, 1, 0)
+feKBBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+feKBBtn.BackgroundTransparency = 0.5
+feKBBtn.BorderSizePixel = 0
+feKBBtn.Text = auraKey.Name
+feKBBtn.TextColor3 = Color3.fromRGB(255, 220, 80)
+feKBBtn.TextScaled = true
+feKBBtn.Font = Enum.Font.GothamBold
+_mkCorner(4, feKBBtn)
+end -- feKBRow do
 
--- BIG KEY INPUT (giống ảnh)
-local feKeyInput = Instance.new("TextBox")
-feKeyInput.Parent = panel8
-feKeyInput.Size = UDim2.new(1, 0, 0, 60)
-feKeyInput.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
-feKeyInput.BackgroundTransparency = 0.25
-feKeyInput.BorderSizePixel = 0
-feKeyInput.Text = auraKey.Name
-feKeyInput.PlaceholderText = "E"
-feKeyInput.ClearTextOnFocus = false
-feKeyInput.TextColor3 = Color3.fromRGB(255, 255, 255)
-feKeyInput.PlaceholderColor3 = Color3.fromRGB(180, 180, 180)
-feKeyInput.Font = Enum.Font.Gotham
-feKeyInput.TextSize = 28
-feKeyInput.TextScaled = false
-feKeyInput.TextXAlignment = Enum.TextXAlignment.Center
-feKeyInput.TextYAlignment = Enum.TextYAlignment.Center
-_mkCorner(8, feKeyInput)
-
-local feKeyStroke = Instance.new("UIStroke")
-feKeyStroke.Parent = feKeyInput
-feKeyStroke.Color = Color3.fromRGB(70, 70, 70)
-feKeyStroke.Thickness = 1.2
-feKeyStroke.Transparency = 0.2
-
-local function setAuraKeyFromText(txt)
-    if not txt or txt == "" then
-        feKeyInput.Text = auraKey.Name
-        return
-    end
-
-    txt = string.upper(string.sub(txt, 1, 1))
-
-    local success, keyEnum = pcall(function()
-        return Enum.KeyCode[txt]
+feKBBtn.MouseButton1Click:Connect(function()
+    if auraListening then return end
+    auraListening = true
+    feKBBtn.Text = "..."
+    feKBBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    local conn
+    conn = UserInputService.InputBegan:Connect(function(input, gpe)
+        if gpe then return end
+        if input.UserInputType == Enum.UserInputType.Keyboard then
+            auraKey = input.KeyCode
+            feKBBtn.Text = auraKey.Name
+            feKBBtn.TextColor3 = Color3.fromRGB(255, 220, 80)
+            feAuraBtn.Text = "Tool Aura [" .. auraKey.Name .. "]"
+            auraListening = false
+            conn:Disconnect()
+        end
     end)
-
-    if success and keyEnum and keyEnum ~= Enum.KeyCode.Unknown then
-        auraKey = keyEnum
-        feKeyInput.Text = txt
-        feAuraBtn.Text = "Tool Aura [" .. auraKey.Name .. "]"
-    else
-        feKeyInput.Text = auraKey.Name
-    end
-end
-
-feKeyInput.FocusLost:Connect(function()
-    setAuraKeyFromText(feKeyInput.Text)
-end)
-
-feKeyInput:GetPropertyChangedSignal("Text"):Connect(function()
-    if #feKeyInput.Text > 1 then
-        feKeyInput.Text = string.sub(feKeyInput.Text, 1, 1)
-        feKeyInput.CursorPosition = #feKeyInput.Text + 1
-    end
 end)
 
 -- Aura Float toggle
 local feAuraFloatBtn = createTransparentButton("Aura Float: OFF", Color3.fromRGB(70, 70, 70), panel8)
 feAuraFloatBtn.MouseButton1Click:Connect(function()
     auraFloatEnabled = not auraFloatEnabled
-
     if auraFloatEnabled then
         feAuraFloatBtn.Text = "Aura Float: ON"
         feAuraFloatBtn.BackgroundColor3 = Color3.fromRGB(180, 20, 20)
@@ -1571,22 +1529,19 @@ feAuraFloatBtn.MouseButton1Click:Connect(function()
     end
 end)
 
--- Drop Tool button (nút thường, không ON/OFF)
+-- DROP TOOL button
 local feDropBtn = createTransparentButton("Drop Tool", Color3.fromRGB(0, 110, 220), panel8)
 feDropBtn.MouseButton1Click:Connect(function()
     local char = LocalPlayer.Character
     if not char then return end
     local tool = char:FindFirstChildOfClass("Tool")
-    if tool then
-        tool.Parent = workspace
-    end
+    if tool then tool.Parent = workspace end
 end)
 
 -- Drop Float toggle
 local feDropFloatBtn = createTransparentButton("Drop Float: OFF", Color3.fromRGB(70, 70, 70), panel8)
 feDropFloatBtn.MouseButton1Click:Connect(function()
     dropFloatEnabled = not dropFloatEnabled
-
     if dropFloatEnabled then
         feDropFloatBtn.Text = "Drop Float: ON"
         feDropFloatBtn.BackgroundColor3 = Color3.fromRGB(0, 90, 180)
@@ -1600,6 +1555,7 @@ end)
 
 -- ─── FLOAT BUTTON SIZE SLIDER ────────────────────────────────────────────────
 do
+    -- Label hiển thị giá trị hiện tại
     local sizeValueLabel = Instance.new("TextLabel")
     sizeValueLabel.Size = UDim2.new(1, 0, 0, 20)
     sizeValueLabel.BackgroundTransparency = 1
@@ -1610,6 +1566,7 @@ do
     sizeValueLabel.TextXAlignment = Enum.TextXAlignment.Center
     sizeValueLabel.Parent = panel8
 
+    -- Thanh slider
     local sliderHolder = Instance.new("Frame")
     sliderHolder.Size = UDim2.new(1, 0, 0, 30)
     sliderHolder.BackgroundColor3 = Color3.fromRGB(28, 28, 28)
@@ -1626,7 +1583,8 @@ do
     track.Parent = sliderHolder
     _mkCorner(3, track)
 
-    local function valToSize(v) return v + 29 end
+    -- Slider value 1-100 → pixel size 30-130
+    local function valToSize(v) return v + 29 end  -- 1→30, 100→129
     local function sizeToVal(s) return math.clamp(s - 29, 1, 100) end
     local curVal = sizeToVal(floatBtnSize)
 
@@ -1647,6 +1605,7 @@ do
     thumb.Parent = track
     _mkCorner(7, thumb)
 
+    -- Invisible hitbox trên toàn track để bắt click/touch dễ hơn
     local sliderBtn = Instance.new("TextButton")
     sliderBtn.Size = UDim2.new(1, 0, 0, 30)
     sliderBtn.Position = UDim2.new(0, 0, 0.5, -15)
@@ -1656,22 +1615,19 @@ do
     sliderBtn.Parent = track
 
     local sDragging = false
-    local sInput = nil
+    local sInput = nil  -- track đúng input object, tránh joystick/other touch can thiệp
 
     local function applySlider(screenPos)
         local abs = track.AbsolutePosition
-        local sz = track.AbsoluteSize
+        local sz  = track.AbsoluteSize
         local rel = math.clamp((screenPos.X - abs.X) / sz.X, 0, 1)
-
         curVal = math.floor(rel * 99) + 1
         floatBtnSize = valToSize(curVal)
-
         sizeValueLabel.Text = "Float Size: " .. tostring(curVal)
-
         local fillRel = (curVal - 1) / 99
-        fill.Size = UDim2.new(fillRel, 0, 1, 0)
+        fill.Size  = UDim2.new(fillRel, 0, 1, 0)
         thumb.Position = UDim2.new(fillRel, 0, 0.5, 0)
-
+        -- Cập nhật kích thước float button đang hiển thị
         if auraFloatBtn then
             auraFloatBtn.Size = UDim2.new(0, floatBtnSize, 0, floatBtnSize)
         end
@@ -1686,7 +1642,6 @@ do
             sDragging = true
             sInput = input
             applySlider(input.Position)
-
             input.Changed:Connect(function()
                 if input.UserInputState == Enum.UserInputState.End then
                     sDragging = false
@@ -1696,14 +1651,13 @@ do
         end
     end)
 
+    -- InputChanged global - chỉ xử lý đúng input object đã bắt đầu, không bị lẫn joystick mobile
     UserInputService.InputChanged:Connect(function(input)
         if sDragging and input == sInput then
             applySlider(input.Position)
         end
     end)
 end
-
--- ─── EQUIP TOOL LIST ──────────────────────────────────────────────────────────
 do
     local feEquipDiv = createTransparentLabel("── Equip Tool ──", panel8)
     feEquipDiv.TextColor3 = Color3.fromRGB(150, 150, 150)
@@ -1719,18 +1673,15 @@ feToolScroll.ScrollBarImageColor3 = Color3.fromRGB(200, 25, 25)
 feToolScroll.CanvasSize = UDim2.new(0, 0, 0, 0)
 feToolScroll.AutomaticCanvasSize = Enum.AutomaticSize.Y
 feToolScroll.Parent = panel8
-
 do
     local feTSLayout = Instance.new("UIListLayout", feToolScroll)
     feTSLayout.SortOrder = Enum.SortOrder.LayoutOrder
     feTSLayout.Padding = UDim.new(0, 3)
-
     local feTSPad = Instance.new("UIPadding", feToolScroll)
     feTSPad.PaddingLeft = UDim.new(0, 4)
     feTSPad.PaddingRight = UDim.new(0, 4)
     feTSPad.PaddingTop = UDim.new(0, 4)
     feTSPad.PaddingBottom = UDim.new(0, 4)
-
     _mkCorner(5, feToolScroll)
 end
 
@@ -1740,22 +1691,16 @@ local function refreshFeTools()
             child:Destroy()
         end
     end
-
     local seen, order = {}, 0
     local sources = {LocalPlayer.Backpack}
-    if LocalPlayer.Character then
-        table.insert(sources, LocalPlayer.Character)
-    end
-
+    if LocalPlayer.Character then table.insert(sources, LocalPlayer.Character) end
     for _, src in pairs(sources) do
         for _, obj in pairs(src:GetChildren()) do
             if obj:IsA("Tool") and not seen[obj.Name] then
                 seen[obj.Name] = true
                 order = order + 1
-
                 local tName = obj.Name
-                local tBtn = Instance.new("TextButton")
-                tBtn.Parent = feToolScroll
+                local tBtn = Instance.new("TextButton", feToolScroll)
                 tBtn.Size = UDim2.new(1, 0, 0, 28)
                 tBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
                 tBtn.BackgroundTransparency = 0.5
@@ -1765,20 +1710,15 @@ local function refreshFeTools()
                 tBtn.TextScaled = true
                 tBtn.Font = Enum.Font.Gotham
                 tBtn.LayoutOrder = order
-
                 local tc = Instance.new("UICorner", tBtn)
                 tc.CornerRadius = UDim.new(0, 4)
-
                 tBtn.MouseButton1Click:Connect(function()
                     local char = LocalPlayer.Character
                     if not char then return end
-
                     for _, s in pairs({LocalPlayer.Backpack, char}) do
                         for _, item in pairs(s:GetChildren()) do
                             if item:IsA("Tool") and item.Name == tName then
-                                pcall(function()
-                                    item.Parent = char
-                                end)
+                                pcall(function() item.Parent = char end)
                             end
                         end
                     end
@@ -1786,10 +1726,8 @@ local function refreshFeTools()
             end
         end
     end
-
     if order == 0 then
-        local empty = Instance.new("TextLabel")
-        empty.Parent = feToolScroll
+        local empty = Instance.new("TextLabel", feToolScroll)
         empty.Name = "EmptyLabel"
         empty.Size = UDim2.new(1, 0, 0, 28)
         empty.BackgroundTransparency = 1
@@ -1803,17 +1741,9 @@ end
 local feRefreshBtn = createTransparentButton("Refresh Tools", Color3.fromRGB(30, 110, 30), panel8)
 feRefreshBtn.MouseButton1Click:Connect(refreshFeTools)
 
-LocalPlayer.Backpack.ChildAdded:Connect(function()
-    task.wait(0.1)
-    refreshFeTools()
-end)
-
-LocalPlayer.Backpack.ChildRemoved:Connect(function()
-    task.wait(0.1)
-    refreshFeTools()
-end)
-
-refreshFeTools() 
+LocalPlayer.Backpack.ChildAdded:Connect(function() task.wait(0.1) refreshFeTools() end)
+LocalPlayer.Backpack.ChildRemoved:Connect(function() task.wait(0.1) refreshFeTools() end)
+refreshFeTools()
 
 -- ─── TAB SWITCH ───────────────────────────────────────────────────────────────
 
@@ -2179,47 +2109,16 @@ loopspeedToggle.MouseButton1Click:Connect(function() setLoopspeedEnabled(not loo
 
 -- ─── BUTTON EVENTS ────────────────────────────────────────────────────────────
 
- ===== MENU OPEN / CLOSE SYSTEM =====
-local function openMenu()
-    mainFrame.Visible = true
-    mainContainer.Visible = false -- ẩn nút Open Menu khi menu mở
-
-    if typeof(updatePlayerList) == "function" then
-        updatePlayerList()
-    end
-end
-
-local function closeMenu()
-    mainFrame.Visible = false
-    mainContainer.Visible = true -- hiện lại nút Open Menu khi tắt menu
-    toggleUIButton.Text = "Open Menu"
-end
-
-local function toggleMenu()
-    if mainFrame.Visible then
-        closeMenu()
-    else
-        openMenu()
-    end
-end
-
--- Mobile: bấm nút Open Menu
 toggleUIButton.MouseButton1Click:Connect(function()
-    openMenu()
+    mainFrame.Visible = not mainFrame.Visible
+    toggleUIButton.Text = mainFrame.Visible and "Close Menu" or "Open Menu"
+    if mainFrame.Visible then updatePlayerList() end
 end)
 
--- Bấm nút X để đóng
 closeButton.MouseButton1Click:Connect(function()
-    closeMenu()
+    mainFrame.Visible = false
+    toggleUIButton.Text = "Open Menu"
 end)
-
--- PC: bấm LeftCtrl để mở / tắt menu
-UserInputService.InputBegan:Connect(function(input, gameProcessed)
-    if gameProcessed then return end
-
-    if input.KeyCode == Enum.KeyCode.LeftControl then
-        toggleMenu()
-    end
 
 autoToggle.MouseButton1Click:Connect(function()
     autoHitboxEnabled = not autoHitboxEnabled
