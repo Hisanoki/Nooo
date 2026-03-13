@@ -1631,15 +1631,47 @@ loopspeedToggle.MouseButton1Click:Connect(function() setLoopspeedEnabled(not loo
 
 -- ─── BUTTON EVENTS ────────────────────────────────────────────────────────────
 
+-- ===== MENU OPEN / CLOSE SYSTEM =====
+local function openMenu()
+    mainFrame.Visible = true
+    mainContainer.Visible = false -- ẩn nút Open Menu khi menu mở
+
+    if typeof(updatePlayerList) == "function" then
+        updatePlayerList()
+    end
+end
+
+local function closeMenu()
+    mainFrame.Visible = false
+    mainContainer.Visible = true -- hiện lại nút Open Menu khi tắt menu
+    toggleUIButton.Text = "Open Menu"
+end
+
+local function toggleMenu()
+    if mainFrame.Visible then
+        closeMenu()
+    else
+        openMenu()
+    end
+end
+
+-- Mobile: bấm nút Open Menu
 toggleUIButton.MouseButton1Click:Connect(function()
-    mainFrame.Visible = not mainFrame.Visible
-    toggleUIButton.Text = mainFrame.Visible and "Close Menu" or "Open Menu"
-    if mainFrame.Visible then updatePlayerList() end
+    openMenu()
 end)
 
+-- Bấm nút X để đóng
 closeButton.MouseButton1Click:Connect(function()
-    mainFrame.Visible = false
-    toggleUIButton.Text = "Open Menu"
+    closeMenu()
+end)
+
+-- PC: bấm LeftCtrl để mở / tắt menu
+UserInputService.InputBegan:Connect(function(input, gameProcessed)
+    if gameProcessed then return end
+
+    if input.KeyCode == Enum.KeyCode.LeftControl then
+        toggleMenu()
+    end
 end)
 
 autoToggle.MouseButton1Click:Connect(function()
@@ -2059,3 +2091,4 @@ end)
 statusLabel.Text = "Processing: 0 Players"
 updatePlayerList()
 RefreshFlingPlayerList()
+ 
