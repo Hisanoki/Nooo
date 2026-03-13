@@ -1507,7 +1507,7 @@ local function createAuraFloat()
     auraFloatBtn = Instance.new("TextButton")
     auraFloatBtn.Size = UDim2.new(0, floatBtnSize, 0, floatBtnSize)
     auraFloatBtn.Position = UDim2.new(0.85, 0, 0.5, -(floatBtnSize + 6))
-    auraFloatBtn.BackgroundColor3 = Color3.fromRGB(160, 20, 20)
+    auraFloatBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
     auraFloatBtn.BackgroundTransparency = 0.35
     auraFloatBtn.BorderSizePixel = 0
     auraFloatBtn.Text = "Aura"
@@ -1520,15 +1520,16 @@ local function createAuraFloat()
     local c = Instance.new("UICorner", auraFloatBtn)
     c.CornerRadius = UDim.new(0, 8)
     local s = Instance.new("UIStroke", auraFloatBtn)
-    s.Color = Color3.fromRGB(220, 60, 60)
+   s.Color = Color3.fromRGB(60, 60, 60)
     s.Thickness = 1.5
 
     local getWasMoved, clearMoved = makeDraggableFloat(auraFloatBtn)
 
     auraFloatBtn.MouseButton1Click:Connect(function()
-        if getWasMoved() then clearMoved(); return end
-        runToolAura()
-    end)
+    if getWasMoved() then clearMoved(); return end
+    flashButton(auraFloatBtn)
+    runToolAura()
+end)
 end
 
 -- ─── DROP FLOAT ───────────────────────────────────────────────────────────────
@@ -1545,7 +1546,7 @@ local function createDropFloat()
     dropFloatBtn = Instance.new("TextButton")
     dropFloatBtn.Size = UDim2.new(0, floatBtnSize, 0, floatBtnSize)
     dropFloatBtn.Position = UDim2.new(0.85, 0, 0.5, 6)
-    dropFloatBtn.BackgroundColor3 = Color3.fromRGB(0, 90, 190)
+    dropFloatBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
     dropFloatBtn.BackgroundTransparency = 0.35
     dropFloatBtn.BorderSizePixel = 0
     dropFloatBtn.Text = "Drop\nTool"
@@ -1558,23 +1559,27 @@ local function createDropFloat()
     local c = Instance.new("UICorner", dropFloatBtn)
     c.CornerRadius = UDim.new(0, 8)
     local s = Instance.new("UIStroke", dropFloatBtn)
-    s.Color = Color3.fromRGB(60, 140, 255)
+   s.Color = Color3.fromRGB(60, 60, 60)
     s.Thickness = 1.5
 
     local getWasMoved, clearMoved = makeDraggableFloat(dropFloatBtn)
 
     dropFloatBtn.MouseButton1Click:Connect(function()
-        if getWasMoved() then clearMoved(); return end
-        local char = LocalPlayer.Character
-        if not char then return end
-        local tool = char:FindFirstChildOfClass("Tool")
-        if tool then tool.Parent = workspace end
-    end)
+    if getWasMoved() then clearMoved(); return end
+    flashButton(dropFloatBtn)
+    local char = LocalPlayer.Character
+    if not char then return end
+    local tool = char:FindFirstChildOfClass("Tool")
+    if tool then tool.Parent = workspace end
+end)
 end
 
 -- ─── FETOOL BUTTONS ───────────────────────────────────────────────────────────
 
-local feAuraBtn = createTransparentButton("Tool Aura [" .. auraKey.Name .. "]", Color3.fromRGB(200, 25, 25), panel8)
+local feAuraBtn = createTransparentButton("Tool Aura [" .. auraKey.Name .. "]", Color3.fromRGB(38, 38, 38), panel8)
+feAuraBtn.BackgroundTransparency = 0.35
+feAuraBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
+
 feAuraBtn.MouseButton1Click:Connect(runToolAura)
 
 -- Keybind row
@@ -1626,23 +1631,34 @@ feKBBtn.MouseButton1Click:Connect(function()
 end)
 
 -- Aura Float toggle
-local feAuraFloatBtn = createTransparentButton("Aura Float: OFF", Color3.fromRGB(70, 70, 70), panel8)
+local feAuraFloatBtn = createTransparentButton("Aura Float: OFF", Color3.fromRGB(38, 38, 38), panel8)
+feAuraFloatBtn.BackgroundTransparency = 0.35
+feAuraFloatBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
+
 feAuraFloatBtn.MouseButton1Click:Connect(function()
     auraFloatEnabled = not auraFloatEnabled
+
     if auraFloatEnabled then
         feAuraFloatBtn.Text = "Aura Float: ON"
-        feAuraFloatBtn.BackgroundColor3 = Color3.fromRGB(180, 20, 20)
+        feAuraFloatBtn.BackgroundColor3 = Color3.fromRGB(50, 200, 120)
+        feAuraFloatBtn.BackgroundTransparency = 0
         createAuraFloat()
     else
         feAuraFloatBtn.Text = "Aura Float: OFF"
-        feAuraFloatBtn.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
+        feAuraFloatBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
+        feAuraFloatBtn.BackgroundTransparency = 0.35
         destroyAuraFloat()
     end
 end)
 
 -- DROP TOOL button
-local feDropBtn = createTransparentButton("Drop Tool", Color3.fromRGB(0, 110, 220), panel8)
+local feDropBtn = createTransparentButton("Drop Tool", Color3.fromRGB(38, 38, 38), panel8)
+feDropBtn.BackgroundTransparency = 0.35
+feDropBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
+
 feDropBtn.MouseButton1Click:Connect(function()
+    flashButton(feDropBtn)
+
     local char = LocalPlayer.Character
     if not char then return end
     local tool = char:FindFirstChildOfClass("Tool")
@@ -1650,16 +1666,22 @@ feDropBtn.MouseButton1Click:Connect(function()
 end)
 
 -- Drop Float toggle
-local feDropFloatBtn = createTransparentButton("Drop Float: OFF", Color3.fromRGB(70, 70, 70), panel8)
+local feDropFloatBtn = createTransparentButton("Drop Float: OFF", Color3.fromRGB(38, 38, 38), panel8)
+feDropFloatBtn.BackgroundTransparency = 0.35
+feDropFloatBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
+
 feDropFloatBtn.MouseButton1Click:Connect(function()
     dropFloatEnabled = not dropFloatEnabled
+
     if dropFloatEnabled then
         feDropFloatBtn.Text = "Drop Float: ON"
-        feDropFloatBtn.BackgroundColor3 = Color3.fromRGB(0, 90, 180)
+        feDropFloatBtn.BackgroundColor3 = Color3.fromRGB(50, 200, 120)
+        feDropFloatBtn.BackgroundTransparency = 0
         createDropFloat()
     else
         feDropFloatBtn.Text = "Drop Float: OFF"
-        feDropFloatBtn.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
+        feDropFloatBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
+        feDropFloatBtn.BackgroundTransparency = 0.35
         destroyDropFloat()
     end
 end)
@@ -1802,62 +1824,102 @@ local function refreshFeTools()
             child:Destroy()
         end
     end
-    local seen, order = {}, 0
-    local sources = {LocalPlayer.Backpack}
-    if LocalPlayer.Character then table.insert(sources, LocalPlayer.Character) end
-    for _, src in pairs(sources) do
-        for _, obj in pairs(src:GetChildren()) do
+
+    local char = LocalPlayer.Character
+    local seen = {}
+    local toolList = {}
+
+    -- Tool trong Backpack = nằm trên
+    for _, obj in pairs(LocalPlayer.Backpack:GetChildren()) do
+        if obj:IsA("Tool") and not seen[obj.Name] then
+            seen[obj.Name] = true
+            table.insert(toolList, {
+                Name = obj.Name,
+                Equipped = false
+            })
+        end
+    end
+
+    -- Tool đang equip trong Character = nằm dưới
+    if char then
+        for _, obj in pairs(char:GetChildren()) do
             if obj:IsA("Tool") and not seen[obj.Name] then
                 seen[obj.Name] = true
-                order = order + 1
-                local tName = obj.Name
-             local tBtn = Instance.new("TextButton", feToolScroll)
-tBtn.Size = UDim2.new(1, 0, 0, 22) -- thấp hơn
-tBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
-tBtn.BackgroundTransparency = 0.35
-tBtn.BorderSizePixel = 0
-tBtn.Text = tName
-tBtn.TextColor3 = Color3.fromRGB(230, 230, 230)
-tBtn.TextScaled = false -- bỏ scaled để đỡ phồng chữ
-tBtn.TextSize = 11      -- chữ nhỏ gọn
-tBtn.Font = Enum.Font.GothamMedium
-tBtn.TextXAlignment = Enum.TextXAlignment.Left -- can trái gọn hơn
-tBtn.LayoutOrder = order
-local tc = Instance.new("UICorner", tBtn)
-tc.CornerRadius = UDim.new(0, 4)
-
-local pad = Instance.new("UIPadding", tBtn)
-pad.PaddingLeft = UDim.new(0, 8)
-pad.PaddingRight = UDim.new(0, 6)
-                tBtn.MouseButton1Click:Connect(function()
-                    local char = LocalPlayer.Character
-                    if not char then return end
-                    for _, s in pairs({LocalPlayer.Backpack, char}) do
-                        for _, item in pairs(s:GetChildren()) do
-                            if item:IsA("Tool") and item.Name == tName then
-                                pcall(function() item.Parent = char end)
-                            end
-                        end
-                    end
-                end)
+                table.insert(toolList, {
+                    Name = obj.Name,
+                    Equipped = true
+                })
             end
         end
     end
-    if order == 0 then
-        local empty = Instance.new("TextLabel", feToolScroll)
-empty.Name = "EmptyLabel"
-empty.Size = UDim2.new(1, 0, 0, 22)
-empty.BackgroundTransparency = 1
-empty.Text = "Backpack trống"
-empty.TextColor3 = Color3.fromRGB(120, 120, 120)
-empty.TextScaled = false
-empty.TextSize = 11
-empty.Font = Enum.Font.Gotham
+
+    for order, data in ipairs(toolList) do
+        local tName = data.Name
+
+        local tBtn = Instance.new("TextButton")
+        tBtn.Parent = feToolScroll
+        tBtn.Size = UDim2.new(1, 0, 0, 22)
+        tBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
+        tBtn.BackgroundTransparency = 0.35
+        tBtn.BorderSizePixel = 0
+        tBtn.Text = data.Equipped and (tName .. " [EQUIPPED]") or tName
+        tBtn.TextColor3 = data.Equipped and Color3.fromRGB(140, 255, 170) or Color3.fromRGB(230, 230, 230)
+        tBtn.TextScaled = false
+        tBtn.TextSize = 11
+        tBtn.Font = Enum.Font.GothamMedium
+        tBtn.TextXAlignment = Enum.TextXAlignment.Left
+        tBtn.LayoutOrder = order
+
+        local tc = Instance.new("UICorner", tBtn)
+        tc.CornerRadius = UDim.new(0, 4)
+
+        local pad = Instance.new("UIPadding", tBtn)
+        pad.PaddingLeft = UDim.new(0, 8)
+        pad.PaddingRight = UDim.new(0, 6)
+
+        tBtn.MouseButton1Click:Connect(function()
+            local char = LocalPlayer.Character
+            if not char then return end
+
+            -- đang equip rồi thì thôi
+            if data.Equipped then
+                return
+            end
+
+            local tool = LocalPlayer.Backpack:FindFirstChild(tName)
+            if tool and tool:IsA("Tool") then
+                pcall(function()
+                    tool.Parent = char
+                end)
+            end
+
+            task.wait(0.05)
+            refreshFeTools()
+        end)
+    end
+
+    if #toolList == 0 then
+        local empty = Instance.new("TextLabel")
+        empty.Parent = feToolScroll
+        empty.Name = "EmptyLabel"
+        empty.Size = UDim2.new(1, 0, 0, 22)
+        empty.BackgroundTransparency = 1
+        empty.Text = "Backpack trống"
+        empty.TextColor3 = Color3.fromRGB(120, 120, 120)
+        empty.TextScaled = false
+        empty.TextSize = 11
+        empty.Font = Enum.Font.Gotham
     end
 end
 
-local feRefreshBtn = createTransparentButton("Refresh Tools", Color3.fromRGB(30, 110, 30), panel8)
-feRefreshBtn.MouseButton1Click:Connect(refreshFeTools)
+local feRefreshBtn = createTransparentButton("Refresh Tools", Color3.fromRGB(38, 38, 38), panel8)
+feRefreshBtn.BackgroundTransparency = 0.35
+feRefreshBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
+
+feRefreshBtn.MouseButton1Click:Connect(function()
+    flashButton(feRefreshBtn)
+    refreshFeTools()
+end)
 
 LocalPlayer.Backpack.ChildAdded:Connect(function() task.wait(0.1) refreshFeTools() end)
 LocalPlayer.Backpack.ChildRemoved:Connect(function() task.wait(0.1) refreshFeTools() end)
@@ -2637,13 +2699,33 @@ end)
 -- ─── INPUT EVENTS ─────────────────────────────────────────────────────────────
 
 UserInputService.InputBegan:Connect(function(input, gameProcessed)
-    if gameProcessed then return end
+    if input.UserInputType ~= Enum.UserInputType.Keyboard then
+        return
+    end
+
+    -- Tool Aura keybind: luôn ưu tiên bắt phím E
+    if input.KeyCode == auraKey and not auraListening then
+        runToolAura()
+        return
+    end
+
+    -- Các phím khác mới bị chặn nếu UI đang ăn input
+    if gameProcessed then
+        return
+    end
+
     if input.KeyCode == INVIS_CONFIG.TOGGLE_KEY then
         toggleInvisibility()
     end
+
     if input.KeyCode == Enum.KeyCode.LeftControl then
-    toggleMenu()
-end
+        mainFrame.Visible = not mainFrame.Visible
+        mainContainer.Visible = not mainFrame.Visible
+
+        if mainFrame.Visible then
+            updatePlayerList()
+        end
+    end
 end)
 
 -- ─── LOCAL PLAYER EVENTS ──────────────────────────────────────────────────────
