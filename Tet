@@ -112,13 +112,6 @@ local invisSound
 -- FETOOL STATE
 local auraKey = Enum.KeyCode.E
 local auraListening = false
--- Float button state
-local auraFloatEnabled = false
-local dropFloatEnabled = false
-local auraFloatBtn = nil
-local dropFloatBtn = nil
-local auraFloatDragConn = nil
-local dropFloatDragConn = nil
 
 -- FLING STATE
 local FlingActive = false
@@ -130,8 +123,8 @@ local FlingPlayerCheckboxes = {}
 local antiFlingEnabled = false
 local antiFlingConnection = nil
 
-getgenv().OldPos = nil
-getgenv().FPDH = workspace.FallenPartsDestroyHeight
+local _OldPos = nil
+local _FPDH = workspace.FallenPartsDestroyHeight
 
 -- ─── HELPERS ──────────────────────────────────────────────────────────────────
 
@@ -699,7 +692,7 @@ local function SkidFling(TargetPlayer)
 
     if Character and Humanoid and RootPart then
         if RootPart.Velocity.Magnitude < 50 then
-            getgenv().OldPos = RootPart.CFrame
+            _OldPos = RootPart.CFrame
         end
         if THumanoid and THumanoid.Sit then
             return FlingMessage("Error", TargetPlayer.Name .. " is sitting", 2)
@@ -783,10 +776,10 @@ local function SkidFling(TargetPlayer)
         Humanoid:SetStateEnabled(Enum.HumanoidStateType.Seated, true)
         workspace.CurrentCamera.CameraSubject = Humanoid
 
-        if getgenv().OldPos then
+        if _OldPos then
             repeat
-                RootPart.CFrame = getgenv().OldPos * CFrame.new(0, .5, 0)
-                Character:SetPrimaryPartCFrame(getgenv().OldPos * CFrame.new(0, .5, 0))
+                RootPart.CFrame = _OldPos * CFrame.new(0, .5, 0)
+                Character:SetPrimaryPartCFrame(_OldPos * CFrame.new(0, .5, 0))
                 Humanoid:ChangeState("GettingUp")
                 for _, part in pairs(Character:GetChildren()) do
                     if part:IsA("BasePart") then
@@ -794,8 +787,8 @@ local function SkidFling(TargetPlayer)
                     end
                 end
                 task.wait()
-            until (RootPart.Position - getgenv().OldPos.p).Magnitude < 25
-            workspace.FallenPartsDestroyHeight = getgenv().FPDH
+            until (RootPart.Position - _OldPos.p).Magnitude < 25
+            workspace.FallenPartsDestroyHeight = _FPDH
         end
     else
         return FlingMessage("Error", "Your character is not ready", 2)
@@ -1297,11 +1290,13 @@ local function runToolAura()
         if not tool or not tool:IsA("Tool") then return end
         local handle = tool:FindFirstChild("Handle")
         if handle then
-            local ok = pcall(function() firetouchinterest(root, handle, 0) end)
-            if ok then
-                task.wait(0.04)
-                pcall(function() firetouchinterest(root, handle, 1) end)
-                return
+            if firetouchinterest then
+                local ok = pcall(function() firetouchinterest(root, handle, 0) end)
+                if ok then
+                    task.wait(0.04)
+                    pcall(function() firetouchinterest(root, handle, 1) end)
+                    return
+                end
             end
         end
         pcall(function() tool.Parent = LocalPlayer.Backpack end)
@@ -1318,129 +1313,6 @@ local function runToolAura()
         end
     end
 end
-
--- ─── FLOAT BUTTON HELPERS ─────────────────────────────────────────────────────
--- Tạo drag logic riêng cho từng nút, track đúng input object để tránh joystick
-
-local function makeDraggableFloat(btn)
-    local fDragging = false
-    local fMoved = false
-    local fDragStart = nil
-    local fDragPos = nil
-    local fDragInput = nil  -- track đúng input object
-
-    btn.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1
-        or input.UserInputType == Enum.UserInputType.Touch then
-            fDragging = true
-            fMoved = false
-            fDragStart = input.Position
-            fDragPos = btn.Position
-            fDragInput = input
-            input.Changed:Connect(function()
-                if input.UserInputState == Enum.UserInputState.End then
-                    fDragging = false
-                    fDragInput = nil
-                end
-            end)
-        end
-    end)
-
-    UserInputService.InputChanged:Connect(function(input)
-        -- Chỉ move khi đúng input object đã bắt đầu drag → joystick không can thiệp
-        if fDragging and input == fDragInput then
-            local delta = input.Position - fDragStart
-            if delta.Magnitude > 6 then fMoved = true end
-            btn.Position = UDim2.new(
-                fDragPos.X.Scale, fDragPos.X.Offset + delta.X,
-                fDragPos.Y.Scale, fDragPos.Y.Offset + delta.Y
-            )
-        end
-    end)
-
-    return function() return fMoved end, function() fMoved = false end
-end
-
--- ─── AURA FLOAT ───────────────────────────────────────────────────────────────
-
-local function destroyAuraFloat()
-    if auraFloatBtn then
-        auraFloatBtn:Destroy()
-        auraFloatBtn = nil
-    end
-end
-
-local function createAuraFloat()
-    destroyAuraFloat()
-    auraFloatBtn = Instance.new("TextButton")
-    auraFloatBtn.Size = UDim2.new(0, 72, 0, 72)
-    auraFloatBtn.Position = UDim2.new(0.75, 0, 0.5, -36)
-    auraFloatBtn.BackgroundColor3 = Color3.fromRGB(200, 25, 25)
-    auraFloatBtn.BackgroundTransparency = 0.1
-    auraFloatBtn.BorderSizePixel = 0
-    auraFloatBtn.Text = "Aura"
-    auraFloatBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-    auraFloatBtn.TextScaled = true
-    auraFloatBtn.Font = Enum.Font.GothamBold
-    auraFloatBtn.Active = true
-    auraFloatBtn.ZIndex = 15
-    auraFloatBtn.Parent = gui
-    local c = Instance.new("UICorner", auraFloatBtn)
-    c.CornerRadius = UDim.new(0, 12)
-    local s = Instance.new("UIStroke", auraFloatBtn)
-    s.Color = Color3.fromRGB(255, 100, 100)
-    s.Thickness = 2
-
-    local getWasMoved, clearMoved = makeDraggableFloat(auraFloatBtn)
-
-    auraFloatBtn.MouseButton1Click:Connect(function()
-        if getWasMoved() then clearMoved(); return end
-        runToolAura()
-    end)
-end
-
--- ─── DROP FLOAT ───────────────────────────────────────────────────────────────
-
-local function destroyDropFloat()
-    if dropFloatBtn then
-        dropFloatBtn:Destroy()
-        dropFloatBtn = nil
-    end
-end
-
-local function createDropFloat()
-    destroyDropFloat()
-    dropFloatBtn = Instance.new("TextButton")
-    dropFloatBtn.Size = UDim2.new(0, 72, 0, 72)
-    dropFloatBtn.Position = UDim2.new(0.75, 0, 0.5, 50)
-    dropFloatBtn.BackgroundColor3 = Color3.fromRGB(0, 110, 220)
-    dropFloatBtn.BackgroundTransparency = 0.1
-    dropFloatBtn.BorderSizePixel = 0
-    dropFloatBtn.Text = "Drop\nTool"
-    dropFloatBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-    dropFloatBtn.TextScaled = true
-    dropFloatBtn.Font = Enum.Font.GothamBold
-    dropFloatBtn.Active = true
-    dropFloatBtn.ZIndex = 15
-    dropFloatBtn.Parent = gui
-    local c = Instance.new("UICorner", dropFloatBtn)
-    c.CornerRadius = UDim.new(0, 12)
-    local s = Instance.new("UIStroke", dropFloatBtn)
-    s.Color = Color3.fromRGB(100, 180, 255)
-    s.Thickness = 2
-
-    local getWasMoved, clearMoved = makeDraggableFloat(dropFloatBtn)
-
-    dropFloatBtn.MouseButton1Click:Connect(function()
-        if getWasMoved() then clearMoved(); return end
-        local char = LocalPlayer.Character
-        if not char then return end
-        local tool = char:FindFirstChildOfClass("Tool")
-        if tool then tool.Parent = workspace end
-    end)
-end
-
--- ─── FETOOL BUTTONS ───────────────────────────────────────────────────────────
 
 local feAuraBtn = createTransparentButton("Tool Aura [" .. auraKey.Name .. "]", Color3.fromRGB(200, 25, 25), panel8)
 feAuraBtn.MouseButton1Click:Connect(runToolAura)
@@ -1495,43 +1367,13 @@ feKBBtn.MouseButton1Click:Connect(function()
     end)
 end)
 
--- Aura Float toggle
-local feAuraFloatBtn = createTransparentButton("Aura Float: OFF", Color3.fromRGB(70, 70, 70), panel8)
-feAuraFloatBtn.MouseButton1Click:Connect(function()
-    auraFloatEnabled = not auraFloatEnabled
-    if auraFloatEnabled then
-        feAuraFloatBtn.Text = "Aura Float: ON"
-        feAuraFloatBtn.BackgroundColor3 = Color3.fromRGB(180, 20, 20)
-        createAuraFloat()
-    else
-        feAuraFloatBtn.Text = "Aura Float: OFF"
-        feAuraFloatBtn.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
-        destroyAuraFloat()
-    end
-end)
-
--- DROP TOOL button
+-- DROP TOOL
 local feDropBtn = createTransparentButton("Drop Tool", Color3.fromRGB(0, 110, 220), panel8)
 feDropBtn.MouseButton1Click:Connect(function()
     local char = LocalPlayer.Character
     if not char then return end
     local tool = char:FindFirstChildOfClass("Tool")
     if tool then tool.Parent = workspace end
-end)
-
--- Drop Float toggle
-local feDropFloatBtn = createTransparentButton("Drop Float: OFF", Color3.fromRGB(70, 70, 70), panel8)
-feDropFloatBtn.MouseButton1Click:Connect(function()
-    dropFloatEnabled = not dropFloatEnabled
-    if dropFloatEnabled then
-        feDropFloatBtn.Text = "Drop Float: ON"
-        feDropFloatBtn.BackgroundColor3 = Color3.fromRGB(0, 90, 180)
-        createDropFloat()
-    else
-        feDropFloatBtn.Text = "Drop Float: OFF"
-        feDropFloatBtn.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
-        destroyDropFloat()
-    end
 end)
 
 -- EQUIP TOOL
