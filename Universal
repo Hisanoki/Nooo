@@ -1148,9 +1148,9 @@ local espNameAllBtn = createTransparentButton("ESP Name All: OFF", Color3.fromRG
 local boxESPBtn = createTransparentButton("ESP Box Charm: OFF", Color3.fromRGB(200, 200, 80), panel3)
 createTransparentLabel("Fly", panel2)
 local flySpeedInput = createTransparentInput("Fly Speed", "2", panel2)
-local flyToggle = createTransparentButton("Fly: OFF", Color3.fromRGB(200,120,60), panel2)
-local infJumpToggle = createTransparentButton("Inf Jump: OFF", Color3.fromRGB(120,170,255), panel2)
-local noclipToggle = createTransparentButton("Noclip: OFF", Color3.fromRGB(120,255,120), panel2)
+local flyToggle = createTransparentButton("Fly: OFF", Color3.fromRGB(60, 60, 60 ), panel2)
+local infJumpToggle = createTransparentButton("Inf Jump: OFF", Color3.fromRGB(60, 60, 60 ), panel2)
+local noclipToggle = createTransparentButton("Noclip: OFF", Color3.fromRBG(60, 60, 60 ), panel2)
 
 -- ─── PANEL 3: TELEPORT ────────────────────────────────────────────────────────
 
@@ -2091,33 +2091,8 @@ local loopspeedConnection = nil
 local function setLoopspeedEnabled(state)
     loopspeedEnabled = state
     loopspeedToggle.Text = loopspeedEnabled and "Loopspeed: ON" or "Loopspeed: OFF"
-    loopspeedToggle.BackgroundColor3 = loopspeedEnabled and ACTIVE_TOGGLE_COLOR or DEFAULT_TOGGLE_COLOR
-
-    if loopspeedConnection then
-        loopspeedConnection:Disconnect()
-        loopspeedConnection = nil
-    end
-
-    if loopspeedEnabled then
-        loopspeedConnection = RunService.Heartbeat:Connect(function()
-            local char = LocalPlayer.Character
-            if char then
-                local hum = char:FindFirstChildOfClass("Humanoid")
-                if hum then
-                    hum.WalkSpeed = tonumber(loopspeedInput.Text) or 16
-                end
-            end
-        end)
-    else
-        local char = LocalPlayer.Character
-        if char then
-            local hum = char:FindFirstChildOfClass("Humanoid")
-            if hum then
-                hum.WalkSpeed = 16
-            end
-        end
-    end
-end
+    loopspeedToggle.BackgroundColor3 = loopspeedEnabled and Color3.fromRGB(80,200,80) or Color3.fromRGB(80,80,200)
+    if loopspeedConnection then loopspeedConnection:Disconnect(); loopspeedConnection = nil end
     if loopspeedEnabled then
         loopspeedConnection = RunService.Heartbeat:Connect(function()
             local char = LocalPlayer.Character
@@ -2234,25 +2209,30 @@ boxESPBtn.MouseButton1Click:Connect(function()
 end)
 
 invisButton.MouseButton1Click:Connect(toggleInvisibility)
-
 infJumpToggle.MouseButton1Click:Connect(function()
     infJumpEnabled = not infJumpEnabled
+
     if infJumpEnabled then
         infJumpToggle.Text = "Inf Jump: ON"
+        infJumpToggle.BackgroundColor3 = Color3.fromRGB(80, 200, 80)
         startInfJump()
     else
         infJumpToggle.Text = "Inf Jump: OFF"
+        infJumpToggle.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
         stopInfJump()
     end
-end)
+end) 
 
 noclipToggle.MouseButton1Click:Connect(function()
     noclipEnabled = not noclipEnabled
+
     if noclipEnabled then
         noclipToggle.Text = "Noclip: ON"
+        noclipToggle.BackgroundColor3 = Color3.fromRGB(80, 200, 80)
         startNoclip()
     else
         noclipToggle.Text = "Noclip: OFF"
+        noclipToggle.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
         stopNoclip()
     end
 end)
@@ -2262,12 +2242,12 @@ flyToggle.MouseButton1Click:Connect(function()
     if flyEnabled then
         flyEnabled = false
         flyToggle.Text = "Fly: OFF"
-        flyToggle.BackgroundColor3 = Color3.fromRGB(70, 70, 70) -- màu UI mặc định
+        flyToggle.BackgroundColor3 = Color3.fromRGB(60, 60, 60 )
         stopFly()
     else
         flyEnabled = true
         flyToggle.Text = "Fly: ON"
-        flyToggle.BackgroundColor3 = Color3.fromRGB(0, 200, 0) -- xanh lá khi bật
+        flyToggle.BackgroundColor3 = Color3.fromRGB(80, 200, 80 )
         startFly()
     end
 end)
