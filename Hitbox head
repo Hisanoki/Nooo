@@ -1350,19 +1350,39 @@ do
     _lbl.Font = Enum.Font.GothamBold
     _lbl.TextSize = 14
 end
-local rejoinBtn = createTransparentButton("Rejoin", Color3.fromRGB(120,200,255), panel7)
-local serverHopBtn = createTransparentButton("Server Hop", Color3.fromRGB(120,255,120), panel7)
+local rejoinBtn = createTransparentButton("Rejoin", Color3.fromRGB(38,38,38), panel7)
+rejoinBtn.BackgroundTransparency = 0.35
+rejoinBtn.BackgroundColor3 = Color3.fromRGB(38,38,38)
+
+local serverHopBtn = createTransparentButton("Server Hop", Color3.fromRGB(38,38,38), panel7)
+serverHopBtn.BackgroundTransparency = 0.35
+serverHopBtn.BackgroundColor3 = Color3.fromRGB(38,38,38)
+
 local jobIdInput = Instance.new("TextBox")
 jobIdInput.Parent = panel7
-jobIdInput.Size = UDim2.new(1,-10,0,30)
+jobIdInput.Size = UDim2.new(1, 0, 0, 36)
 jobIdInput.PlaceholderText = "Enter JobId..."
 jobIdInput.Text = ""
-jobIdInput.BackgroundColor3 = Color3.fromRGB(40,40,40)
+jobIdInput.BackgroundColor3 = Color3.fromRGB(38,38,38)
+jobIdInput.BackgroundTransparency = 0.35
+jobIdInput.BorderSizePixel = 0
 jobIdInput.TextColor3 = Color3.new(1,1,1)
+jobIdInput.PlaceholderColor3 = Color3.fromRGB(170,170,170)
+jobIdInput.ClearTextOnFocus = false
+jobIdInput.Font = Enum.Font.Gotham
+jobIdInput.TextSize = 14
 
-local joinJobBtn = createTransparentButton("Join", Color3.fromRGB(120,200,255), panel7)
+local jobIdCorner = Instance.new("UICorner")
+jobIdCorner.CornerRadius = UDim.new(0,8)
+jobIdCorner.Parent = jobIdInput
 
-local copyJobBtn = createTransparentButton("Copy JobId", Color3.fromRGB(255,200,120), panel7)
+local joinJobBtn = createTransparentButton("Join", Color3.fromRGB(38,38,38), panel7)
+joinJobBtn.BackgroundTransparency = 0.35
+joinJobBtn.BackgroundColor3 = Color3.fromRGB(38,38,38)
+
+local copyJobBtn = createTransparentButton("Copy JobId", Color3.fromRGB(38,38,38), panel7)
+copyJobBtn.BackgroundTransparency = 0.35
+copyJobBtn.BackgroundColor3 = Color3.fromRGB(38,38,38)
 -- ─── PANEL 8: FETOOL ─────────────────────────────────────────────────────────
 
 do
