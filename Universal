@@ -2114,22 +2114,22 @@ loopspeedToggle.MouseButton1Click:Connect(function() setLoopspeedEnabled(not loo
 
 -- ─── BUTTON EVENTS ────────────────────────────────────────────────────────────
 
--- Trạng thái mặc định
+-- -- Trạng thái mặc định
 mainFrame.Visible = false
-toggleUIButton.Visible = true
+mainContainer.Visible = true
 toggleUIButton.Text = "Open Menu"
 
--- Bấm Open Menu -> mở menu + ẩn nút mở
+-- Bấm Open Menu -> mở menu + ẩn luôn thanh mở menu
 toggleUIButton.MouseButton1Click:Connect(function()
     mainFrame.Visible = true
-    toggleUIButton.Visible = false
+    mainContainer.Visible = false
     updatePlayerList()
 end)
 
--- Bấm X -> đóng menu + hiện lại nút mở
+-- Bấm X -> đóng menu + hiện lại thanh mở menu
 closeButton.MouseButton1Click:Connect(function()
     mainFrame.Visible = false
-    toggleUIButton.Visible = true
+    mainContainer.Visible = true
 end)
 
 autoToggle.MouseButton1Click:Connect(function()
