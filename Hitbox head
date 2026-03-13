@@ -1274,6 +1274,7 @@ local bangBtn = createTransparentButton("BANG PLAYER : OFF", Color3.fromRGB(80, 
 bangBtn.BackgroundTransparency = 1
 bangBtn.BackgroundColor3 = Color3.fromRGB(80, 200, 80)
 local loopBringActive = false
+local loopBringStates = {}
 
 local loopBringBtn = createTransparentButton("LOOP BRING PLAYER : OFF", Color3.fromRGB(38, 38, 38), panel5)
 loopBringBtn.BackgroundTransparency = 0.35
@@ -2192,7 +2193,6 @@ end)
 
 end)
     
-
 loopBringBtn.MouseButton1Click:Connect(function()
 
     loopBringActive = not loopBringActive
@@ -2218,13 +2218,13 @@ loopBringBtn.MouseButton1Click:Connect(function()
             while loopBringActive do
                 local char = LocalPlayer.Character
                 if not char then
-                    task.wait(0.1)
+                    task.wait(0.03)
                     continue
                 end
 
                 local hrp = char:FindFirstChild("HumanoidRootPart")
                 if not hrp then
-                    task.wait(0.1)
+                    task.wait(0.03)
                     continue
                 end
 
@@ -2247,17 +2247,45 @@ loopBringBtn.MouseButton1Click:Connect(function()
 
                     if player.Character then
                         local targetHRP = player.Character:FindFirstChild("HumanoidRootPart")
+                        local hum = player.Character:FindFirstChildOfClass("Humanoid")
 
-                        if targetHRP then
+                        if targetHRP and hum then
+                            -- lưu state gốc 1 lần
+                            if not loopBringStates[player] then
+                                loopBringStates[player] = {
+                                    WalkSpeed = hum.WalkSpeed,
+                                    JumpPower = hum.JumpPower,
+                                    AutoRotate = hum.AutoRotate,
+                                }
+                            end
+
+                            -- freeze vừa đủ, vẫn giữ khả năng bị hit
+                            hum.WalkSpeed = 0
+                            hum.JumpPower = 0
+                            hum.AutoRotate = false
+
+                            for _, track in ipairs(hum:GetPlayingAnimationTracks()) do
+                                track:Stop(0.1)
+                            end
+
+                            -- chỉ tắt collision để chồng lên nhau, KHÔNG tắt touch/query
+                            for _, part in ipairs(player.Character:GetDescendants()) do
+                                if part:IsA("BasePart") then
+                                    part.CanCollide = false
+                                    part.Massless = true
+                                    part.AssemblyLinearVelocity = Vector3.zero
+                                    part.AssemblyAngularVelocity = Vector3.zero
+                                end
+                            end
+
+                            -- tất cả đứng cùng 1 chỗ, chồng 1 cục
                             targetHRP.CFrame = hrp.CFrame * CFrame.new(3, 1, 0)
                         end
                     end
-
-                    task.wait(0.1)
                 end
 
                 UpdateFlingStatus()
-                task.wait(0.1)
+                task.wait(0.02)
             end
         end)
 
@@ -2265,9 +2293,32 @@ loopBringBtn.MouseButton1Click:Connect(function()
         loopBringBtn.Text = "LOOP BRING PLAYER : OFF"
         loopBringBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
         loopBringBtn.BackgroundTransparency = 0.35
+
+        -- trả lại state khi OFF
+        for player, state in pairs(loopBringStates) do
+            if player and player.Parent and player.Character then
+                local hum = player.Character:FindFirstChildOfClass("Humanoid")
+
+                if hum then
+                    hum.WalkSpeed = state.WalkSpeed or 16
+                    hum.JumpPower = state.JumpPower or 50
+                    hum.AutoRotate = (state.AutoRotate ~= false)
+                end
+
+                for _, part in ipairs(player.Character:GetDescendants()) do
+                    if part:IsA("BasePart") then
+                        part.CanCollide = true
+                        part.Massless = false
+                    end
+                end
+            end
+        end
+
+        loopBringStates = {}
     end
 
 end)
+
 
 flingSelectAllBtn.MouseButton1Click:Connect(function() ToggleAllFling(true) end)
 flingDeselectAllBtn.MouseButton1Click:Connect(function() ToggleAllFling(false) end)
