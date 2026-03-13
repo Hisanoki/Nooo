@@ -1152,9 +1152,17 @@ playerListLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(functio
     playerList.CanvasSize = UDim2.new(0,0,0,playerListLayout.AbsoluteContentSize.Y + 10)
 end)
 
-local autoNameESP = createTransparentButton("ESP Name: OFF", Color3.fromRGB(50, 150, 200), panel3)
+local autoNameESP = createTransparentButton("ESP Name: OFF", Color3.fromRGB(80, 200, 80), panel3)
+autoNameESP.BackgroundTransparency = 1
+autoNameESP.BackgroundColor3 = Color3.fromRGB(80, 200, 80)
+
 local espNameAllBtn = createTransparentButton("ESP Name All: OFF", Color3.fromRGB(80, 200, 80), panel3)
-local boxESPBtn = createTransparentButton("ESP Box Charm: OFF", Color3.fromRGB(200, 200, 80), panel3)
+espNameAllBtn.BackgroundTransparency = 1
+espNameAllBtn.BackgroundColor3 = Color3.fromRGB(80, 200, 80)
+
+local boxESPBtn = createTransparentButton("ESP Box Charm: OFF", Color3.fromRGB(80, 200, 80), panel3)
+boxESPBtn.BackgroundTransparency = 1
+boxESPBtn.BackgroundColor3 = Color3.fromRGB(80, 200, 80)
 createTransparentLabel("Fly", panel2)
 local flySpeedInput = createTransparentInput("Fly Speed", "2", panel2)
 local flyToggle = createTransparentButton("Fly: OFF", Color3.fromRGB(80, 200, 80), panel2)
@@ -1190,9 +1198,17 @@ tpListLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
     tpPlayerList.CanvasSize = UDim2.new(0,0,0,tpListLayout.AbsoluteContentSize.Y + 5)
 end)
 
-local autoTPBtn = createTransparentButton("Auto Teleport: OFF", Color3.fromRGB(200,120,80), panel4)
-local teleportBtn = createTransparentButton("Teleport To Player", Color3.fromRGB(80,200,120), panel4)
-local tpToolBtn = createTransparentButton("Teleport Tool", Color3.fromRGB(170,120,255), panel4)
+local autoTPBtn = createTransparentButton("Auto TP: OFF", Color3.fromRGB(80, 200, 80), panel4)
+autoTPBtn.BackgroundTransparency = 1
+autoTPBtn.BackgroundColor3 = Color3.fromRGB(80, 200, 80)
+
+local teleportBtn = createTransparentButton("TP", Color3.fromRGB(80, 200, 80), panel4)
+teleportBtn.BackgroundTransparency = 1
+teleportBtn.BackgroundColor3 = Color3.fromRGB(80, 200, 80)
+
+local tpToolBtn = createTransparentButton("TP Tool", Color3.fromRGB(80, 200, 80), panel4)
+tpToolBtn.BackgroundTransparency = 1
+tpToolBtn.BackgroundColor3 = Color3.fromRGB(80, 200, 80)
 
 -- ─── PANEL 5: TROLL (FLING) ───────────────────────────────────────────────────
 
@@ -1223,8 +1239,13 @@ flingListLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function
     flingPlayerList.CanvasSize = UDim2.new(0,0,0,flingListLayout.AbsoluteContentSize.Y + 10)
 end)
 
-local flingStartBtn = createTransparentButton("START FLING", Color3.fromRGB(0, 180, 0), panel5)
-local bangBtn = createTransparentButton("BANG PLAYER", Color3.fromRGB(255, 80, 150), panel5)
+local flingStartBtn = createTransparentButton("FLING PLAYER : OFF", Color3.fromRGB(80, 200, 80), panel5)
+flingStartBtn.BackgroundTransparency = 1
+flingStartBtn.BackgroundColor3 = Color3.fromRGB(80, 200, 80)
+
+local bangBtn = createTransparentButton("BANG PLAYER : OFF", Color3.fromRGB(80, 200, 80), panel5)
+bangBtn.BackgroundTransparency = 1
+bangBtn.BackgroundColor3 = Color3.fromRGB(80, 200, 80)
 local flingSelectAllBtn = createTransparentButton("Select All", Color3.fromRGB(60, 60, 80), panel5)
 local flingDeselectAllBtn = createTransparentButton("Deselect All", Color3.fromRGB(60, 60, 80), panel5)
 
@@ -1236,11 +1257,25 @@ do
     _lbl.TextSize = 14
 end
 
-local antiFlingBtn = createTransparentButton("Anti-Fling: OFF", Color3.fromRGB(60, 100, 180), panel6)
-local antiVoidBtn = createTransparentButton("Anti Void: OFF", Color3.fromRGB(120,200,120), panel6)
-local antiAfkBtn = createTransparentButton("Anti AFK: OFF", Color3.fromRGB(120,180,255), panel6)
-local loopFBBtn = createTransparentButton("LoopFullBright: OFF", Color3.fromRGB(180,50,50), panel6)
-local noFogBtn = createTransparentButton("No Fog", Color3.fromRGB(120,200,255), panel6)
+local antiFlingBtn = createTransparentButton("Anti-Fling: OFF", Color3.fromRGB(38, 38, 38), panel6)
+antiFlingBtn.BackgroundTransparency = 0.35
+antiFlingBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
+
+local antiVoidBtn = createTransparentButton("Anti Void: OFF", Color3.fromRGB(38, 38, 38), panel6)
+antiVoidBtn.BackgroundTransparency = 0.35
+antiVoidBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
+
+local antiAfkBtn = createTransparentButton("Anti AFK: OFF", Color3.fromRGB(38, 38, 38), panel6)
+antiAfkBtn.BackgroundTransparency = 0.35
+antiAfkBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
+
+local loopFBBtn = createTransparentButton("LoopFullBright: OFF", Color3.fromRGB(38, 38, 38), panel6)
+loopFBBtn.BackgroundTransparency = 0.35
+loopFBBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
+
+local noFogBtn = createTransparentButton("No Fog", Color3.fromRGB(38, 38, 38), panel6)
+noFogBtn.BackgroundTransparency = 0.35
+noFogBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
 local antiAfkEnabled = false
 
 local loopFullBright = false
@@ -1248,6 +1283,14 @@ local fbConnection = nil
 antiAfkBtn.MouseButton1Click:Connect(function()
     antiAfkEnabled = not antiAfkEnabled
     antiAfkBtn.Text = "Anti AFK: "..(antiAfkEnabled and "ON" or "OFF")
+
+    if antiAfkEnabled then
+        antiAfkBtn.BackgroundColor3 = Color3.fromRGB(50, 200, 120)
+        antiAfkBtn.BackgroundTransparency = 0
+    else
+        antiAfkBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
+        antiAfkBtn.BackgroundTransparency = 0.35
+    end
 end)
 
 local VirtualUser = game:GetService("VirtualUser")
@@ -1265,6 +1308,14 @@ local lastSafePos = nil
 antiVoidBtn.MouseButton1Click:Connect(function()
     antiVoidEnabled = not antiVoidEnabled
     antiVoidBtn.Text = "Anti Void: "..(antiVoidEnabled and "ON" or "OFF")
+
+    if antiVoidEnabled then
+        antiVoidBtn.BackgroundColor3 = Color3.fromRGB(50, 200, 120)
+        antiVoidBtn.BackgroundTransparency = 0
+    else
+        antiVoidBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
+        antiVoidBtn.BackgroundTransparency = 0.35
+    end
 end)
 
 RunService.Heartbeat:Connect(function()
@@ -1943,10 +1994,12 @@ flingStartBtn.MouseButton1Click:Connect(function()
     if FlingActive then
         StopFling()
         flingStartBtn.Text = "FLING PLAYER : OFF"
-        flingStartBtn.BackgroundColor3 = Color3.fromRGB(200,0,0)
+        flingStartBtn.BackgroundColor3 = Color3.fromRGB(80, 200, 80)
+        flingStartBtn.BackgroundTransparency = 1
     else
         flingStartBtn.Text = "FLING PLAYER : ON"
-        flingStartBtn.BackgroundColor3 = Color3.fromRGB(0,200,0)
+        flingStartBtn.BackgroundColor3 = Color3.fromRGB(80, 200, 80)
+        flingStartBtn.BackgroundTransparency = 0
         StartFling()
     end
 
@@ -1959,77 +2012,72 @@ bangBtn.MouseButton1Click:Connect(function()
 
     if BangActive then
         bangBtn.Text = "BANG PLAYER : ON"
-        bangBtn.BackgroundColor3 = Color3.fromRGB(0,200,0)
+        bangBtn.BackgroundColor3 = Color3.fromRGB(80, 200, 80)
+        bangBtn.BackgroundTransparency = 0
     else
         bangBtn.Text = "BANG PLAYER : OFF"
-        bangBtn.BackgroundColor3 = Color3.fromRGB(200,0,0)
+        bangBtn.BackgroundColor3 = Color3.fromRGB(80, 200, 80)
+        bangBtn.BackgroundTransparency = 1
         if bangTrack then
             bangTrack:Stop()
         end
         return
     end
+local char = LocalPlayer.Character
+if not char then return end
 
-    
+local humanoid = char:FindFirstChildOfClass("Humanoid")
 
-    local char = LocalPlayer.Character
-    if not char then return end
+local anim = Instance.new("Animation")
+anim.AnimationId = "rbxassetid://5918726674"
 
-    local humanoid = char:FindFirstChildOfClass("Humanoid")
+bangTrack = humanoid:LoadAnimation(anim)
+bangTrack:Play()
 
-    local anim = Instance.new("Animation")
-    anim.AnimationId = "rbxassetid://5918726674"
+spawn(function()
+    while BangActive do
 
-    bangTrack = humanoid:LoadAnimation(anim)
-    bangTrack:Play()
+        local char = LocalPlayer.Character
+        if not char then task.wait() continue end
 
-spawn(function() 
-        while BangActive do
+        local hrp = char:FindFirstChild("HumanoidRootPart")
+        if not hrp then task.wait() continue end
+        local humanoid = char:FindFirstChildOfClass("Humanoid")
 
-            local char = LocalPlayer.Character
-            if not char then task.wait() continue end
+        for _,player in pairs(SelectedFlingTargets) do
+            if not BangActive then break end
 
-            local hrp = char:FindFirstChild("HumanoidRootPart")
-            if not hrp then task.wait() continue end
-            local humanoid = char:FindFirstChildOfClass("Humanoid")
+            if player.Character then
+                local targetHRP = player.Character:FindFirstChild("HumanoidRootPart")
 
+                if targetHRP then
+                    hrp.CFrame = targetHRP.CFrame * CFrame.new(0,0,1)
 
+                    for i = 1,15 do
 
-            for _,player in pairs(SelectedFlingTargets) do
-                if not BangActive then break end
+                        if not BangActive then break end
 
-                if player.Character then
-                    local targetHRP = player.Character:FindFirstChild("HumanoidRootPart")
-
-                    if targetHRP then
                         hrp.CFrame = targetHRP.CFrame * CFrame.new(0,0,1)
+                        task.wait(0.05)
 
-                        for i = 1,15 do
+                        if not BangActive then break end
 
-    if not BangActive then break end
+                        hrp.CFrame = targetHRP.CFrame * CFrame.new(0,0,1.5)
+                        task.wait(0.05)
 
-    hrp.CFrame = targetHRP.CFrame * CFrame.new(0,0,1)
-    task.wait(0.05)
-
-    if not BangActive then break end
-
-    hrp.CFrame = targetHRP.CFrame * CFrame.new(0,0,1.5)
-    task.wait(0.05)
-
-end
                     end
                 end
             end
-
-            task.wait()
-
         end
 
-    end)
+        task.wait()
+
+    end
 
 end)
 
-        
-
+end)
+    
 
 flingSelectAllBtn.MouseButton1Click:Connect(function() ToggleAllFling(true) end)
 flingDeselectAllBtn.MouseButton1Click:Connect(function() ToggleAllFling(false) end)
@@ -2040,10 +2088,12 @@ antiFlingBtn.MouseButton1Click:Connect(function()
     if antiFlingEnabled then
         antiFlingBtn.Text = "Anti-Fling: ON"
         antiFlingBtn.BackgroundColor3 = Color3.fromRGB(50, 200, 120)
+        antiFlingBtn.BackgroundTransparency = 0
         enableAntiFling()
     else
         antiFlingBtn.Text = "Anti-Fling: OFF"
-        antiFlingBtn.BackgroundColor3 = Color3.fromRGB(60, 100, 180)
+        antiFlingBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
+        antiFlingBtn.BackgroundTransparency = 0.35
         disableAntiFling()
     end
 end)
@@ -2053,7 +2103,8 @@ loopFBBtn.MouseButton1Click:Connect(function()
 
     if loopFullBright then
         loopFBBtn.Text = "LoopFullBright: ON"
-        loopFBBtn.BackgroundColor3 = Color3.fromRGB(0,200,0)
+       loopFBBtn.BackgroundColor3 = Color3.fromRGB(50, 200, 120)
+loopFBBtn.BackgroundTransparency = 0
 
         if fbConnection then
             fbConnection:Disconnect()
@@ -2073,7 +2124,8 @@ loopFBBtn.MouseButton1Click:Connect(function()
 
     else
         loopFBBtn.Text = "LoopFullBright: OFF"
-        loopFBBtn.BackgroundColor3 = Color3.fromRGB(180,50,50)
+       loopFBBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
+loopFBBtn.BackgroundTransparency = 0.35
 
         if fbConnection then
             fbConnection:Disconnect()
@@ -2084,6 +2136,9 @@ loopFBBtn.MouseButton1Click:Connect(function()
 
 end)
 noFogBtn.MouseButton1Click:Connect(function()
+
+    noFogBtn.BackgroundColor3 = Color3.fromRGB(50, 200, 120)
+    noFogBtn.BackgroundTransparency = 0
 
     local lighting = game:GetService("Lighting")
 
@@ -2096,6 +2151,10 @@ noFogBtn.MouseButton1Click:Connect(function()
             v:Destroy()
         end
     end
+
+    task.wait(0.15)
+    noFogBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
+    noFogBtn.BackgroundTransparency = 0.35
 
 end)
 -- ─── LOOPSPEED ────────────────────────────────────────────────────────────────
@@ -2185,10 +2244,21 @@ end)
 
 autoNameESP.MouseButton1Click:Connect(function()
     nameESPEnabled = not nameESPEnabled
-    autoNameESP.Text = nameESPEnabled and "ESP Name: ON" or "ESP Name: OFF"
-    autoNameESP.BackgroundColor3 = nameESPEnabled and Color3.fromRGB(50,200,50) or Color3.fromRGB(50,150,200)
+
+    if nameESPEnabled then
+        autoNameESP.Text = "ESP Name: ON"
+        autoNameESP.BackgroundColor3 = Color3.fromRGB(80, 200, 80)
+        autoNameESP.BackgroundTransparency = 0
+    else
+        autoNameESP.Text = "ESP Name: OFF"
+        autoNameESP.BackgroundColor3 = Color3.fromRGB(80, 200, 80)
+        autoNameESP.BackgroundTransparency = 1
+    end
+
     if not nameESPEnabled then
-        for player, _ in pairs(nameESPObjects) do removeNameESP(player) end
+        for player, _ in pairs(nameESPObjects) do
+            removeNameESP(player)
+        end
     else
         for player, selected in pairs(selectedPlayers) do
             if selected and player.Character and isAlive(player.Character) then
@@ -2199,11 +2269,19 @@ autoNameESP.MouseButton1Click:Connect(function()
 end)
 
 
-
 espNameAllBtn.MouseButton1Click:Connect(function()
     espNameAllState = not espNameAllState
-    espNameAllBtn.Text = espNameAllState and "ESP Name All: ON" or "ESP Name All: OFF"
-    espNameAllBtn.BackgroundColor3 = espNameAllState and Color3.fromRGB(80,220,80) or Color3.fromRGB(80,200,80)
+
+    if espNameAllState then
+        espNameAllBtn.Text = "ESP Name All: ON"
+        espNameAllBtn.BackgroundColor3 = Color3.fromRGB(80, 200, 80)
+        espNameAllBtn.BackgroundTransparency = 0
+    else
+        espNameAllBtn.Text = "ESP Name All: OFF"
+        espNameAllBtn.BackgroundColor3 = Color3.fromRGB(80, 200, 80)
+        espNameAllBtn.BackgroundTransparency = 1
+    end
+
     for _, player in pairs(Players:GetPlayers()) do
         if player ~= LocalPlayer then
             selectedPlayers[player] = espNameAllState
@@ -2214,14 +2292,25 @@ espNameAllBtn.MouseButton1Click:Connect(function()
             end
         end
     end
+
     updatePlayerList()
 end)
 
 boxESPBtn.MouseButton1Click:Connect(function()
     boxESPEnabled = not boxESPEnabled
-    boxESPBtn.Text = boxESPEnabled and "ESP Box Charm: ON" or "ESP Box Charm: OFF"
-    boxESPBtn.BackgroundColor3 = boxESPEnabled and Color3.fromRGB(220,220,80) or Color3.fromRGB(200,200,80)
+
+    if boxESPEnabled then
+        boxESPBtn.Text = "ESP Box Charm: ON"
+        boxESPBtn.BackgroundColor3 = Color3.fromRGB(80, 200, 80)
+        boxESPBtn.BackgroundTransparency = 0
+    else
+        boxESPBtn.Text = "ESP Box Charm: OFF"
+        boxESPBtn.BackgroundColor3 = Color3.fromRGB(80, 200, 80)
+        boxESPBtn.BackgroundTransparency = 1
+    end
+
     local size = tonumber(sizeInput.Text) or DEFAULT_HITBOX_SIZE
+
     for _, player in pairs(Players:GetPlayers()) do
         if player ~= LocalPlayer and player.Character and isAlive(player.Character) then
             if boxESPEnabled then
@@ -2359,24 +2448,40 @@ copyJobBtn.MouseButton1Click:Connect(function()
     end)
 
 end)
--- ─── TP BUTTON EVENTS ─────────────────────────────────────────────────────────
+---- ─── TP BUTTON EVENTS ─────────────────────────────────────────────────────────
 
 autoTPBtn.MouseButton1Click:Connect(function()
     autoTPEnabled = not autoTPEnabled
-    autoTPBtn.Text = autoTPEnabled and "Auto Teleport: ON" or "Auto Teleport: OFF"
-    autoTPBtn.BackgroundColor3 = autoTPEnabled and Color3.fromRGB(80,200,80) or Color3.fromRGB(200,120,80)
-    if autoTPConnection then autoTPConnection:Disconnect(); autoTPConnection = nil end
+
+    if autoTPEnabled then
+        autoTPBtn.Text = "Auto TP: ON"
+        autoTPBtn.BackgroundColor3 = Color3.fromRGB(80, 200, 80)
+        autoTPBtn.BackgroundTransparency = 0
+    else
+        autoTPBtn.Text = "Auto TP: OFF"
+        autoTPBtn.BackgroundColor3 = Color3.fromRGB(80, 200, 80)
+        autoTPBtn.BackgroundTransparency = 1
+    end
+
+    if autoTPConnection then
+        autoTPConnection:Disconnect()
+        autoTPConnection = nil
+    end
+
     if autoTPEnabled then
         autoTPConnection = RunService.Heartbeat:Connect(function()
             local myChar = LocalPlayer.Character
             if not myChar then return end
             local myHRP = myChar:FindFirstChild("HumanoidRootPart")
             if not myHRP then return end
+
             for player,_ in pairs(selectedTPPlayers) do
                 local targetChar = player.Character
                 if targetChar then
                     local targetHRP = targetChar:FindFirstChild("HumanoidRootPart")
-                    if targetHRP then myHRP.CFrame = targetHRP.CFrame + Vector3.new(0,3,0) end
+                    if targetHRP then
+                        myHRP.CFrame = targetHRP.CFrame + Vector3.new(0,3,0)
+                    end
                 end
             end
         end)
@@ -2388,6 +2493,7 @@ teleportBtn.MouseButton1Click:Connect(function()
     if not myChar then return end
     local myHRP = myChar:FindFirstChild("HumanoidRootPart")
     if not myHRP then return end
+
     for player,_ in pairs(selectedTPPlayers) do
         local targetChar = player.Character
         if targetChar then
@@ -2403,14 +2509,17 @@ end)
 tpToolBtn.MouseButton1Click:Connect(function()
     local player = LocalPlayer
     local mouse = player:GetMouse()
+
     if player.Backpack:FindFirstChild("Click TP") then
         createNotification("Teleport Tool", "Tool already in backpack")
         return
     end
+
     local tool = Instance.new("Tool")
     tool.Name = "Click TP"
     tool.RequiresHandle = false
     tool.CanBeDropped = false
+
     tool.Activated:Connect(function()
         local char = player.Character
         if not char then return end
@@ -2418,9 +2527,12 @@ tpToolBtn.MouseButton1Click:Connect(function()
         if not hrp then return end
         hrp.CFrame = mouse.Hit + Vector3.new(0,5,0)
     end)
+
     tool.Parent = player.Backpack
-    createNotification("Teleport Tool", "Tool added to backpack")
+    createNotification("Teleport Tool", "Click TP tool added")
 end)
+
+
 
 -- ─── INPUT EVENTS ─────────────────────────────────────────────────────────────
 
