@@ -1151,7 +1151,7 @@ local flySpeedInput = createTransparentInput("Fly Speed", "2", panel2)
 local flyToggle = createTransparentButton("Fly: OFF", Color3.fromRGB(60, 60, 60 ), panel2)
 local infJumpToggle = createTransparentButton("Inf Jump: OFF", Color3.fromRGB(60, 60, 60 ), panel2)
 local noclipToggle = createTransparentButton("Noclip: OFF", Color3.fromRBG(60, 60, 60 ), panel2)
-
+local defaultToggleColor = Color3.fromRGB(60, 60, 60)
 -- ─── PANEL 3: TELEPORT ────────────────────────────────────────────────────────
 
 do
@@ -2091,7 +2091,7 @@ local loopspeedConnection = nil
 local function setLoopspeedEnabled(state)
     loopspeedEnabled = state
     loopspeedToggle.Text = loopspeedEnabled and "Loopspeed: ON" or "Loopspeed: OFF"
-    loopspeedToggle.BackgroundColor3 = loopspeedEnabled and Color3.fromRGB(80,200,80) or Color3.fromRGB(80,80,200)
+    loopspeedToggle.BackgroundColor3 = loopspeedEnabled and Color3.fromRGB(80,200,80) or defaultToggleColor
     if loopspeedConnection then loopspeedConnection:Disconnect(); loopspeedConnection = nil end
     if loopspeedEnabled then
         loopspeedConnection = RunService.Heartbeat:Connect(function()
@@ -2218,7 +2218,7 @@ infJumpToggle.MouseButton1Click:Connect(function()
         startInfJump()
     else
         infJumpToggle.Text = "Inf Jump: OFF"
-        infJumpToggle.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+        infJumpToggle.BackgroundColor3 = defaultToggleColor
         stopInfJump()
     end
 end) 
@@ -2232,7 +2232,7 @@ noclipToggle.MouseButton1Click:Connect(function()
         startNoclip()
     else
         noclipToggle.Text = "Noclip: OFF"
-        noclipToggle.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+noclipToggle.BackgroundColor3 = defaultToggleColor
         stopNoclip()
     end
 end)
@@ -2421,7 +2421,7 @@ LocalPlayer.CharacterAdded:Connect(function(character)
     stopFly()
     if flyToggle then
         flyToggle.Text = "Fly: OFF"
-        flyToggle.BackgroundColor3 = Color3.fromRGB(200,120,60)
+flyToggle.BackgroundColor3 = defaultToggleColor 
     end
     isInvisible = false
     invisButton.BackgroundColor3 = INVIS_CONFIG.PRIMARY_COLOR
