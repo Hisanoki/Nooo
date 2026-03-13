@@ -2091,8 +2091,33 @@ local loopspeedConnection = nil
 local function setLoopspeedEnabled(state)
     loopspeedEnabled = state
     loopspeedToggle.Text = loopspeedEnabled and "Loopspeed: ON" or "Loopspeed: OFF"
-    loopspeedToggle.BackgroundColor3 = loopspeedEnabled and Color3.fromRGB(80,200,80) or Color3.fromRGB(80,80,200)
-    if loopspeedConnection then loopspeedConnection:Disconnect(); loopspeedConnection = nil end
+    loopspeedToggle.BackgroundColor3 = loopspeedEnabled and ACTIVE_TOGGLE_COLOR or DEFAULT_TOGGLE_COLOR
+
+    if loopspeedConnection then
+        loopspeedConnection:Disconnect()
+        loopspeedConnection = nil
+    end
+
+    if loopspeedEnabled then
+        loopspeedConnection = RunService.Heartbeat:Connect(function()
+            local char = LocalPlayer.Character
+            if char then
+                local hum = char:FindFirstChildOfClass("Humanoid")
+                if hum then
+                    hum.WalkSpeed = tonumber(loopspeedInput.Text) or 16
+                end
+            end
+        end)
+    else
+        local char = LocalPlayer.Character
+        if char then
+            local hum = char:FindFirstChildOfClass("Humanoid")
+            if hum then
+                hum.WalkSpeed = 16
+            end
+        end
+    end
+end
     if loopspeedEnabled then
         loopspeedConnection = RunService.Heartbeat:Connect(function()
             local char = LocalPlayer.Character
@@ -2237,12 +2262,12 @@ flyToggle.MouseButton1Click:Connect(function()
     if flyEnabled then
         flyEnabled = false
         flyToggle.Text = "Fly: OFF"
-        flyToggle.BackgroundColor3 = Color3.fromRGB(200,120,60)
+        flyToggle.BackgroundColor3 = Color3.fromRGB(70, 70, 70) -- màu UI mặc định
         stopFly()
     else
         flyEnabled = true
         flyToggle.Text = "Fly: ON"
-        flyToggle.BackgroundColor3 = Color3.fromRGB(80,200,80)
+        flyToggle.BackgroundColor3 = Color3.fromRGB(0, 200, 0) -- xanh lá khi bật
         startFly()
     end
 end)
@@ -2551,4 +2576,4 @@ end)
 
 statusLabel.Text = "Processing: 0 Players"
 updatePlayerList()
-RefreshFlingPlayerList()  
+RefreshFlingPlayerList()   
