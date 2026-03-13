@@ -1481,7 +1481,7 @@ do
     feKBBtn.Text = auraKey.Name
 feKBBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 feKBBtn.TextScaled = false
-feKBBtn.TextSize = 18
+feKBBtn.TextSize = 14
 feKBBtn.Font = Enum.Font.GothamBold
     feKBBtn.AutoButtonColor = true
     _mkCorner(6, feKBBtn)
@@ -1504,7 +1504,7 @@ feKBBtn.MouseButton1Click:Connect(function()
         if input.UserInputType == Enum.UserInputType.Keyboard then
             auraKey = input.KeyCode
             feKBBtn.Text = auraKey.Name
-            feKBBtn.TextColor3 = Color3.fromRGB(255, 220, 80)
+            feKBBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
             feAuraBtn.Text = "Tool Aura [" .. auraKey.Name .. "]"
             auraListening = false
             conn:Disconnect()
@@ -2114,15 +2114,22 @@ loopspeedToggle.MouseButton1Click:Connect(function() setLoopspeedEnabled(not loo
 
 -- ─── BUTTON EVENTS ────────────────────────────────────────────────────────────
 
+-- -- Trạng thái mặc định
+mainFrame.Visible = false
+mainContainer.Visible = true
+toggleUIButton.Text = "Open Menu"
+
+-- Bấm Open Menu -> mở menu + ẩn luôn thanh mở menu
 toggleUIButton.MouseButton1Click:Connect(function()
-    mainFrame.Visible = not mainFrame.Visible
-    toggleUIButton.Text = mainFrame.Visible and "Close Menu" or "Open Menu"
-    if mainFrame.Visible then updatePlayerList() end
+    mainFrame.Visible = true
+    mainContainer.Visible = false
+    updatePlayerList()
 end)
 
+-- Bấm X -> đóng menu + hiện lại thanh mở menu
 closeButton.MouseButton1Click:Connect(function()
     mainFrame.Visible = false
-    toggleUIButton.Text = "Open Menu"
+    mainContainer.Visible = true
 end)
 
 autoToggle.MouseButton1Click:Connect(function()
@@ -2544,4 +2551,4 @@ end)
 
 statusLabel.Text = "Processing: 0 Players"
 updatePlayerList()
-RefreshFlingPlayerList()  
+RefreshFlingPlayerList()   
