@@ -212,10 +212,11 @@ local function toggleInvisibility()
         task.wait()
         seat.CFrame = savedCFrame
         setCharacterTransparency(LocalPlayer.Character, 0.5)
-        if invisButton then
-            invisButton.BackgroundColor3 = INVIS_CONFIG.SUCCESS_COLOR
-            invisButton.Text = "VISIBLE"
-        end
+       if invisButton then
+    invisButton.BackgroundColor3 = INVIS_CONFIG.SUCCESS_COLOR
+    invisButton.BackgroundTransparency = 0
+    invisButton.Text = "Invisible: ON"
+end
         createNotification("Invisibility ON", "You are now invisible")
     else
         local chair = workspace:FindFirstChild("invischair")
@@ -224,10 +225,11 @@ local function toggleInvisibility()
             setCharacterTransparency(LocalPlayer.Character, 0)
         end
         if invisButton then
-            invisButton.BackgroundColor3 = INVIS_CONFIG.PRIMARY_COLOR
-            invisButton.Text = "INVISIBLE"
-        end
-        createNotification("Invisibility OFF", "You are now visible")
+    invisButton.BackgroundColor3 = INVIS_CONFIG.SUCCESS_COLOR
+    invisButton.BackgroundTransparency = 1
+    invisButton.Text = "Invisible: OFF"
+end
+        createNotification("Invisibility OFF", "You are now Invisible")
     end
 end
 
@@ -1111,9 +1113,16 @@ end)
 
 
 createTransparentLabel("Loopspeed", panel2)
+
 local loopspeedInput = createTransparentInput("Speed (e.g. 16)", "16", panel2)
-local loopspeedToggle = createTransparentButton("Loopspeed: OFF", Color3.fromRGB(80, 80, 200), panel2)
-invisButton = createTransparentButton("INVISIBLE", INVIS_CONFIG.PRIMARY_COLOR, panel2)
+
+local loopspeedToggle = createTransparentButton("Loopspeed: OFF", Color3.fromRGB(80, 200, 80), panel2)
+loopspeedToggle.BackgroundTransparency = 1
+loopspeedToggle.BackgroundColor3 = Color3.fromRGB(80, 200, 80)
+
+invisButton = createTransparentButton("Invisible: OFF", INVIS_CONFIG.SUCCESS_COLOR, panel2)
+invisButton.BackgroundTransparency = 1
+invisButton.BackgroundColor3 = INVIS_CONFIG.SUCCESS_COLOR
 invisSound = Instance.new("Sound")
 invisSound.SoundId = INVIS_CONFIG.SOUND_ID
 invisSound.Volume = 0.5
@@ -1148,9 +1157,15 @@ local espNameAllBtn = createTransparentButton("ESP Name All: OFF", Color3.fromRG
 local boxESPBtn = createTransparentButton("ESP Box Charm: OFF", Color3.fromRGB(200, 200, 80), panel3)
 createTransparentLabel("Fly", panel2)
 local flySpeedInput = createTransparentInput("Fly Speed", "2", panel2)
-local flyToggle = createTransparentButton("Fly: OFF", Color3.fromRGB(200,120,60), panel2)
-local infJumpToggle = createTransparentButton("Inf Jump: OFF", Color3.fromRGB(120,170,255), panel2)
-local noclipToggle = createTransparentButton("Noclip: OFF", Color3.fromRGB(120,255,120), panel2)
+local flyToggle = createTransparentButton("Fly: OFF", Color3.fromRGB(80, 200, 80), panel2)
+flyToggle.BackgroundTransparency = 1
+flyToggle.BackgroundColor3 = Color3.fromRGB(80, 200, 80)
+local infJumpToggle = createTransparentButton("Inf Jump: OFF", Color3.fromRGB(80, 200, 80), panel2)
+infJumpToggle.BackgroundTransparency = 1
+infJumpToggle.BackgroundColor3 = Color3.fromRGB(80, 200, 80)
+local noclipToggle = createTransparentButton("Noclip: OFF", Color3.fromRGB(80, 200, 80), panel2)
+noclipToggle.BackgroundTransparency = 1
+noclipToggle.BackgroundColor3 = Color3.fromRGB(80, 200, 80)
 
 -- ─── PANEL 3: TELEPORT ────────────────────────────────────────────────────────
 
@@ -2091,21 +2106,31 @@ local loopspeedConnection = nil
 local function setLoopspeedEnabled(state)
     loopspeedEnabled = state
     loopspeedToggle.Text = loopspeedEnabled and "Loopspeed: ON" or "Loopspeed: OFF"
-    loopspeedToggle.BackgroundColor3 = loopspeedEnabled and Color3.fromRGB(80,200,80) or Color3.fromRGB(80,80,200)
-    if loopspeedConnection then loopspeedConnection:Disconnect(); loopspeedConnection = nil end
+    loopspeedToggle.BackgroundColor3 = Color3.fromRGB(80, 200, 80) -- xanh lá
+    loopspeedToggle.BackgroundTransparency = loopspeedEnabled and 0 or 1
+
+    if loopspeedConnection then
+        loopspeedConnection:Disconnect()
+        loopspeedConnection = nil
+    end
+
     if loopspeedEnabled then
         loopspeedConnection = RunService.Heartbeat:Connect(function()
             local char = LocalPlayer.Character
             if char then
                 local hum = char:FindFirstChildOfClass("Humanoid")
-                if hum then hum.WalkSpeed = tonumber(loopspeedInput.Text) or 16 end
+                if hum then
+                    hum.WalkSpeed = tonumber(loopspeedInput.Text) or 16
+                end
             end
         end)
     else
         local char = LocalPlayer.Character
         if char then
             local hum = char:FindFirstChildOfClass("Humanoid")
-            if hum then hum.WalkSpeed = 16 end
+            if hum then
+                hum.WalkSpeed = 16
+            end
         end
     end
 end
@@ -2212,38 +2237,42 @@ invisButton.MouseButton1Click:Connect(toggleInvisibility)
 
 infJumpToggle.MouseButton1Click:Connect(function()
     infJumpEnabled = not infJumpEnabled
+    infJumpToggle.Text = infJumpEnabled and "Inf Jump: ON" or "Inf Jump: OFF"
+    infJumpToggle.BackgroundColor3 = Color3.fromRGB(80, 200, 80) -- xanh lá
+    infJumpToggle.BackgroundTransparency = infJumpEnabled and 0 or 1
+
     if infJumpEnabled then
-        infJumpToggle.Text = "Inf Jump: ON"
         startInfJump()
     else
-        infJumpToggle.Text = "Inf Jump: OFF"
         stopInfJump()
     end
 end)
 
 noclipToggle.MouseButton1Click:Connect(function()
     noclipEnabled = not noclipEnabled
+    noclipToggle.Text = noclipEnabled and "Noclip: ON" or "Noclip: OFF"
+    noclipToggle.BackgroundColor3 = Color3.fromRGB(80, 200, 80) -- xanh lá
+    noclipToggle.BackgroundTransparency = noclipEnabled and 0 or 1
+
     if noclipEnabled then
-        noclipToggle.Text = "Noclip: ON"
         startNoclip()
     else
-        noclipToggle.Text = "Noclip: OFF"
         stopNoclip()
     end
 end)
 
 flyToggle.MouseButton1Click:Connect(function()
     flySpeed = tonumber(flySpeedInput.Text) or 2
+    flyEnabled = not flyEnabled
+
+    flyToggle.Text = flyEnabled and "Fly: ON" or "Fly: OFF"
+    flyToggle.BackgroundColor3 = Color3.fromRGB(80, 200, 80) -- xanh lá
+    flyToggle.BackgroundTransparency = flyEnabled and 0 or 1
+
     if flyEnabled then
-        flyEnabled = false
-        flyToggle.Text = "Fly: OFF"
-        flyToggle.BackgroundColor3 = Color3.fromRGB(200,120,60)
-        stopFly()
-    else
-        flyEnabled = true
-        flyToggle.Text = "Fly: ON"
-        flyToggle.BackgroundColor3 = Color3.fromRGB(80,200,80)
         startFly()
+    else
+        stopFly()
     end
 end)
 rejoinBtn.MouseButton1Click:Connect(function()
@@ -2415,12 +2444,16 @@ LocalPlayer.CharacterAdded:Connect(function(character)
     flyEnabled = false
     stopFly()
     if flyToggle then
-        flyToggle.Text = "Fly: OFF"
-        flyToggle.BackgroundColor3 = Color3.fromRGB(200,120,60)
-    end
+    flyToggle.Text = "Fly: OFF"
+flyToggle.BackgroundColor3 = Color3.fromRGB(80, 200, 80)
+flyToggle.BackgroundTransparency = 1
+end
     isInvisible = false
-    invisButton.BackgroundColor3 = INVIS_CONFIG.PRIMARY_COLOR
-    invisButton.Text = "INVISIBLE"
+if invisButton then
+    invisButton.BackgroundColor3 = INVIS_CONFIG.SUCCESS_COLOR
+    invisButton.BackgroundTransparency = 1
+    invisButton.Text = "Invisible: OFF"
+end
     local chair = workspace:FindFirstChild("invischair")
     if chair then chair:Destroy() end
     setCharacterTransparency(character, 0)
