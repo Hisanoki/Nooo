@@ -127,6 +127,9 @@ local BangActive = false
 local SelectedFlingTargets = {}
 local FlingPlayerCheckboxes = {}
 
+local walkflinging = false
+local walkFlingHumanoidDiedConn = nil
+local speaker = LocalPlayer
 -- ANTI-FLING STATE
 local antiFlingEnabled = false
 local antiFlingConnection = nil
@@ -212,8 +215,8 @@ local function toggleInvisibility()
         task.wait()
         seat.CFrame = savedCFrame
         setCharacterTransparency(LocalPlayer.Character, 0.5)
-       if invisButton then
-    invisButton.BackgroundColor3 = INVIS_CONFIG.SUCCESS_COLOR
+      if invisButton then
+    invisButton.BackgroundColor3 = Color3.fromRGB(50, 200, 120)
     invisButton.BackgroundTransparency = 0
     invisButton.Text = "Invisible: ON"
 end
@@ -225,8 +228,8 @@ end
             setCharacterTransparency(LocalPlayer.Character, 0)
         end
         if invisButton then
-    invisButton.BackgroundColor3 = INVIS_CONFIG.SUCCESS_COLOR
-    invisButton.BackgroundTransparency = 1
+    invisButton.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
+    invisButton.BackgroundTransparency = 0.35
     invisButton.Text = "Invisible: OFF"
 end
         createNotification("Invisibility OFF", "You are now Invisible")
@@ -819,7 +822,64 @@ local function SkidFling(TargetPlayer)
         return FlingMessage("Error", "Your character is not ready", 2)
     end
 end
+-- ─── WALK FLING ──────────────────────────────────────────────────────────────
 
+local function toggleWalkFling()
+    walkflinging = not walkflinging
+
+    if walkflinging then
+        local character = speaker.Character
+        local humanoid = character and character:FindFirstChildWhichIsA("Humanoid")
+
+        if walkFlingHumanoidDiedConn then
+            walkFlingHumanoidDiedConn:Disconnect()
+            walkFlingHumanoidDiedConn = nil
+        end
+
+        if humanoid then
+            walkFlingHumanoidDiedConn = humanoid.Died:Connect(function()
+                walkflinging = false
+                if walkFlingBtn then
+                    walkFlingBtn.Text = "WALK FLING : OFF"
+                    walkFlingBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
+                    walkFlingBtn.BackgroundTransparency = 0.35
+                end
+            end)
+        end
+
+        task.spawn(function()
+            local movel = 0.1
+
+            while walkflinging do
+                RunService.Heartbeat:Wait()
+
+                local char = speaker.Character
+                local root = char and char:FindFirstChild("HumanoidRootPart")
+
+                if char and root and root.Parent then
+                    local vel = root.Velocity
+                    root.Velocity = vel * 10000 + Vector3.new(0, 10000, 0)
+
+                    RunService.RenderStepped:Wait()
+                    if root and root.Parent then
+                        root.Velocity = vel
+                    end
+
+                    RunService.Stepped:Wait()
+                    if root and root.Parent then
+                        root.Velocity = vel + Vector3.new(0, movel, 0)
+                        movel = movel * -1
+                    end
+                end
+            end
+        end)
+    else
+        if walkFlingHumanoidDiedConn then
+            walkFlingHumanoidDiedConn:Disconnect()
+            walkFlingHumanoidDiedConn = nil
+        end
+    end
+end
 -- ─── ANTI-FLING ──────────────────────────────────────────────────────────────
 
 local function enableAntiFling()
@@ -1143,13 +1203,13 @@ createTransparentLabel("Loopspeed", panel2)
 
 local loopspeedInput = createTransparentInput("Speed (e.g. 16)", "16", panel2)
 
-local loopspeedToggle = createTransparentButton("Loopspeed: OFF", Color3.fromRGB(80, 200, 80), panel2)
-loopspeedToggle.BackgroundTransparency = 1
-loopspeedToggle.BackgroundColor3 = Color3.fromRGB(80, 200, 80)
+local loopspeedToggle = createTransparentButton("Loopspeed: OFF", Color3.fromRGB(38, 38, 38), panel2)
+loopspeedToggle.BackgroundTransparency = 0.35
+loopspeedToggle.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
 
-invisButton = createTransparentButton("Invisible: OFF", INVIS_CONFIG.SUCCESS_COLOR, panel2)
-invisButton.BackgroundTransparency = 1
-invisButton.BackgroundColor3 = INVIS_CONFIG.SUCCESS_COLOR
+invisButton = createTransparentButton("Invisible: OFF", Color3.fromRGB(38, 38, 38), panel2)
+invisButton.BackgroundTransparency = 0.35
+invisButton.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
 invisSound = Instance.new("Sound")
 invisSound.SoundId = INVIS_CONFIG.SOUND_ID
 invisSound.Volume = 0.5
@@ -1179,28 +1239,30 @@ playerListLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(functio
     playerList.CanvasSize = UDim2.new(0,0,0,playerListLayout.AbsoluteContentSize.Y + 10)
 end)
 
-local autoNameESP = createTransparentButton("ESP Name: OFF", Color3.fromRGB(80, 200, 80), panel3)
-autoNameESP.BackgroundTransparency = 1
-autoNameESP.BackgroundColor3 = Color3.fromRGB(80, 200, 80)
+local autoNameESP = createTransparentButton("ESP Name: OFF", Color3.fromRGB(38, 38, 38), panel3)
+autoNameESP.BackgroundTransparency = 0.35
+autoNameESP.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
 
-local espNameAllBtn = createTransparentButton("ESP Name All: OFF", Color3.fromRGB(80, 200, 80), panel3)
-espNameAllBtn.BackgroundTransparency = 1
-espNameAllBtn.BackgroundColor3 = Color3.fromRGB(80, 200, 80)
+local espNameAllBtn = createTransparentButton("ESP Name All: OFF", Color3.fromRGB(38, 38, 38), panel3)
+espNameAllBtn.BackgroundTransparency = 0.35
+espNameAllBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
 
-local boxESPBtn = createTransparentButton("ESP Box Charm: OFF", Color3.fromRGB(80, 200, 80), panel3)
-boxESPBtn.BackgroundTransparency = 1
-boxESPBtn.BackgroundColor3 = Color3.fromRGB(80, 200, 80)
+local boxESPBtn = createTransparentButton("ESP Box Charm: OFF", Color3.fromRGB(38, 38, 38), panel3)
+boxESPBtn.BackgroundTransparency = 0.35
+boxESPBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
 createTransparentLabel("Fly", panel2)
 local flySpeedInput = createTransparentInput("Fly Speed", "2", panel2)
-local flyToggle = createTransparentButton("Fly: OFF", Color3.fromRGB(80, 200, 80), panel2)
-flyToggle.BackgroundTransparency = 1
-flyToggle.BackgroundColor3 = Color3.fromRGB(80, 200, 80)
-local infJumpToggle = createTransparentButton("Inf Jump: OFF", Color3.fromRGB(80, 200, 80), panel2)
-infJumpToggle.BackgroundTransparency = 1
-infJumpToggle.BackgroundColor3 = Color3.fromRGB(80, 200, 80)
-local noclipToggle = createTransparentButton("Noclip: OFF", Color3.fromRGB(80, 200, 80), panel2)
-noclipToggle.BackgroundTransparency = 1
-noclipToggle.BackgroundColor3 = Color3.fromRGB(80, 200, 80)
+local flyToggle = createTransparentButton("Fly: OFF", Color3.fromRGB(38, 38, 38), panel2)
+flyToggle.BackgroundTransparency = 0.35
+flyToggle.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
+
+local infJumpToggle = createTransparentButton("Inf Jump: OFF", Color3.fromRGB(38, 38, 38), panel2)
+infJumpToggle.BackgroundTransparency = 0.35
+infJumpToggle.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
+
+local noclipToggle = createTransparentButton("Noclip: OFF", Color3.fromRGB(38, 38, 38), panel2)
+noclipToggle.BackgroundTransparency = 0.35
+noclipToggle.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
 
 -- ─── PANEL 3: TELEPORT ────────────────────────────────────────────────────────
 
@@ -1225,9 +1287,9 @@ tpListLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
     tpPlayerList.CanvasSize = UDim2.new(0,0,0,tpListLayout.AbsoluteContentSize.Y + 5)
 end)
 
-local autoTPBtn = createTransparentButton("Auto TP: OFF", Color3.fromRGB(80, 200, 80), panel4)
-autoTPBtn.BackgroundTransparency = 1
-autoTPBtn.BackgroundColor3 = Color3.fromRGB(80, 200, 80)
+local autoTPBtn = createTransparentButton("Auto TP: OFF", Color3.fromRGB(38, 38, 38), panel4)
+autoTPBtn.BackgroundTransparency = 0.35
+autoTPBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
 
 local teleportBtn = createTransparentButton("TP", Color3.fromRGB(38, 38, 38), panel4)
 teleportBtn.BackgroundTransparency = 0.35
@@ -1266,13 +1328,18 @@ flingListLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function
     flingPlayerList.CanvasSize = UDim2.new(0,0,0,flingListLayout.AbsoluteContentSize.Y + 10)
 end)
 
-local flingStartBtn = createTransparentButton("FLING PLAYER : OFF", Color3.fromRGB(80, 200, 80), panel5)
-flingStartBtn.BackgroundTransparency = 1
-flingStartBtn.BackgroundColor3 = Color3.fromRGB(80, 200, 80)
+local flingStartBtn = createTransparentButton("FLING PLAYER : OFF", Color3.fromRGB(38, 38, 38), panel5)
+flingStartBtn.BackgroundTransparency = 0.35
+flingStartBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
 
-local bangBtn = createTransparentButton("BANG PLAYER : OFF", Color3.fromRGB(80, 200, 80), panel5)
-bangBtn.BackgroundTransparency = 1
-bangBtn.BackgroundColor3 = Color3.fromRGB(80, 200, 80)
+local walkFlingBtn = createTransparentButton("WALK FLING : OFF", Color3.fromRGB(38, 38, 38), panel5)
+walkFlingBtn.BackgroundTransparency = 0.35
+walkFlingBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
+
+local bangBtn = createTransparentButton("BANG PLAYER : OFF", Color3.fromRGB(38, 38, 38), panel5)
+bangBtn.BackgroundTransparency = 0.35
+bangBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
+
 local loopBringActive = false
 local loopBringStates = {}
 
@@ -2112,11 +2179,11 @@ flingStartBtn.MouseButton1Click:Connect(function()
     if FlingActive then
         StopFling()
         flingStartBtn.Text = "FLING PLAYER : OFF"
-        flingStartBtn.BackgroundColor3 = Color3.fromRGB(80, 200, 80)
-        flingStartBtn.BackgroundTransparency = 1
+        flingStartBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
+        flingStartBtn.BackgroundTransparency = 0.35
     else
         flingStartBtn.Text = "FLING PLAYER : ON"
-        flingStartBtn.BackgroundColor3 = Color3.fromRGB(80, 200, 80)
+        flingStartBtn.BackgroundColor3 = Color3.fromRGB(50, 200, 120)
         flingStartBtn.BackgroundTransparency = 0
         StartFling()
     end
@@ -2130,12 +2197,12 @@ bangBtn.MouseButton1Click:Connect(function()
 
     if BangActive then
         bangBtn.Text = "BANG PLAYER : ON"
-        bangBtn.BackgroundColor3 = Color3.fromRGB(80, 200, 80)
+        bangBtn.BackgroundColor3 = Color3.fromRGB(50, 200, 120)
         bangBtn.BackgroundTransparency = 0
     else
         bangBtn.Text = "BANG PLAYER : OFF"
-        bangBtn.BackgroundColor3 = Color3.fromRGB(80, 200, 80)
-        bangBtn.BackgroundTransparency = 1
+        bangBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
+        bangBtn.BackgroundTransparency = 0.35
         if bangTrack then
             bangTrack:Stop()
         end
@@ -2195,7 +2262,28 @@ spawn(function()
 end)
 
 end)
-    
+
+walkFlingBtn.MouseButton1Click:Connect(function()
+    toggleWalkFling()
+
+    if walkflinging then
+        if not antiFlingEnabled then
+            antiFlingEnabled = true
+            antiFlingBtn.Text = "Anti-Fling: ON"
+            antiFlingBtn.BackgroundColor3 = Color3.fromRGB(50, 200, 120)
+            antiFlingBtn.BackgroundTransparency = 0
+            enableAntiFling()
+        end
+
+        walkFlingBtn.Text = "WALK FLING : ON"
+        walkFlingBtn.BackgroundColor3 = Color3.fromRGB(50, 200, 120)
+        walkFlingBtn.BackgroundTransparency = 0
+    else
+        walkFlingBtn.Text = "WALK FLING : OFF"
+        walkFlingBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
+        walkFlingBtn.BackgroundTransparency = 0.35
+    end
+end)
 loopBringBtn.MouseButton1Click:Connect(function()
 
     loopBringActive = not loopBringActive
@@ -2409,8 +2497,8 @@ local loopspeedConnection = nil
 local function setLoopspeedEnabled(state)
     loopspeedEnabled = state
     loopspeedToggle.Text = loopspeedEnabled and "Loopspeed: ON" or "Loopspeed: OFF"
-    loopspeedToggle.BackgroundColor3 = Color3.fromRGB(80, 200, 80) -- xanh lá
-    loopspeedToggle.BackgroundTransparency = loopspeedEnabled and 0 or 1
+loopspeedToggle.BackgroundColor3 = loopspeedEnabled and Color3.fromRGB(50, 200, 120) or Color3.fromRGB(38, 38, 38)
+loopspeedToggle.BackgroundTransparency = loopspeedEnabled and 0 or 0.35
 
     if loopspeedConnection then
         loopspeedConnection:Disconnect()
@@ -2528,12 +2616,12 @@ autoNameESP.MouseButton1Click:Connect(function()
 
     if nameESPEnabled then
         autoNameESP.Text = "ESP Name: ON"
-        autoNameESP.BackgroundColor3 = Color3.fromRGB(80, 200, 80)
+        autoNameESP.BackgroundColor3 = Color3.fromRGB(50, 200, 120)
         autoNameESP.BackgroundTransparency = 0
     else
         autoNameESP.Text = "ESP Name: OFF"
-        autoNameESP.BackgroundColor3 = Color3.fromRGB(80, 200, 80)
-        autoNameESP.BackgroundTransparency = 1
+        autoNameESP.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
+        autoNameESP.BackgroundTransparency = 0.35
     end
 
     if not nameESPEnabled then
@@ -2555,12 +2643,12 @@ espNameAllBtn.MouseButton1Click:Connect(function()
 
     if espNameAllState then
         espNameAllBtn.Text = "ESP Name All: ON"
-        espNameAllBtn.BackgroundColor3 = Color3.fromRGB(80, 200, 80)
+        espNameAllBtn.BackgroundColor3 = Color3.fromRGB(50, 200, 120)
         espNameAllBtn.BackgroundTransparency = 0
     else
         espNameAllBtn.Text = "ESP Name All: OFF"
-        espNameAllBtn.BackgroundColor3 = Color3.fromRGB(80, 200, 80)
-        espNameAllBtn.BackgroundTransparency = 1
+        espNameAllBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
+        espNameAllBtn.BackgroundTransparency = 0.35
     end
 
     for _, player in pairs(Players:GetPlayers()) do
@@ -2582,12 +2670,12 @@ boxESPBtn.MouseButton1Click:Connect(function()
 
     if boxESPEnabled then
         boxESPBtn.Text = "ESP Box Charm: ON"
-        boxESPBtn.BackgroundColor3 = Color3.fromRGB(80, 200, 80)
+        boxESPBtn.BackgroundColor3 = Color3.fromRGB(50, 200, 120)
         boxESPBtn.BackgroundTransparency = 0
     else
         boxESPBtn.Text = "ESP Box Charm: OFF"
-        boxESPBtn.BackgroundColor3 = Color3.fromRGB(80, 200, 80)
-        boxESPBtn.BackgroundTransparency = 1
+        boxESPBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
+        boxESPBtn.BackgroundTransparency = 0.35
     end
 
     local size = tonumber(sizeInput.Text) or DEFAULT_HITBOX_SIZE
@@ -2608,8 +2696,8 @@ invisButton.MouseButton1Click:Connect(toggleInvisibility)
 infJumpToggle.MouseButton1Click:Connect(function()
     infJumpEnabled = not infJumpEnabled
     infJumpToggle.Text = infJumpEnabled and "Inf Jump: ON" or "Inf Jump: OFF"
-    infJumpToggle.BackgroundColor3 = Color3.fromRGB(80, 200, 80) -- xanh lá
-    infJumpToggle.BackgroundTransparency = infJumpEnabled and 0 or 1
+    infJumpToggle.BackgroundColor3 = infJumpEnabled and Color3.fromRGB(50, 200, 120) or Color3.fromRGB(38, 38, 38)
+infJumpToggle.BackgroundTransparency = infJumpEnabled and 0 or 0.35
 
     if infJumpEnabled then
         startInfJump()
@@ -2621,8 +2709,8 @@ end)
 noclipToggle.MouseButton1Click:Connect(function()
     noclipEnabled = not noclipEnabled
     noclipToggle.Text = noclipEnabled and "Noclip: ON" or "Noclip: OFF"
-    noclipToggle.BackgroundColor3 = Color3.fromRGB(80, 200, 80) -- xanh lá
-    noclipToggle.BackgroundTransparency = noclipEnabled and 0 or 1
+   noclipToggle.BackgroundColor3 = noclipEnabled and Color3.fromRGB(50, 200, 120) or Color3.fromRGB(38, 38, 38)
+noclipToggle.BackgroundTransparency = noclipEnabled and 0 or 0.35
 
     if noclipEnabled then
         startNoclip()
@@ -2636,8 +2724,8 @@ flyToggle.MouseButton1Click:Connect(function()
     flyEnabled = not flyEnabled
 
     flyToggle.Text = flyEnabled and "Fly: ON" or "Fly: OFF"
-    flyToggle.BackgroundColor3 = Color3.fromRGB(80, 200, 80) -- xanh lá
-    flyToggle.BackgroundTransparency = flyEnabled and 0 or 1
+   flyToggle.BackgroundColor3 = flyEnabled and Color3.fromRGB(50, 200, 120) or Color3.fromRGB(38, 38, 38)
+flyToggle.BackgroundTransparency = flyEnabled and 0 or 0.35
 
     if flyEnabled then
         startFly()
@@ -2836,12 +2924,12 @@ autoTPBtn.MouseButton1Click:Connect(function()
 
     if autoTPEnabled then
         autoTPBtn.Text = "Auto TP: ON"
-        autoTPBtn.BackgroundColor3 = Color3.fromRGB(80, 200, 80)
+        autoTPBtn.BackgroundColor3 = Color3.fromRGB(50, 200, 120)
         autoTPBtn.BackgroundTransparency = 0
     else
         autoTPBtn.Text = "Auto TP: OFF"
-        autoTPBtn.BackgroundColor3 = Color3.fromRGB(80, 200, 80)
-        autoTPBtn.BackgroundTransparency = 1
+        autoTPBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
+        autoTPBtn.BackgroundTransparency = 0.35
     end
 
     if autoTPConnection then
