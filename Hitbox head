@@ -2810,25 +2810,33 @@ end)
 rejoinBtn.MouseButton1Click:Connect(function()
 
     local TeleportService = game:GetService("TeleportService")
-    local Players = game:GetService("Players")
     local StarterGui = game:GetService("StarterGui")
+    local queue = queue_on_teleport or queueonteleport
 
     pcall(function()
         StarterGui:SetCore("SendNotification", {
             Title = "Server",
-            Text = "Rejoining same server...",
+            Text = "Rejoining...",
             Duration = 2
         })
     end)
 
-    -- chạy lại script sau khi rejoin
-    queue_on_teleport('loadstring(game:HttpGet("https://raw.githubusercontent.com/Hisanoki/Nooo/main/Hitbox%20head"))()')
+    -- tự chạy lại script sau khi rejoin
+    if queue then
+        queue('loadstring(game:HttpGet("https://raw.githubusercontent.com/Hisanoki/Nooo/main/Hitbox%20head"))()')
+    end
 
-    TeleportService:TeleportToPlaceInstance(
-        game.PlaceId,
-        game.JobId,
-        Players.LocalPlayer
-    )
+    if #Players:GetPlayers() <= 1 then
+        Players.LocalPlayer:Kick("\nRejoining...")
+        task.wait(0.5)
+        TeleportService:Teleport(game.PlaceId, Players.LocalPlayer)
+    else
+        TeleportService:TeleportToPlaceInstance(
+            game.PlaceId,
+            game.JobId,
+            Players.LocalPlayer
+        )
+    end
 
 end)
 serverHopBtn.MouseButton1Click:Connect(function()
