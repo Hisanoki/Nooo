@@ -104,7 +104,7 @@ local boxESPObjects = {}
 local nameESPObjects = {}
 local processedChars = {}
 local playerConnections = {}
-
+local manualPositionCFrame = nil
 local isInvisible = false
 local invisButton
 local invisSound
@@ -1498,6 +1498,38 @@ joinJobBtn.BackgroundColor3 = Color3.fromRGB(38,38,38)
 local copyJobBtn = createTransparentButton("Copy JobId", Color3.fromRGB(38,38,38), panel7)
 copyJobBtn.BackgroundTransparency = 0.35
 copyJobBtn.BackgroundColor3 = Color3.fromRGB(38,38,38)
+local serverDivider = Instance.new("Frame")
+serverDivider.Parent = panel7
+serverDivider.Size = UDim2.new(1, 0, 0, 2)
+serverDivider.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
+serverDivider.BackgroundTransparency = 0.2
+serverDivider.BorderSizePixel = 0
+
+local posInput = Instance.new("TextBox")
+posInput.Parent = panel7
+posInput.Size = UDim2.new(1, 0, 0, 36)
+posInput.PlaceholderText = "Enter Position..."
+posInput.Text = ""
+posInput.BackgroundColor3 = Color3.fromRGB(38,38,38)
+posInput.BackgroundTransparency = 0.35
+posInput.BorderSizePixel = 0
+posInput.TextColor3 = Color3.new(1,1,1)
+posInput.PlaceholderColor3 = Color3.fromRGB(170,170,170)
+posInput.ClearTextOnFocus = false
+posInput.Font = Enum.Font.Gotham
+posInput.TextSize = 14
+
+local posInputCorner = Instance.new("UICorner")
+posInputCorner.CornerRadius = UDim.new(0,8)
+posInputCorner.Parent = posInput
+
+local tpPosBtn = createTransparentButton("Tp Position", Color3.fromRGB(38,38,38), panel7)
+tpPosBtn.BackgroundTransparency = 0.35
+tpPosBtn.BackgroundColor3 = Color3.fromRGB(38,38,38)
+
+local copyPosBtn = createTransparentButton("Copy Position", Color3.fromRGB(38,38,38), panel7)
+copyPosBtn.BackgroundTransparency = 0.35
+copyPosBtn.BackgroundColor3 = Color3.fromRGB(38,38,38)
 -- ─── PANEL 8: FETOOL ─────────────────────────────────────────────────────────
 
 do
@@ -2779,6 +2811,15 @@ rejoinBtn.MouseButton1Click:Connect(function()
 
     local TeleportService = game:GetService("TeleportService")
     local Players = game:GetService("Players")
+    local StarterGui = game:GetService("StarterGui")
+
+    pcall(function()
+        StarterGui:SetCore("SendNotification", {
+            Title = "Server",
+            Text = "Rejoining same server...",
+            Duration = 2
+        })
+    end)
 
     -- chạy lại script sau khi rejoin
     queue_on_teleport('loadstring(game:HttpGet("https://raw.githubusercontent.com/Hisanoki/Nooo/main/Hitbox%20head"))()')
@@ -2795,6 +2836,15 @@ serverHopBtn.MouseButton1Click:Connect(function()
     local TeleportService = game:GetService("TeleportService")
     local HttpService = game:GetService("HttpService")
     local Players = game:GetService("Players")
+    local StarterGui = game:GetService("StarterGui")
+
+    pcall(function()
+        StarterGui:SetCore("SendNotification", {
+            Title = "Server",
+            Text = "Searching new server...",
+            Duration = 2
+        })
+    end)
 
     -- tự chạy lại script sau khi hop
     queue_on_teleport('loadstring(game:HttpGet("https://raw.githubusercontent.com/Hisanoki/Nooo/refs/heads/main/Hitbox%20head"))()')
@@ -2854,6 +2904,108 @@ copyJobBtn.MouseButton1Click:Connect(function()
         game:GetService("StarterGui"):SetCore("SendNotification",{
             Title = "Server",
             Text = "JobId copied!",
+            Duration = 3
+        })
+    end)
+
+end)
+tpPosBtn.MouseButton1Click:Connect(function()
+
+    local text = posInput.Text
+    if text == "" then
+        pcall(function()
+            game:GetService("StarterGui"):SetCore("SendNotification",{
+                Title = "Position",
+                Text = "Please enter a position first!",
+                Duration = 3
+            })
+        end)
+        return
+    end
+
+    local parts = string.split(text, ",")
+    if #parts < 3 then
+        pcall(function()
+            game:GetService("StarterGui"):SetCore("SendNotification",{
+                Title = "Position",
+                Text = "Invalid format! Use: X, Y, Z",
+                Duration = 3
+            })
+        end)
+        return
+    end
+
+    local x = tonumber(parts[1] and parts[1]:match("^%s*(.-)%s*$"))
+    local y = tonumber(parts[2] and parts[2]:match("^%s*(.-)%s*$"))
+    local z = tonumber(parts[3] and parts[3]:match("^%s*(.-)%s*$"))
+
+    if not x or not y or not z then
+        pcall(function()
+            game:GetService("StarterGui"):SetCore("SendNotification",{
+                Title = "Position",
+                Text = "Invalid numbers! Use: X, Y, Z",
+                Duration = 3
+            })
+        end)
+        return
+    end
+
+    manualPositionCFrame = CFrame.new(x, y, z)
+
+    local char = LocalPlayer.Character
+    local hrp = char and char:FindFirstChild("HumanoidRootPart")
+
+    if hrp then
+        hrp.CFrame = manualPositionCFrame
+
+        pcall(function()
+            game:GetService("StarterGui"):SetCore("SendNotification",{
+                Title = "Position",
+                Text = "Teleported to position!",
+                Duration = 3
+            })
+        end)
+    else
+        pcall(function()
+            game:GetService("StarterGui"):SetCore("SendNotification",{
+                Title = "Position",
+                Text = "HumanoidRootPart not found!",
+                Duration = 3
+            })
+        end)
+    end
+
+end)
+
+copyPosBtn.MouseButton1Click:Connect(function()
+
+    local char = LocalPlayer.Character
+    local hrp = char and char:FindFirstChild("HumanoidRootPart")
+
+    if not hrp then
+        pcall(function()
+            game:GetService("StarterGui"):SetCore("SendNotification",{
+                Title = "Position",
+                Text = "HumanoidRootPart not found!",
+                Duration = 3
+            })
+        end)
+        return
+    end
+
+    local pos = hrp.Position
+    local posText = string.format("%.2f, %.2f, %.2f", pos.X, pos.Y, pos.Z)
+
+    posInput.Text = posText
+
+    if setclipboard then
+        setclipboard(posText)
+    end
+
+    pcall(function()
+        game:GetService("StarterGui"):SetCore("SendNotification",{
+            Title = "Position",
+            Text = "Position copied!",
             Duration = 3
         })
     end)
