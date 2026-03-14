@@ -1150,17 +1150,21 @@ local function refreshSpecList()
     for _,plr in pairs(Players:GetPlayers()) do
         if plr ~= LocalPlayer then
 
-            local btn = createTransparentButton(plr.Name, Color3.fromRGB(70,70,70), specContainer)
+           local btn = createTransparentButton(plr.Name, Color3.fromRGB(38, 38, 38), specContainer)
+btn.BackgroundTransparency = 0.35
+btn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
             table.insert(specButtons, btn)
 
             btn.MouseButton1Click:Connect(function()
 
                 if selectedSpecButton then
-                    selectedSpecButton.BackgroundColor3 = Color3.fromRGB(70,70,70)
-                end
+    selectedSpecButton.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
+    selectedSpecButton.BackgroundTransparency = 0.35
+end
 
-                btn.BackgroundColor3 = Color3.fromRGB(0,170,0)
-                selectedSpecButton = btn
+                btn.BackgroundColor3 = Color3.fromRGB(50, 200, 120)
+btn.BackgroundTransparency = 0
+selectedSpecButton = btn
 
                 SpectatePlayer(plr)
 
@@ -1186,10 +1190,13 @@ stopSpec.MouseButton1Click:Connect(function()
     StopSpectate()
 
     for _,v in pairs(specContainer:GetChildren()) do
-        if v:IsA("TextButton") then
-            v.BackgroundColor3 = Color3.fromRGB(40,40,40)
-        end
+    if v:IsA("TextButton") then
+        v.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
+        v.BackgroundTransparency = 0.35
     end
+end
+
+selectedSpecButton = nil
 
     task.delay(0.2, function()
         if stopSpec then
@@ -1346,8 +1353,13 @@ local loopBringStates = {}
 local loopBringBtn = createTransparentButton("LOOP BRING PLAYER : OFF", Color3.fromRGB(38, 38, 38), panel5)
 loopBringBtn.BackgroundTransparency = 0.35
 loopBringBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
-local flingSelectAllBtn = createTransparentButton("Select All", Color3.fromRGB(60, 60, 80), panel5)
-local flingDeselectAllBtn = createTransparentButton("Deselect All", Color3.fromRGB(60, 60, 80), panel5)
+local flingSelectAllBtn = createTransparentButton("Select All", Color3.fromRGB(38, 38, 38), panel5)
+flingSelectAllBtn.BackgroundTransparency = 0.35
+flingSelectAllBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
+
+local flingDeselectAllBtn = createTransparentButton("Deselect All", Color3.fromRGB(38, 38, 38), panel5)
+flingDeselectAllBtn.BackgroundTransparency = 0.35
+flingDeselectAllBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
 
 -- ─── PANEL 6: MISC ────────────────────────────────────────────────────────────
 do
@@ -2411,8 +2423,38 @@ loopBringBtn.MouseButton1Click:Connect(function()
 end)
 
 
-flingSelectAllBtn.MouseButton1Click:Connect(function() ToggleAllFling(true) end)
-flingDeselectAllBtn.MouseButton1Click:Connect(function() ToggleAllFling(false) end)
+flingSelectAllBtn.MouseButton1Click:Connect(function()
+    local oldColor = flingSelectAllBtn.BackgroundColor3
+    local oldTransparency = flingSelectAllBtn.BackgroundTransparency
+
+    flingSelectAllBtn.BackgroundColor3 = Color3.fromRGB(50, 200, 120)
+    flingSelectAllBtn.BackgroundTransparency = 0
+
+    task.delay(0.15, function()
+        if flingSelectAllBtn then
+            flingSelectAllBtn.BackgroundColor3 = oldColor
+            flingSelectAllBtn.BackgroundTransparency = oldTransparency
+        end
+    end)
+
+    ToggleAllFling(true)
+end)
+flingDeselectAllBtn.MouseButton1Click:Connect(function()
+    local oldColor = flingDeselectAllBtn.BackgroundColor3
+    local oldTransparency = flingDeselectAllBtn.BackgroundTransparency
+
+    flingDeselectAllBtn.BackgroundColor3 = Color3.fromRGB(50, 200, 120)
+    flingDeselectAllBtn.BackgroundTransparency = 0
+
+    task.delay(0.15, function()
+        if flingDeselectAllBtn then
+            flingDeselectAllBtn.BackgroundColor3 = oldColor
+            flingDeselectAllBtn.BackgroundTransparency = oldTransparency
+        end
+    end)
+
+    ToggleAllFling(false)
+end)
 
 
 antiFlingBtn.MouseButton1Click:Connect(function()
@@ -3103,8 +3145,8 @@ local function updateTPList()
             local btn = Instance.new("TextButton")
             btn.Size = UDim2.new(1,-6,0,28)
             btn.Text = player.Name
-            btn.BackgroundColor3 = selectedTPPlayers[player] and Color3.fromRGB(80,200,80) or Color3.fromRGB(60,60,60)
-            btn.BackgroundTransparency = 0.7
+            btn.BackgroundColor3 = selectedTPPlayers[player] and Color3.fromRGB(50, 200, 120) or Color3.fromRGB(38, 38, 38)
+btn.BackgroundTransparency = selectedTPPlayers[player] and 0 or 0.35
             btn.TextColor3 = Color3.new(1,1,1)
             btn.Font = Enum.Font.Gotham
             btn.TextSize = 14
@@ -3129,8 +3171,8 @@ function updatePlayerList()
             local btn = Instance.new("TextButton")
             btn.Size = UDim2.new(1,-6,0,28)
             btn.Text = player.Name
-            btn.BackgroundColor3 = selectedPlayers[player] and Color3.fromRGB(80,200,80) or Color3.fromRGB(60,60,60)
-            btn.BackgroundTransparency = 0.7
+           btn.BackgroundColor3 = selectedPlayers[player] and Color3.fromRGB(50, 200, 120) or Color3.fromRGB(38, 38, 38)
+btn.BackgroundTransparency = selectedPlayers[player] and 0 or 0.35
             btn.TextColor3 = Color3.new(1,1,1)
             btn.Font = Enum.Font.Gotham
             btn.TextSize = 14
