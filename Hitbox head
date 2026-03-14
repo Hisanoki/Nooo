@@ -3258,15 +3258,15 @@ end)
 LocalPlayer.CharacterAdded:Connect(function(character)
     flyEnabled = false
     stopFly()
-    if flyToggle then
+   if flyToggle then
     flyToggle.Text = "Fly: OFF"
-flyToggle.BackgroundColor3 = Color3.fromRGB(80, 200, 80)
-flyToggle.BackgroundTransparency = 1
+    flyToggle.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
+    flyToggle.BackgroundTransparency = 0.35
 end
     isInvisible = false
 if invisButton then
-    invisButton.BackgroundColor3 = INVIS_CONFIG.SUCCESS_COLOR
-    invisButton.BackgroundTransparency = 1
+    invisButton.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
+    invisButton.BackgroundTransparency = 0.35
     invisButton.Text = "Invisible: OFF"
 end
     local chair = workspace:FindFirstChild("invischair")
