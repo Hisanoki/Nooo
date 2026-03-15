@@ -1,0 +1,97 @@
+--=====================================================
+-- SETTINGS (easy to edit)
+--=====================================================
+local KILL_RADIUS = 100            -- studs
+local CHECK_INTERVAL = 0.2         -- seconds between scans
+local UNLOAD_KEY = Enum.KeyCode.M  -- key to unload script
+local TAG_NAME = "NPC_KILLER"      -- internal tag name
+
+--=====================================================
+-- SERVICES
+--=====================================================
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local UIS = game:GetService("UserInputService")
+
+local player = Players.LocalPlayer
+local character = player.Character or player.CharacterAdded:Wait()
+
+--=====================================================
+-- REMOVE OLD COPIES
+--=====================================================
+if _G[TAG_NAME] then
+    _G[TAG_NAME].Unload()
+end
+
+local runtime = {}
+_G[TAG_NAME] = runtime
+
+runtime.alive = true
+runtime.connections = {}
+
+print("[NPC Killer] Loaded")
+
+--=====================================================
+-- FUNCTION: KILL NPCs
+--=====================================================
+local function killNPCs()
+    local root = character:FindFirstChild("HumanoidRootPart")
+    if not root then return end
+    
+    for _, model in pairs(workspace:GetDescendants()) do
+        if model:IsA("Model") and model ~= character then
+            
+            local hum = model:FindFirstChildOfClass("Humanoid")
+            local hrp = model:FindFirstChild("HumanoidRootPart")
+            
+            if hum and hrp and hum.Health > 0 then
+                local dist = (hrp.Position - root.Position).Magnitude
+                
+                if dist <= KILL_RADIUS then
+                    hum.Health = 0
+                end
+            end
+            
+        end
+    end
+end
+
+--=====================================================
+-- LOOP
+--=====================================================
+task.spawn(function()
+    while runtime.alive do
+        killNPCs()
+        task.wait(CHECK_INTERVAL)
+    end
+end)
+
+--=====================================================
+-- UNLOAD FUNCTION
+--=====================================================
+function runtime.Unload()
+    runtime.alive = false
+    
+    for _,c in pairs(runtime.connections) do
+        pcall(function()
+            c:Disconnect()
+        end)
+    end
+    
+    _G[TAG_NAME] = nil
+    
+    print("[NPC Killer] Unloaded")
+end
+
+--=====================================================
+-- KEYBIND
+--=====================================================
+table.insert(runtime.connections,
+    UIS.InputBegan:Connect(function(input, gp)
+        if gp then return end
+        
+        if input.KeyCode == UNLOAD_KEY then
+            runtime.Unload()
+        end
+    end)
+)
