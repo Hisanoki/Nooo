@@ -186,13 +186,12 @@ end
 -- ─── INVISIBILITY ─────────────────────────────────────────────────────────────
 
 local function playInvisSound()
-    if invisSound then invisSound:Play() end
 end
 
 local function toggleInvisibility()
     if not LocalPlayer.Character then return end
     isInvisible = not isInvisible
-    playInvisSound()
+   
 
     if isInvisible then
         local hrp = getHumanoidRootPart()
