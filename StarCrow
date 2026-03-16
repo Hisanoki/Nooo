@@ -947,7 +947,7 @@ gui.Parent = LocalPlayer:WaitForChild("PlayerGui")
 
 -- Toggle button (middle-left, image, square rounded, white border, draggable)
 local toggleBtn = Instance.new("ImageButton")
-toggleBtn.Size = UDim2.new(0, 70, 0, 70)
+toggleBtn.Size = UDim2.new(0, 50, 0, 40)
 toggleBtn.Position = UDim2.new(0, 8, 0.5, -35)
 toggleBtn.AnchorPoint = Vector2.new(0, 0)
 toggleBtn.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
@@ -965,17 +965,25 @@ do
     _s.Color = Color3.fromRGB(255, 255, 255)
     _s.Thickness = 2
 end
--- Drag logic: track đúng input object, không bị joystick can thiệp
+-- Drag logic: PC dùng MouseMovement, Mobile track input object (tránh joystick)
 local _tbDragging = false
 local _tbMoved = false
+local _tbIsTouch = false
 local _tbDragInput = nil
 local _tbDragStart = nil
 local _tbDragPos = nil
 toggleBtn.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1
-    or input.UserInputType == Enum.UserInputType.Touch then
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
         _tbDragging = true
         _tbMoved = false
+        _tbIsTouch = false
+        _tbDragInput = nil
+        _tbDragStart = input.Position
+        _tbDragPos = toggleBtn.Position
+    elseif input.UserInputType == Enum.UserInputType.Touch then
+        _tbDragging = true
+        _tbMoved = false
+        _tbIsTouch = true
         _tbDragInput = input
         _tbDragStart = input.Position
         _tbDragPos = toggleBtn.Position
@@ -987,8 +995,21 @@ toggleBtn.InputBegan:Connect(function(input)
         end)
     end
 end)
+toggleBtn.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        _tbDragging = false
+    end
+end)
 UserInputService.InputChanged:Connect(function(input)
-    if _tbDragging and input == _tbDragInput then
+    if not _tbDragging then return end
+    if not _tbIsTouch and input.UserInputType == Enum.UserInputType.MouseMovement then
+        local delta = input.Position - _tbDragStart
+        if delta.Magnitude > 6 then _tbMoved = true end
+        toggleBtn.Position = UDim2.new(
+            _tbDragPos.X.Scale, _tbDragPos.X.Offset + delta.X,
+            _tbDragPos.Y.Scale, _tbDragPos.Y.Offset + delta.Y
+        )
+    elseif _tbIsTouch and input == _tbDragInput then
         local delta = input.Position - _tbDragStart
         if delta.Magnitude > 6 then _tbMoved = true end
         toggleBtn.Position = UDim2.new(
