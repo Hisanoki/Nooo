@@ -117,6 +117,8 @@ local auraFloatEnabled = false
 local dropFloatEnabled = false
 local auraFloatBtn = nil
 local dropFloatBtn = nil
+local equipAllFloatEnabled = false
+local equipAllFloatBtn = nil
 local auraFloatDragConn = nil
 local dropFloatDragConn = nil
 local floatBtnSize = 62  -- shared size (px) cho cả 2 float button, điều chỉnh bằng slider
@@ -1642,7 +1644,27 @@ local function runToolAura()
         end
     end
 end
+local function runEquipAllTools()
+    local char = LocalPlayer.Character
+    if not char then return end
 
+    local moved = false
+
+    for _, obj in pairs(LocalPlayer.Backpack:GetChildren()) do
+        if obj:IsA("Tool") then
+            pcall(function()
+                obj.Parent = char
+            end)
+            moved = true
+            task.wait(0.03)
+        end
+    end
+
+    if moved then
+        task.wait(0.05)
+        refreshFeTools()
+    end
+end
 -- ─── FLOAT BUTTON HELPERS ─────────────────────────────────────────────────────
 -- Tạo drag logic riêng cho từng nút, track đúng input object để tránh joystick
 
@@ -1765,7 +1787,50 @@ local function createDropFloat()
     if tool then tool.Parent = workspace end
 end)
 end
+-- ─── EQUIP ALL FLOAT ──────────────────────────────────────────────────────────
 
+local function destroyEquipAllFloat()
+    if equipAllFloatBtn then
+        equipAllFloatBtn:Destroy()
+        equipAllFloatBtn = nil
+    end
+end
+
+local function createEquipAllFloat()
+    destroyEquipAllFloat()
+    equipAllFloatBtn = Instance.new("TextButton")
+    equipAllFloatBtn.Size = UDim2.new(0, floatBtnSize, 0, floatBtnSize)
+    equipAllFloatBtn.Position = UDim2.new(0.85, 0, 0.5, floatBtnSize + 18)
+    equipAllFloatBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
+    equipAllFloatBtn.BackgroundTransparency = 0.35
+    equipAllFloatBtn.BorderSizePixel = 0
+    equipAllFloatBtn.Text = "Equip\nAll"
+    equipAllFloatBtn.TextColor3 = Color3.fromRGB(255, 235, 180)
+    equipAllFloatBtn.TextScaled = true
+    equipAllFloatBtn.Font = Enum.Font.GothamBold
+    equipAllFloatBtn.Active = true
+    equipAllFloatBtn.ZIndex = 15
+    equipAllFloatBtn.Parent = gui
+
+    local c = Instance.new("UICorner", equipAllFloatBtn)
+    c.CornerRadius = UDim.new(0, 8)
+
+    local s = Instance.new("UIStroke", equipAllFloatBtn)
+    s.Color = Color3.fromRGB(60, 60, 60)
+    s.Thickness = 1.5
+
+    local getWasMoved, clearMoved = makeDraggableFloat(equipAllFloatBtn)
+
+    equipAllFloatBtn.MouseButton1Click:Connect(function()
+        if getWasMoved() then
+            clearMoved()
+            return
+        end
+
+        flashButton(equipAllFloatBtn)
+        runEquipAllTools()
+    end)
+end
 -- ─── FETOOL BUTTONS ───────────────────────────────────────────────────────────
 
 local feAuraBtn = createTransparentButton("Tool Aura [" .. auraKey.Name .. "]", Color3.fromRGB(38, 38, 38), panel8)
@@ -1877,7 +1942,36 @@ feDropFloatBtn.MouseButton1Click:Connect(function()
         destroyDropFloat()
     end
 end)
+-- EQUIP ALL button
+local feEquipAllBtn = createTransparentButton("Equip All", Color3.fromRGB(38, 38, 38), panel8)
+feEquipAllBtn.BackgroundTransparency = 0.35
+feEquipAllBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
 
+feEquipAllBtn.MouseButton1Click:Connect(function()
+    flashButton(feEquipAllBtn)
+    runEquipAllTools()
+end)
+
+-- Equip All Float toggle
+local feEquipAllFloatToggleBtn = createTransparentButton("Equip All Float: OFF", Color3.fromRGB(38, 38, 38), panel8)
+feEquipAllFloatToggleBtn.BackgroundTransparency = 0.35
+feEquipAllFloatToggleBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
+
+feEquipAllFloatToggleBtn.MouseButton1Click:Connect(function()
+    equipAllFloatEnabled = not equipAllFloatEnabled
+
+    if equipAllFloatEnabled then
+        feEquipAllFloatToggleBtn.Text = "Equip All Float: ON"
+        feEquipAllFloatToggleBtn.BackgroundColor3 = Color3.fromRGB(50, 200, 120)
+        feEquipAllFloatToggleBtn.BackgroundTransparency = 0
+        createEquipAllFloat()
+    else
+        feEquipAllFloatToggleBtn.Text = "Equip All Float: OFF"
+        feEquipAllFloatToggleBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
+        feEquipAllFloatToggleBtn.BackgroundTransparency = 0.35
+        destroyEquipAllFloat()
+    end
+end)
 -- ─── FLOAT BUTTON SIZE SLIDER ────────────────────────────────────────────────
 do
     -- Label hiển thị giá trị hiện tại
@@ -1959,6 +2053,9 @@ do
         if dropFloatBtn then
             dropFloatBtn.Size = UDim2.new(0, floatBtnSize, 0, floatBtnSize)
         end
+        if equipAllFloatBtn then
+    equipAllFloatBtn.Size = UDim2.new(0, floatBtnSize, 0, floatBtnSize)
+end
     end
 
     sliderBtn.InputBegan:Connect(function(input)
