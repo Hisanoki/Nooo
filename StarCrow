@@ -2209,9 +2209,67 @@ feRefreshBtn.MouseButton1Click:Connect(function()
     flashButton(feRefreshBtn)
     refreshFeTools()
 end)
+local feRefreshBusy = false
+local lastFeToolSignature = ""
+local feAutoScanRunning = false
+local function scheduleFeRefresh()
+    if feRefreshBusy then return end
+    feRefreshBusy = true
 
-LocalPlayer.Backpack.ChildAdded:Connect(function() task.wait(0.1) refreshFeTools() end)
-LocalPlayer.Backpack.ChildRemoved:Connect(function() task.wait(0.1) refreshFeTools() end)
+    task.delay(0.06, function()
+        feRefreshBusy = false
+        pcall(function()
+            refreshFeTools()
+        end)
+    end)
+end
+
+LocalPlayer.Backpack.ChildAdded:Connect(function(obj)
+    if obj:IsA("Tool") then
+        scheduleFeRefresh()
+    end
+end)
+
+LocalPlayer.Backpack.ChildRemoved:Connect(function(obj)
+    if obj:IsA("Tool") then
+        scheduleFeRefresh()
+    end
+end)
+
+local function bindFeToolCharacter(char)
+    if not char then return end
+
+    char.ChildAdded:Connect(function(obj)
+        if obj:IsA("Tool") then
+            scheduleFeRefresh()
+        end
+    end)
+
+    char.ChildRemoved:Connect(function(obj)
+        if obj:IsA("Tool") then
+            scheduleFeRefresh()
+        end
+    end)
+
+    local hum = char:FindFirstChildOfClass("Humanoid")
+    if hum then
+        hum.Died:Connect(function()
+            scheduleFeRefresh()
+        end)
+    end
+
+    scheduleFeRefresh()
+end
+
+if LocalPlayer.Character then
+    bindFeToolCharacter(LocalPlayer.Character)
+end
+
+LocalPlayer.CharacterAdded:Connect(function(char)
+    task.wait(0.15)
+    bindFeToolCharacter(char)
+end)
+
 refreshFeTools()
 
 -- ─── TAB SWITCH ───────────────────────────────────────────────────────────────
