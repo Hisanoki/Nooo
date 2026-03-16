@@ -225,8 +225,6 @@ k.InputBegan:Connect(function(input)
     end
 end)
 
-hướng dẫn
-
 task.wait(1)
 
 f("Hướng dẫn", "Click nút để bật/tắt aim", 3)
