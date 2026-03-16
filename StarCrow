@@ -945,30 +945,58 @@ if LocalPlayer:FindFirstChild("PlayerGui") then
 end
 gui.Parent = LocalPlayer:WaitForChild("PlayerGui")
 
--- Toggle button (always visible)
-local mainContainer = Instance.new("Frame")
-mainContainer.Size = UDim2.new(0, 220, 0, 36)
-mainContainer.Position = UDim2.new(0.5, -110, 0, 10)
-mainContainer.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-mainContainer.BackgroundTransparency = 0.7
-mainContainer.BorderSizePixel = 0
-mainContainer.Active = true
-mainContainer.Draggable = true
-mainContainer.Parent = gui
-_mkCorner(8, mainContainer)
-
-local toggleUIButton = Instance.new("TextButton")
-toggleUIButton.Size = UDim2.new(0, 110, 0, 28)
-toggleUIButton.Position = UDim2.new(0.5, -55, 0.5, -14)
-toggleUIButton.Text = "Open Menu"
-toggleUIButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-toggleUIButton.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
-toggleUIButton.BackgroundTransparency = 0.7
-toggleUIButton.BorderSizePixel = 0
-toggleUIButton.Font = Enum.Font.Gotham
-toggleUIButton.TextSize = 14
-toggleUIButton.Parent = mainContainer
-_mkCorner(6, toggleUIButton)
+-- Toggle button (middle-left, image, square rounded, white border, draggable)
+local toggleBtn = Instance.new("ImageButton")
+toggleBtn.Size = UDim2.new(0, 70, 0, 70)
+toggleBtn.Position = UDim2.new(0, 8, 0.5, -35)
+toggleBtn.AnchorPoint = Vector2.new(0, 0)
+toggleBtn.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+toggleBtn.BackgroundTransparency = 0
+toggleBtn.BorderSizePixel = 0
+toggleBtn.Image = "rbxassetid://73309457774546"
+toggleBtn.ScaleType = Enum.ScaleType.Stretch
+toggleBtn.ZIndex = 5
+toggleBtn.Active = true
+toggleBtn.Parent = gui
+do
+    local _c = Instance.new("UICorner", toggleBtn)
+    _c.CornerRadius = UDim.new(0, 14)
+    local _s = Instance.new("UIStroke", toggleBtn)
+    _s.Color = Color3.fromRGB(255, 255, 255)
+    _s.Thickness = 2
+end
+-- Drag logic: track đúng input object, không bị joystick can thiệp
+local _tbDragging = false
+local _tbMoved = false
+local _tbDragInput = nil
+local _tbDragStart = nil
+local _tbDragPos = nil
+toggleBtn.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1
+    or input.UserInputType == Enum.UserInputType.Touch then
+        _tbDragging = true
+        _tbMoved = false
+        _tbDragInput = input
+        _tbDragStart = input.Position
+        _tbDragPos = toggleBtn.Position
+        input.Changed:Connect(function()
+            if input.UserInputState == Enum.UserInputState.End then
+                _tbDragging = false
+                _tbDragInput = nil
+            end
+        end)
+    end
+end)
+UserInputService.InputChanged:Connect(function(input)
+    if _tbDragging and input == _tbDragInput then
+        local delta = input.Position - _tbDragStart
+        if delta.Magnitude > 6 then _tbMoved = true end
+        toggleBtn.Position = UDim2.new(
+            _tbDragPos.X.Scale, _tbDragPos.X.Offset + delta.X,
+            _tbDragPos.Y.Scale, _tbDragPos.Y.Offset + delta.Y
+        )
+    end
+end)
 
 -- Main frame — wider to fit left sidebar + content
 -- Layout: [Left sidebar 70px] [Content area fills rest]
@@ -1137,12 +1165,14 @@ specContainer.ScrollBarThickness = 4
 specContainer.CanvasSize = UDim2.new(0,0,0,0)
 specContainer.Parent = panel2
 
-local specLayout = Instance.new("UIListLayout")
-specLayout.Parent = specContainer
-specLayout.Padding = UDim.new(0,4)
-specLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
-    specContainer.CanvasSize = UDim2.new(0,0,0,specLayout.AbsoluteContentSize.Y + 10)
-end)
+do
+    local specLayout = Instance.new("UIListLayout")
+    specLayout.Parent = specContainer
+    specLayout.Padding = UDim.new(0,4)
+    specLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+        specContainer.CanvasSize = UDim2.new(0,0,0,specLayout.AbsoluteContentSize.Y + 10)
+    end)
+end
 local function refreshSpecList()
 
     for _,b in pairs(specButtons) do
@@ -1242,13 +1272,15 @@ playerList.BorderSizePixel = 0
 playerList.ScrollBarThickness = 4
 playerList.CanvasSize = UDim2.new(0, 0, 0, 0)
 playerList.Parent = panel3
-local playerListLayout = Instance.new("UIListLayout")
-playerListLayout.SortOrder = Enum.SortOrder.LayoutOrder
-playerListLayout.Padding = UDim.new(0, 2)
-playerListLayout.Parent = playerList
-playerListLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
-    playerList.CanvasSize = UDim2.new(0,0,0,playerListLayout.AbsoluteContentSize.Y + 10)
-end)
+do
+    local playerListLayout = Instance.new("UIListLayout")
+    playerListLayout.SortOrder = Enum.SortOrder.LayoutOrder
+    playerListLayout.Padding = UDim.new(0, 2)
+    playerListLayout.Parent = playerList
+    playerListLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+        playerList.CanvasSize = UDim2.new(0,0,0,playerListLayout.AbsoluteContentSize.Y + 10)
+    end)
+end
 
 local autoNameESP = createTransparentButton("ESP Name: OFF", Color3.fromRGB(38, 38, 38), panel3)
 autoNameESP.BackgroundTransparency = 0.35
@@ -1291,12 +1323,14 @@ tpPlayerList.BorderSizePixel = 0
 tpPlayerList.ScrollBarThickness = 4
 tpPlayerList.CanvasSize = UDim2.new(0,0,0,0)
 tpPlayerList.Parent = panel4
-local tpListLayout = Instance.new("UIListLayout")
-tpListLayout.Padding = UDim.new(0,2)
-tpListLayout.Parent = tpPlayerList
-tpListLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
-    tpPlayerList.CanvasSize = UDim2.new(0,0,0,tpListLayout.AbsoluteContentSize.Y + 5)
-end)
+do
+    local tpListLayout = Instance.new("UIListLayout")
+    tpListLayout.Padding = UDim.new(0,2)
+    tpListLayout.Parent = tpPlayerList
+    tpListLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+        tpPlayerList.CanvasSize = UDim2.new(0,0,0,tpListLayout.AbsoluteContentSize.Y + 5)
+    end)
+end
 
 local autoTPBtn = createTransparentButton("Auto TP: OFF", Color3.fromRGB(38, 38, 38), panel4)
 autoTPBtn.BackgroundTransparency = 0.35
@@ -1331,13 +1365,15 @@ flingPlayerList.BorderSizePixel = 0
 flingPlayerList.ScrollBarThickness = 5
 flingPlayerList.CanvasSize = UDim2.new(0, 0, 0, 0)
 flingPlayerList.Parent = panel5
-local flingListLayout = Instance.new("UIListLayout")
-flingListLayout.SortOrder = Enum.SortOrder.LayoutOrder
-flingListLayout.Padding = UDim.new(0, 3)
-flingListLayout.Parent = flingPlayerList
-flingListLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
-    flingPlayerList.CanvasSize = UDim2.new(0,0,0,flingListLayout.AbsoluteContentSize.Y + 10)
-end)
+do
+    local flingListLayout = Instance.new("UIListLayout")
+    flingListLayout.SortOrder = Enum.SortOrder.LayoutOrder
+    flingListLayout.Padding = UDim.new(0, 3)
+    flingListLayout.Parent = flingPlayerList
+    flingListLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+        flingPlayerList.CanvasSize = UDim2.new(0,0,0,flingListLayout.AbsoluteContentSize.Y + 10)
+    end)
+end
 
 local flingStartBtn = createTransparentButton("FLING PLAYER : OFF", Color3.fromRGB(38, 38, 38), panel5)
 flingStartBtn.BackgroundTransparency = 0.35
@@ -1394,8 +1430,6 @@ noFogBtn.BackgroundTransparency = 0.35
 noFogBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
 local antiAfkEnabled = false
 
-local loopFullBright = false
-local fbConnection = nil
 antiAfkBtn.MouseButton1Click:Connect(function()
     antiAfkEnabled = not antiAfkEnabled
     antiAfkBtn.Text = "Anti AFK: "..(antiAfkEnabled and "ON" or "OFF")
@@ -1411,57 +1445,50 @@ antiAfkBtn.MouseButton1Click:Connect(function()
     end
 end)
 
-local VirtualUser = game:GetService("VirtualUser")
-
 game:GetService("Players").LocalPlayer.Idled:Connect(function()
     if antiAfkEnabled then
-        VirtualUser:Button2Down(Vector2.new(0,0), workspace.CurrentCamera.CFrame)
+        local VU = game:GetService("VirtualUser")
+        VU:Button2Down(Vector2.new(0,0), workspace.CurrentCamera.CFrame)
         task.wait(1)
-        VirtualUser:Button2Up(Vector2.new(0,0), workspace.CurrentCamera.CFrame)
+        VU:Button2Up(Vector2.new(0,0), workspace.CurrentCamera.CFrame)
     end
 end)
-local antiVoidEnabled = false
-local lastSafePos = nil
+do
+    local antiVoidEnabled = false
+    local lastSafePos = nil
 
-antiVoidBtn.MouseButton1Click:Connect(function()
-    antiVoidEnabled = not antiVoidEnabled
-    antiVoidBtn.Text = "Anti Void: "..(antiVoidEnabled and "ON" or "OFF")
+    antiVoidBtn.MouseButton1Click:Connect(function()
+        antiVoidEnabled = not antiVoidEnabled
+        antiVoidBtn.Text = "Anti Void: "..(antiVoidEnabled and "ON" or "OFF")
 
-    if antiVoidEnabled then
-        antiVoidBtn.BackgroundColor3 = Color3.fromRGB(50, 200, 120)
-        antiVoidBtn.BackgroundTransparency = 0
-        createNotification("Anti Void", "ON")
-    else
-        antiVoidBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
-        antiVoidBtn.BackgroundTransparency = 0.35
-        createNotification("Anti Void", "OFF")
-    end
-end)
-
-RunService.Heartbeat:Connect(function()
-
-    if not antiVoidEnabled then return end
-
-    local char = LocalPlayer.Character
-    if not char then return end
-
-    local hrp = char:FindFirstChild("HumanoidRootPart")
-    if not hrp then return end
-
-    -- lưu vị trí an toàn khi đang trên map
-    if hrp.Position.Y > -5 then
-        lastSafePos = hrp.CFrame
-    end
-
-    -- nếu rơi void thì quay lại vị trí an toàn
-    if hrp.Position.Y < -30 then
-        if lastSafePos then
-            hrp.CFrame = lastSafePos
-            hrp.AssemblyLinearVelocity = Vector3.zero
+        if antiVoidEnabled then
+            antiVoidBtn.BackgroundColor3 = Color3.fromRGB(50, 200, 120)
+            antiVoidBtn.BackgroundTransparency = 0
+            createNotification("Anti Void", "ON")
+        else
+            antiVoidBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
+            antiVoidBtn.BackgroundTransparency = 0.35
+            createNotification("Anti Void", "OFF")
         end
-    end
+    end)
 
-end)
+    RunService.Heartbeat:Connect(function()
+        if not antiVoidEnabled then return end
+        local char = LocalPlayer.Character
+        if not char then return end
+        local hrp = char:FindFirstChild("HumanoidRootPart")
+        if not hrp then return end
+        if hrp.Position.Y > -5 then
+            lastSafePos = hrp.CFrame
+        end
+        if hrp.Position.Y < -30 then
+            if lastSafePos then
+                hrp.CFrame = lastSafePos
+                hrp.AssemblyLinearVelocity = Vector3.zero
+            end
+        end
+    end)
+end
 -- 
 local fakeKillAllBtn = createTransparentButton("KILL ALL", Color3.fromRGB(38,38,38), panel6)
 fakeKillAllBtn.BackgroundTransparency = 0.35
@@ -1505,9 +1532,11 @@ jobIdInput.ClearTextOnFocus = false
 jobIdInput.Font = Enum.Font.Gotham
 jobIdInput.TextSize = 14
 
-local jobIdCorner = Instance.new("UICorner")
-jobIdCorner.CornerRadius = UDim.new(0,8)
-jobIdCorner.Parent = jobIdInput
+do
+    local jobIdCorner = Instance.new("UICorner")
+    jobIdCorner.CornerRadius = UDim.new(0,8)
+    jobIdCorner.Parent = jobIdInput
+end
 
 local joinJobBtn = createTransparentButton("Join", Color3.fromRGB(38,38,38), panel7)
 joinJobBtn.BackgroundTransparency = 0.35
@@ -1516,12 +1545,14 @@ joinJobBtn.BackgroundColor3 = Color3.fromRGB(38,38,38)
 local copyJobBtn = createTransparentButton("Copy JobId", Color3.fromRGB(38,38,38), panel7)
 copyJobBtn.BackgroundTransparency = 0.35
 copyJobBtn.BackgroundColor3 = Color3.fromRGB(38,38,38)
-local serverDivider = Instance.new("Frame")
-serverDivider.Parent = panel7
-serverDivider.Size = UDim2.new(1, 0, 0, 2)
-serverDivider.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
-serverDivider.BackgroundTransparency = 0.2
-serverDivider.BorderSizePixel = 0
+do
+    local serverDivider = Instance.new("Frame")
+    serverDivider.Parent = panel7
+    serverDivider.Size = UDim2.new(1, 0, 0, 2)
+    serverDivider.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
+    serverDivider.BackgroundTransparency = 0.2
+    serverDivider.BorderSizePixel = 0
+end
 
 local posInput = Instance.new("TextBox")
 posInput.Parent = panel7
@@ -1537,9 +1568,11 @@ posInput.ClearTextOnFocus = false
 posInput.Font = Enum.Font.Gotham
 posInput.TextSize = 14
 
-local posInputCorner = Instance.new("UICorner")
-posInputCorner.CornerRadius = UDim.new(0,8)
-posInputCorner.Parent = posInput
+do
+    local posInputCorner = Instance.new("UICorner")
+    posInputCorner.CornerRadius = UDim.new(0,8)
+    posInputCorner.Parent = posInput
+end
 
 local tpPosBtn = createTransparentButton("Tp Position", Color3.fromRGB(38,38,38), panel7)
 tpPosBtn.BackgroundTransparency = 0.35
@@ -2252,6 +2285,7 @@ flingStartBtn.MouseButton1Click:Connect(function()
 
 end)
 
+do
 local bangTrack
 bangBtn.MouseButton1Click:Connect(function()
 
@@ -2324,6 +2358,7 @@ spawn(function()
 end)
 
 end)
+end -- bangTrack do
 
 walkFlingBtn.MouseButton1Click:Connect(function()
     local antiFlingWasManuallyEnabled = antiFlingEnabled and not walkFlingAutoEnabledAntiFling
@@ -2538,44 +2573,44 @@ antiFlingBtn.MouseButton1Click:Connect(function()
         disableAntiFling()
     end
 end)
-loopFBBtn.MouseButton1Click:Connect(function()
+do
+    local loopFullBright = false
+    local fbConnection = nil
+    loopFBBtn.MouseButton1Click:Connect(function()
 
-    loopFullBright = not loopFullBright
+        loopFullBright = not loopFullBright
 
-    if loopFullBright then
-        loopFBBtn.Text = "LoopFullBright: ON"
-       loopFBBtn.BackgroundColor3 = Color3.fromRGB(50, 200, 120)
-loopFBBtn.BackgroundTransparency = 0
-createNotification("LoopFullBright", "ON")
-        if fbConnection then
-            fbConnection:Disconnect()
+        if loopFullBright then
+            loopFBBtn.Text = "LoopFullBright: ON"
+            loopFBBtn.BackgroundColor3 = Color3.fromRGB(50, 200, 120)
+            loopFBBtn.BackgroundTransparency = 0
+            createNotification("LoopFullBright", "ON")
+            if fbConnection then
+                fbConnection:Disconnect()
+            end
+
+            fbConnection = RunService.RenderStepped:Connect(function()
+                local lighting = game:GetService("Lighting")
+                lighting.Brightness = 2
+                lighting.ClockTime = 14
+                lighting.FogEnd = 100000
+                lighting.GlobalShadows = false
+                lighting.OutdoorAmbient = Color3.fromRGB(128,128,128)
+            end)
+
+        else
+            loopFBBtn.Text = "LoopFullBright: OFF"
+            loopFBBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
+            loopFBBtn.BackgroundTransparency = 0.35
+            createNotification("LoopFullBright", "OFF")
+            if fbConnection then
+                fbConnection:Disconnect()
+                fbConnection = nil
+            end
         end
 
-        fbConnection = RunService.RenderStepped:Connect(function()
-
-            local lighting = game:GetService("Lighting")
-
-            lighting.Brightness = 2
-            lighting.ClockTime = 14
-            lighting.FogEnd = 100000
-            lighting.GlobalShadows = false
-            lighting.OutdoorAmbient = Color3.fromRGB(128,128,128)
-
-        end)
-
-    else
-        loopFBBtn.Text = "LoopFullBright: OFF"
-       loopFBBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
-loopFBBtn.BackgroundTransparency = 0.35
-createNotification("LoopFullBright", "OFF")
-        if fbConnection then
-            fbConnection:Disconnect()
-            fbConnection = nil
-        end
-
-    end
-
-end)
+    end)
+end
 noFogBtn.MouseButton1Click:Connect(function()
 
     noFogBtn.BackgroundColor3 = Color3.fromRGB(50, 200, 120)
@@ -2602,59 +2637,53 @@ noFogBtn.MouseButton1Click:Connect(function()
 end)
 -- ─── LOOPSPEED ────────────────────────────────────────────────────────────────
 
-local loopspeedEnabled = false
-local loopspeedConnection = nil
+do
+    local loopspeedEnabled = false
+    local loopspeedConnection = nil
 
-local function setLoopspeedEnabled(state)
-    loopspeedEnabled = state
-    loopspeedToggle.Text = loopspeedEnabled and "Loopspeed: ON" or "Loopspeed: OFF"
-loopspeedToggle.BackgroundColor3 = loopspeedEnabled and Color3.fromRGB(50, 200, 120) or Color3.fromRGB(38, 38, 38)
-loopspeedToggle.BackgroundTransparency = loopspeedEnabled and 0 or 0.35
+    local function setLoopspeedEnabled(state)
+        loopspeedEnabled = state
+        loopspeedToggle.Text = loopspeedEnabled and "Loopspeed: ON" or "Loopspeed: OFF"
+        loopspeedToggle.BackgroundColor3 = loopspeedEnabled and Color3.fromRGB(50, 200, 120) or Color3.fromRGB(38, 38, 38)
+        loopspeedToggle.BackgroundTransparency = loopspeedEnabled and 0 or 0.35
 
-    if loopspeedConnection then
-        loopspeedConnection:Disconnect()
-        loopspeedConnection = nil
-    end
+        if loopspeedConnection then
+            loopspeedConnection:Disconnect()
+            loopspeedConnection = nil
+        end
 
-    if loopspeedEnabled then
-        loopspeedConnection = RunService.Heartbeat:Connect(function()
+        if loopspeedEnabled then
+            loopspeedConnection = RunService.Heartbeat:Connect(function()
+                local char = LocalPlayer.Character
+                if char then
+                    local hum = char:FindFirstChildOfClass("Humanoid")
+                    if hum then hum.WalkSpeed = tonumber(loopspeedInput.Text) or 16 end
+                end
+            end)
+        else
             local char = LocalPlayer.Character
             if char then
                 local hum = char:FindFirstChildOfClass("Humanoid")
-                if hum then
-                    hum.WalkSpeed = tonumber(loopspeedInput.Text) or 16
-                end
-            end
-        end)
-    else
-        local char = LocalPlayer.Character
-        if char then
-            local hum = char:FindFirstChildOfClass("Humanoid")
-            if hum then
-                hum.WalkSpeed = 16
+                if hum then hum.WalkSpeed = 16 end
             end
         end
     end
-end
 
-loopspeedToggle.MouseButton1Click:Connect(function() setLoopspeedEnabled(not loopspeedEnabled) end)
+    loopspeedToggle.MouseButton1Click:Connect(function() setLoopspeedEnabled(not loopspeedEnabled) end)
+end
 
 -- ─── BUTTON EVENTS ────────────────────────────────────────────────────────────
 
 -- -- Trạng thái mặc định
 mainFrame.Visible = false
-mainContainer.Visible = true
-toggleUIButton.Text = "Open Menu"
 
 local function openMenu()
     mainFrame.Visible = true
-    mainContainer.Visible = false
     updatePlayerList()
 end
 
 local function closeMenu()
     mainFrame.Visible = false
-    mainContainer.Visible = true
 end
 
 local function toggleMenu()
@@ -2665,9 +2694,10 @@ local function toggleMenu()
     end
 end
 
--- Bấm Open Menu -> mở menu + ẩn luôn thanh mở menu
-toggleUIButton.MouseButton1Click:Connect(function()
-    openMenu()
+-- Bấm toggle button -> mở/đóng menu (bỏ qua nếu vừa kéo)
+toggleBtn.MouseButton1Click:Connect(function()
+    if _tbMoved then _tbMoved = false; return end
+    toggleMenu()
 end)
 
 -- Bấm X -> đóng menu + hiện lại thanh mở menu
@@ -3281,12 +3311,7 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
     end
 
     if input.KeyCode == Enum.KeyCode.LeftControl then
-        mainFrame.Visible = not mainFrame.Visible
-        mainContainer.Visible = not mainFrame.Visible
-
-        if mainFrame.Visible then
-            updatePlayerList()
-        end
+        toggleMenu()
     end
 end)
 
@@ -3436,4 +3461,4 @@ end)
 
 statusLabel.Text = "Processing: 0 Players"
 updatePlayerList()
-RefreshFlingPlayerList()   
+RefreshFlingPlayerList()
