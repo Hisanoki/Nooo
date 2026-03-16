@@ -2911,7 +2911,7 @@ rejoinBtn.MouseButton1Click:Connect(function()
 
     -- tự chạy lại script sau khi rejoin
     if queue then
-        queue('loadstring(game:HttpGet("https://raw.githubusercontent.com/Hisanoki/Nooo/main/Hitbox%20head"))()')
+        queue('loadstring(game:HttpGet("https://raw.githubusercontent.com/Hisanoki/Nooo/refs/heads/main/StarCrow"))()')
     end
 
     if #Players:GetPlayers() <= 1 then
@@ -2943,7 +2943,7 @@ serverHopBtn.MouseButton1Click:Connect(function()
     end)
 
     -- tự chạy lại script sau khi hop
-    queue_on_teleport('loadstring(game:HttpGet("https://raw.githubusercontent.com/Hisanoki/Nooo/refs/heads/main/Hitbox%20head"))()')
+    queue_on_teleport('loadstring(game:HttpGet("https://raw.githubusercontent.com/Hisanoki/Nooo/refs/heads/main/StarCrow"))()')
 
     local PlaceID = game.PlaceId
     local JobID = game.JobId
@@ -2978,7 +2978,7 @@ joinJobBtn.MouseButton1Click:Connect(function()
 
         local queue = queue_on_teleport or queueonteleport
         if queue then
-            queue('loadstring(game:HttpGet("https://raw.githubusercontent.com/Hisanoki/Nooo/main/Hitbox%20head"))()')
+            queue('loadstring(game:HttpGet("https://raw.githubusercontent.com/Hisanoki/Nooo/refs/heads/main/StarCrow"))()')
         end
 
         game:GetService("TeleportService"):TeleportToPlaceInstance(
