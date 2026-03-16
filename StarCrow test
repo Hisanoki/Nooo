@@ -320,10 +320,19 @@ end
 
 local function updateAimbotFOVCircle()
     if not aimbotFOVCircle then return end
-    local cam = workspace.CurrentCamera
+
     aimbotFOVCircle.Visible = aimbotFOVEnabled
+
+    local cam = workspace.CurrentCamera
+    local vp = cam and cam.ViewportSize or Vector2.new(1920, 1080)
+
+    aimbotFOVCircle.Position = Vector2.new(vp.X / 2, vp.Y / 2)
     aimbotFOVCircle.Radius = aimbotFOVRadius
-    aimbotFOVCircle.Position = Vector2.new(cam.ViewportSize.X / 2, cam.ViewportSize.Y / 2)
+    aimbotFOVCircle.Filled = false
+    aimbotFOVCircle.Thickness = 1.5
+    aimbotFOVCircle.NumSides = 64
+    aimbotFOVCircle.Transparency = 1
+    aimbotFOVCircle.Color = Color3.fromRGB(255, 255, 255)
 end
 
 local function startAimbot()
@@ -2430,15 +2439,24 @@ aimbotToggleBtn.MouseButton1Click:Connect(function()
         stopAimbot()
     end
 end)
-
 fovToggleBtn.MouseButton1Click:Connect(function()
     aimbotFOVEnabled = not aimbotFOVEnabled
     fovToggleBtn.Text = aimbotFOVEnabled and "FOV: ON" or "FOV: OFF"
     fovToggleBtn.BackgroundColor3 = aimbotFOVEnabled and Color3.fromRGB(50, 200, 120) or Color3.fromRGB(38, 38, 38)
     fovToggleBtn.BackgroundTransparency = aimbotFOVEnabled and 0 or 0.35
 
-    if aimbotFOVCircle then
-        aimbotFOVCircle.Visible = aimbotFOVEnabled
+    if aimbotFOVEnabled then
+        pcall(function()
+            if not aimbotFOVCircle then
+                createAimbotFOVCircle()
+            end
+            updateAimbotFOVCircle()
+            aimbotFOVCircle.Visible = true
+        end)
+    else
+        if aimbotFOVCircle then
+            aimbotFOVCircle.Visible = false
+        end
     end
 end)
 
@@ -3863,5 +3881,4 @@ end)
 statusLabel.Text = "Processing: 0 Players"
 updatePlayerList()
 RefreshFlingPlayerList() 
-pcall(createAimbotFOVCircle)
-pcall(updateAimbotFOVCircle)
+
