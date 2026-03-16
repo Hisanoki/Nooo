@@ -1244,13 +1244,13 @@ end
 local tabBtns = {}
 do
     local tabColors = {
-        Color3.fromRGB(25,25,25), Color3.fromRGB(25,25,25),
-        Color3.fromRGB(25,25,25), Color3.fromRGB(25,25,25),
-        Color3.fromRGB(25,25,25), Color3.fromRGB(25,25,25),
-        Color3.fromRGB(25,25,25)
-    }
-    local tabNames = {"Player","ESP","Teleport","Troll","Misc","Server","FeTool", "Aimbot"}
-    for i = 1, 8 do
+    Color3.fromRGB(25,25,25), Color3.fromRGB(25,25,25),
+    Color3.fromRGB(25,25,25), Color3.fromRGB(25,25,25),
+    Color3.fromRGB(25,25,25), Color3.fromRGB(25,25,25),
+    Color3.fromRGB(25,25,25), Color3.fromRGB(25,25,25)
+}
+local tabNames = {"Player","ESP","Teleport","Troll","Misc","Server","FeTool","Aimbot"}
+for i = 1, 8 do
     local btn = Instance.new("TextButton")
     btn.Size = UDim2.new(1, 0, 0, 30)
     btn.BackgroundColor3 = tabColors[i]
