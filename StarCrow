@@ -1097,13 +1097,13 @@ end
 local tabBtns = {}
 do
     local tabColors = {
-        Color3.fromRGB(25,25,25), Color3.fromRGB(25,25,25),
-        Color3.fromRGB(25,25,25), Color3.fromRGB(25,25,25),
-        Color3.fromRGB(25,25,25), Color3.fromRGB(25,25,25),
-        Color3.fromRGB(25,25,25)
-    }
-    local tabNames = {"Player","ESP","Teleport","Troll","Misc","Server","FeTool"}
-    for i = 1, 7 do
+    Color3.fromRGB(25,25,25), Color3.fromRGB(25,25,25),
+    Color3.fromRGB(25,25,25), Color3.fromRGB(25,25,25),
+    Color3.fromRGB(25,25,25), Color3.fromRGB(25,25,25),
+    Color3.fromRGB(25,25,25), Color3.fromRGB(25,25,25)
+}
+    local tabNames = {"Player","ESP","Teleport","Troll","Misc","Server","FeTool","Aimbot"}
+    for i = 1, 8 do
     local btn = Instance.new("TextButton")
     btn.Size = UDim2.new(1, 0, 0, 30)
     btn.BackgroundColor3 = tabColors[i]
@@ -1158,7 +1158,7 @@ local panel5 = makeScrollPanel() -- Troll
 local panel6 = makeScrollPanel() -- Misc   
 local panel7 = makeScrollPanel() -- Server 
 local panel8 = makeScrollPanel() -- FeTool
-
+local panel9 = makeScrollPanel() -- Aimbot
 -- ─── PANEL 1: HEAD HITBOX ─────────────────────────────────────────────────────
 
 do
@@ -2271,10 +2271,18 @@ LocalPlayer.CharacterAdded:Connect(function(char)
 end)
 
 refreshFeTools()
+-- ─── PANEL 9: AIMBOT ─────────────────────────────────────────────────────────
+
+do
+    local _lbl = createTransparentLabel("Aimbot", panel9)
+    _lbl.TextColor3 = Color3.fromRGB(255, 255, 255)
+    _lbl.Font = Enum.Font.GothamBold
+    _lbl.TextSize = 14
+end
 
 -- ─── TAB SWITCH ───────────────────────────────────────────────────────────────
 
-local panels = {panel2, panel3, panel4, panel5, panel6, panel7, panel8}
+local panels = {panel2, panel3, panel4, panel5, panel6, panel7, panel8, panel9}
 
 local function switchTab(idx)
     for i, p in ipairs(panels) do
