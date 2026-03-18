@@ -253,7 +253,7 @@ local function removeBoxESP(character)
     local head = character:FindFirstChild("Head")
     if head then
         for _, c in head:GetChildren() do
-            if c:IsA("BoxHandleAdornment") and c.Name == "BoxCharmESP" then
+            if c:IsA("BoxHandleAdornment") and c.Name == "BoxChamESP" then
                 c:Destroy()
             end
         end
@@ -266,7 +266,7 @@ local function addBoxESP(character, color, size)
     local head = character:FindFirstChild("Head")
     if not head or not head:IsA("BasePart") then return end
     local box = Instance.new("BoxHandleAdornment")
-    box.Name = "BoxCharmESP"
+    box.Name = "BoxChamESP"
     box.Adornee = head
     box.Size = Vector3.new(size, size, size)
     box.Color3 = color or ESP_COLOR
@@ -312,7 +312,7 @@ local function applyHeadHitbox(character, size)
         if head then
             local found = false
             for _, c in head:GetChildren() do
-                if c:IsA("BoxHandleAdornment") and c.Name == "BoxCharmESP" then
+                if c:IsA("BoxHandleAdornment") and c.Name == "BoxChamESP" then
                     found = true; break
                 end
             end
@@ -1162,14 +1162,14 @@ local panel9 = makeScrollPanel() -- Aimbot
 -- ─── PANEL 1: HEAD HITBOX ─────────────────────────────────────────────────────
 
 do
-    local _lbl = createTransparentLabel("Head Hitbox", panel2)
+    local _lbl = createTransparentLabel("Hit Box", panel2)
     _lbl.TextColor3 = Color3.fromRGB(255,255,255)
     _lbl.Font = Enum.Font.GothamBold
     _lbl.TextSize = 14
 end
 
 sizeInput = createTransparentInput("Size (e.g. 15)", tostring(DEFAULT_HITBOX_SIZE), panel2)
-local autoToggle = createTransparentButton("Auto Hitbox: OFF", Color3.fromRGB(180, 50, 50), panel2)
+local autoToggle = createTransparentButton("Head Hit Box: OFF", Color3.fromRGB(38, 38, 38), panel2)
 autoToggle.BackgroundColor3 = Color3.fromRGB(38,38,38)
 autoToggle.BackgroundTransparency = 0.35
 local removeAllBtn = createTransparentButton("Remove All Hitboxes", Color3.fromRGB(180, 50, 50), panel2)
@@ -1313,7 +1313,7 @@ local espNameAllBtn = createTransparentButton("ESP Name All: OFF", Color3.fromRG
 espNameAllBtn.BackgroundTransparency = 0.35
 espNameAllBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
 
-local boxESPBtn = createTransparentButton("ESP Box Charm: OFF", Color3.fromRGB(38, 38, 38), panel3)
+local boxESPBtn = createTransparentButton("ESP Box Cham: OFF", Color3.fromRGB(38, 38, 38), panel3)
 boxESPBtn.BackgroundTransparency = 0.35
 boxESPBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
 createTransparentLabel("Fly", panel2)
@@ -2891,7 +2891,7 @@ end)
 
 autoToggle.MouseButton1Click:Connect(function()
     autoHitboxEnabled = not autoHitboxEnabled
-    autoToggle.Text = autoHitboxEnabled and "Auto Hitbox: ON" or "Auto Hitbox: OFF"
+    autoToggle.Text = autoHitboxEnabled and "Head Hit Box: ON" or "Head Hit Box: OFF"
 
     if autoHitboxEnabled then
         autoToggle.BackgroundColor3 = Color3.fromRGB(50, 200, 120)
@@ -2994,11 +2994,11 @@ boxESPBtn.MouseButton1Click:Connect(function()
     boxESPEnabled = not boxESPEnabled
 
     if boxESPEnabled then
-        boxESPBtn.Text = "ESP Box Charm: ON"
+        boxESPBtn.Text = "ESP Box Cham: ON"
         boxESPBtn.BackgroundColor3 = Color3.fromRGB(50, 200, 120)
         boxESPBtn.BackgroundTransparency = 0
     else
-        boxESPBtn.Text = "ESP Box Charm: OFF"
+        boxESPBtn.Text = "ESP Box Cham: OFF"
         boxESPBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
         boxESPBtn.BackgroundTransparency = 0.35
     end
