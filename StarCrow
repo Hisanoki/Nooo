@@ -9,6 +9,7 @@ local UserInputService = game:GetService("UserInputService")
 
 -- ─── STATE TABLE ─────────────────────────────────────────────────────────────
 local S = {
+    chamsEnabled = false,
     SpectatingPlayer=nil, spectating=false, specConnection=nil,
     selectedSpecButton=nil, specButtons={}, specContainer=nil,
     flyEnabled=false, flySpeed=2, flyConnection=nil, noclipConnection=nil,
@@ -262,7 +263,29 @@ local function addBoxESP(character, color, size)
     box.Parent = head
     S.boxESPObjects[character] = box
 end
+-- ─── CHAMS ESP (HIGHLIGHT) ────────────────────────────────────────────────────
+local function removeChams(character)
+    if not character then return end
+    local highlight = character:FindFirstChild("StarCrowChams")
+    if highlight then
+        highlight:Destroy()
+    end
+end
 
+local function addChams(character, color)
+    if not character or not isAlive(character) then return end
+    removeChams(character)
+    
+    local highlight = Instance.new("Highlight")
+    highlight.Name = "StarCrowChams"
+    highlight.Adornee = character
+    highlight.FillColor = color or Color3.fromRGB(255, 0, 0)
+    highlight.FillTransparency = 0.5
+    highlight.OutlineColor = Color3.new(1, 1, 1)
+    highlight.OutlineTransparency = 0
+    highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+    highlight.Parent = character
+end
 -- ─── HEAD HITBOX ──────────────────────────────────────────────────────────────
 
 local function removeHeadHitbox(character)
@@ -459,6 +482,9 @@ local function onCharacterReady(player, character)
         if (S.espNameAllState or (S.nameESPEnabled and S.selectedPlayers[player])) and isAlive(character) then
             createNameESP(player, character)
         end
+        if S.chamsEnabled and isAlive(character) then
+            addChams(character, getTeamColor(player))
+        end
     end
 
     applyAll()
@@ -467,12 +493,14 @@ local function onCharacterReady(player, character)
         removeHeadHitbox(character)
         removeBoxESP(character)
         removeNameESP(player)
+        removeChams(character)
     end)
 
     local ancestryConn = character.AncestryChanged:Connect(function(_, parent)
         if not parent then
             removeHeadHitbox(character)
             removeBoxESP(character)
+            removeChams(character)
         end
     end)
 
@@ -508,6 +536,7 @@ local function unregisterPlayer(player)
     if player.Character then
         removeHeadHitbox(player.Character)
         removeBoxESP(player.Character)
+        removeChams(player.Character)
     end
     removeNameESP(player)
     S.selectedPlayers[player] = nil
@@ -1299,6 +1328,41 @@ espNameAllBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
 local boxESPBtn = createTransparentButton("ESP Box Chams: OFF", Color3.fromRGB(38, 38, 38), panel3)
 boxESPBtn.BackgroundTransparency = 0.35
 boxESPBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
+-- Tìm nút Box ESP trong panel3 và dán đoạn này ngay dưới nó
+local chamsToggle = createTransparentButton("Esp Chams: OFF", Color3.fromRGB(38, 38, 38), panel3)
+
+-- THIẾT LẬP MÀU MẶC ĐỊNH KHI MỚI CHẠY SCRIPT (Để giống các nút khác)
+chamsToggle.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
+chamsToggle.BackgroundTransparency = 0.35
+
+chamsToggle.MouseButton1Click:Connect(function()
+    S.chamsEnabled = not S.chamsEnabled
+    
+    if S.chamsEnabled then
+        chamsToggle.Text = "Esp Chams: ON"
+        chamsToggle.BackgroundColor3 = Color3.fromRGB(50, 200, 120)
+        chamsToggle.BackgroundTransparency = 0
+        
+        -- NẾU THIẾU ĐOẠN DƯỚI NÀY THÌ BẤM NÚT SẼ KHÔNG CÓ TÁC DỤNG NGAY
+        for _, p in pairs(game.Players:GetPlayers()) do
+            if p ~= game.Players.LocalPlayer and p.Character then
+                -- Gọi hàm addChams trực tiếp khi vừa bấm nút ON
+                addChams(p.Character, getTeamColor(p))
+            end
+        end
+    else
+        chamsToggle.Text = "Esp Chams: OFF"
+        chamsToggle.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
+        chamsToggle.BackgroundTransparency = 0.35
+        
+        -- Xóa sạch khi OFF
+        for _, p in pairs(game.Players:GetPlayers()) do
+            if p.Character then
+                removeChams(p.Character)
+            end
+        end
+    end
+end)
 createTransparentLabel("Fly", panel2)
 local flySpeedInput = createTransparentInput("Fly Speed", "2", panel2)
 S.flyToggle = createTransparentButton("Fly: OFF", Color3.fromRGB(38, 38, 38), panel2)
