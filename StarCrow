@@ -3,21 +3,18 @@ local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 local Camera = workspace.CurrentCamera
 
-local SpectatingPlayer = nil
-local spectating = false
-local specConnection = nil
 function SpectatePlayer(player)
 
-    SpectatingPlayer = player
-    spectating = true
+    S.SpectatingPlayer = player
+    S.spectating = true
 
-    if specConnection then
-        specConnection:Disconnect()
-        specConnection = nil
+    if S.specConnection then
+        S.specConnection:Disconnect()
+        S.specConnection = nil
     end
 
     local function setCamera(character)
-        if not spectating then return end
+        if not S.spectating then return end
         local humanoid = character:WaitForChild("Humanoid")
         Camera.CameraSubject = humanoid
     end
@@ -26,8 +23,8 @@ function SpectatePlayer(player)
         setCamera(player.Character)
     end
 
-    specConnection = player.CharacterAdded:Connect(function(char)
-        if spectating then
+    S.specConnection = player.CharacterAdded:Connect(function(char)
+        if S.spectating then
             setCamera(char)
         end
     end)
@@ -36,17 +33,17 @@ end
 
 function StopSpectate()
 
-    spectating = false
-    SpectatingPlayer = nil
+    S.spectating = false
+    S.SpectatingPlayer = nil
 
-    if specConnection then
-        specConnection:Disconnect()
-        specConnection = nil
+    if S.specConnection then
+        S.specConnection:Disconnect()
+        S.specConnection = nil
     end
 
-    if selectedSpecButton then
-        selectedSpecButton.BackgroundColor3 = Color3.fromRGB(70,70,70)
-        selectedSpecButton = nil
+    if S.selectedSpecButton then
+        S.selectedSpecButton.BackgroundColor3 = Color3.fromRGB(70,70,70)
+        S.selectedSpecButton = nil
     end
 
     if LocalPlayer.Character then
@@ -60,6 +57,41 @@ end
 local RunService = game:GetService("RunService")
 local StarterGui = game:GetService("StarterGui")
 local UserInputService = game:GetService("UserInputService")
+
+-- ─── STATE TABLE ─────────────────────────────────────────────────────────────
+local S = {
+    SpectatingPlayer=nil, spectating=false, specConnection=nil,
+    selectedSpecButton=nil, specButtons={}, specContainer=nil,
+    flyEnabled=false, flySpeed=2, flyConnection=nil, noclipConnection=nil,
+    infJumpEnabled=false, infJumpConnection=nil,
+    autoTPEnabled=false, autoTPConnection=nil,
+    noclipEnabled=false, noclipLoop=nil,
+    autoHitboxEnabled=false, nameESPEnabled=false, boxESPEnabled=false, espNameAllState=false,
+    selectedPlayers={}, selectedTPPlayers={}, boxESPObjects={}, nameESPObjects={},
+    processedChars={}, playerConnections={}, manualPositionCFrame=nil,
+    isInvisible=false, invisButton=nil, invisSound=nil,
+    auraKey=Enum.KeyCode.E, auraListening=false,
+    auraFloatEnabled=false, dropFloatEnabled=false,
+    auraFloatBtn=nil, dropFloatBtn=nil, equipAllFloatEnabled=false, equipAllFloatBtn=nil,
+    auraFloatDragConn=nil, dropFloatDragConn=nil, floatBtnSize=62,
+    FlingActive=false, BangActive=false,
+    SelectedFlingTargets={}, FlingPlayerCheckboxes={},
+    walkflinging=false, walkFlingHumanoidDiedConn=nil, speaker=nil,
+    antiFlingEnabled=false, antiFlingConnection=nil, antiFlingAutoEnabledByWalkFling=false,
+    loopBringActive=false, loopBringStates={},
+    antiAfkEnabled=false,
+    feRefreshBusy=false, lastFeToolSignature="", feAutoScanRunning=false,
+    -- Cross-ref UI (assigned later during panel creation)
+    statusLabel=nil, sizeInput=nil,
+    flyToggle=nil, loopspeedInput=nil, loopspeedToggle=nil,
+    walkFlingBtn=nil, flingStatusLabel=nil, flingPlayerList=nil,
+    autoTPBtn=nil, tpPlayerList=nil, playerList=nil,
+    feAuraBtn=nil, feKBBtn=nil,
+    flingStartBtn=nil, bangBtn=nil, loopBringBtn=nil,
+    specContainer=nil,
+}
+S.speaker = LocalPlayer
+
 
 
 -- CONFIG
@@ -81,61 +113,16 @@ local INVIS_CONFIG = {
 
 -- STATE
 -- FLY SYSTEM
-local flyEnabled = false
-local flySpeed = 2
-local flyConnection = nil
-local noclipConnection = nil
 -- INF JUMP
-local infJumpEnabled = false
-local infJumpConnection = nil
 
-local autoTPEnabled = false
-local autoTPConnection = nil
 -- NOCLIP
-local noclipEnabled = false
-local noclipLoop = nil
-local autoHitboxEnabled = false
-local nameESPEnabled = false
-local boxESPEnabled = false
-local espNameAllState = false
-local selectedPlayers = {}
-local selectedTPPlayers = {}
-local boxESPObjects = {}
-local nameESPObjects = {}
-local processedChars = {}
-local playerConnections = {}
-local manualPositionCFrame = nil
-local isInvisible = false
-local invisButton
-local invisSound
 
 -- FETOOL STATE
-local auraKey = Enum.KeyCode.E
-local auraListening = false
 -- Float button state
-local auraFloatEnabled = false
-local dropFloatEnabled = false
-local auraFloatBtn = nil
-local dropFloatBtn = nil
-local equipAllFloatEnabled = false
-local equipAllFloatBtn = nil
-local auraFloatDragConn = nil
-local dropFloatDragConn = nil
-local floatBtnSize = 62  -- shared size (px) cho cả 2 float button, điều chỉnh bằng slider
 
 -- FLING STATE
-local FlingActive = false
-local BangActive = false
-local SelectedFlingTargets = {}
-local FlingPlayerCheckboxes = {}
 
-local walkflinging = false
-local walkFlingHumanoidDiedConn = nil
-local speaker = LocalPlayer
 -- ANTI FLING STATE
-local antiFlingEnabled = false
-local antiFlingConnection = nil
-local antiFlingAutoEnabledByWalkFling = false
 getgenv().OldPos = nil
 getgenv().FPDH = workspace.FallenPartsDestroyHeight
 
@@ -192,10 +179,10 @@ end
 
 local function toggleInvisibility()
     if not LocalPlayer.Character then return end
-    isInvisible = not isInvisible
+    S.isInvisible = not S.isInvisible
     playInvisSound()
 
-    if isInvisible then
+    if S.isInvisible then
         local hrp = getHumanoidRootPart()
         if not hrp then warn("HumanoidRootPart not found") return end
         local savedCFrame = hrp.CFrame
@@ -220,10 +207,10 @@ local function toggleInvisibility()
         seat.CFrame = savedCFrame
 
         setCharacterTransparency(LocalPlayer.Character, 0.5)
-        if invisButton then
-            invisButton.BackgroundColor3 = Color3.fromRGB(50, 200, 120)
-            invisButton.BackgroundTransparency = 0
-            invisButton.Text = "Invisible: ON"
+        if S.invisButton then
+            S.invisButton.BackgroundColor3 = Color3.fromRGB(50, 200, 120)
+            S.invisButton.BackgroundTransparency = 0
+            S.invisButton.Text = "Invisible: ON"
         end
         createNotification("Invisible ON", "You are now invisible")
     else
@@ -234,10 +221,10 @@ local function toggleInvisibility()
             setCharacterTransparency(LocalPlayer.Character, 0)
         end
 
-        if invisButton then
-            invisButton.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
-            invisButton.BackgroundTransparency = 0.35
-            invisButton.Text = "Invisible: OFF"
+        if S.invisButton then
+            S.invisButton.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
+            S.invisButton.BackgroundTransparency = 0.35
+            S.invisButton.Text = "Invisible: OFF"
         end
         createNotification("Invisible OFF", "You are now visible")
     end
@@ -246,9 +233,9 @@ end
 
 local function removeBoxESP(character)
     if not character then return end
-    if boxESPObjects[character] then
-        pcall(function() boxESPObjects[character]:Destroy() end)
-        boxESPObjects[character] = nil
+    if S.boxESPObjects[character] then
+        pcall(function() S.boxESPObjects[character]:Destroy() end)
+        S.boxESPObjects[character] = nil
     end
     local head = character:FindFirstChild("Head")
     if head then
@@ -274,14 +261,14 @@ local function addBoxESP(character, color, size)
     box.ZIndex = 10
     box.AlwaysOnTop = true
     box.Parent = head
-    boxESPObjects[character] = box
+    S.boxESPObjects[character] = box
 end
 
 -- ─── HEAD HITBOX ──────────────────────────────────────────────────────────────
 
 local function removeHeadHitbox(character)
     if not character then return end
-    processedChars[character] = nil
+    S.processedChars[character] = nil
     removeBoxESP(character)
     local head = character:FindFirstChild("Head")
     if not head then return end
@@ -307,7 +294,7 @@ end
 local function applyHeadHitbox(character, size)
     if not character then return end
     if not isAlive(character) then return end
-    if processedChars[character] then
+    if S.processedChars[character] then
         local head = character:FindFirstChild("Head")
         if head then
             local found = false
@@ -349,15 +336,15 @@ local function applyHeadHitbox(character, size)
     head.Material = Enum.Material.ForceField
 
     addBoxESP(character, ESP_COLOR, size)
-    processedChars[character] = true
+    S.processedChars[character] = true
 end
 
 -- ─── NAME ESP ─────────────────────────────────────────────────────────────────
 
 local function removeNameESP(player)
-    if nameESPObjects[player] then
-        pcall(function() nameESPObjects[player]:Destroy() end)
-        nameESPObjects[player] = nil
+    if S.nameESPObjects[player] then
+        pcall(function() S.nameESPObjects[player]:Destroy() end)
+        S.nameESPObjects[player] = nil
     end
 end
 
@@ -440,21 +427,20 @@ local function createNameESP(player, char)
         end
     end)
 
-    nameESPObjects[player] = billboard
+    S.nameESPObjects[player] = billboard
 end
 
 -- ─── PLAYER MANAGEMENT ────────────────────────────────────────────────────────
 
 local function cleanupPlayerConnections(player)
-    if playerConnections[player] then
-        for _, conn in ipairs(playerConnections[player]) do
+    if S.playerConnections[player] then
+        for _, conn in ipairs(S.playerConnections[player]) do
             pcall(function() conn:Disconnect() end)
         end
-        playerConnections[player] = nil
+        S.playerConnections[player] = nil
     end
 end
 
-local sizeInput -- forward declare (used in onCharacterReady)
 
 local function onCharacterReady(player, character)
     local humanoid = character:FindFirstChildOfClass("Humanoid")
@@ -464,14 +450,14 @@ local function onCharacterReady(player, character)
     if not humanoid then return end
 
     local function applyAll()
-        local size = tonumber(sizeInput and sizeInput.Text) or DEFAULT_HITBOX_SIZE
-        if autoHitboxEnabled and isAlive(character) then
+        local size = tonumber(S.sizeInput and S.sizeInput.Text) or DEFAULT_HITBOX_SIZE
+        if S.autoHitboxEnabled and isAlive(character) then
             applyHeadHitbox(character, size)
         end
-        if boxESPEnabled and isAlive(character) then
+        if S.boxESPEnabled and isAlive(character) then
             addBoxESP(character, getTeamColor(player), size)
         end
-        if (espNameAllState or (nameESPEnabled and selectedPlayers[player])) and isAlive(character) then
+        if (S.espNameAllState or (S.nameESPEnabled and S.selectedPlayers[player])) and isAlive(character) then
             createNameESP(player, character)
         end
     end
@@ -491,24 +477,24 @@ local function onCharacterReady(player, character)
         end
     end)
 
-    if playerConnections[player] then
-        table.insert(playerConnections[player], diedConn)
-        table.insert(playerConnections[player], ancestryConn)
+    if S.playerConnections[player] then
+        table.insert(S.playerConnections[player], diedConn)
+        table.insert(S.playerConnections[player], ancestryConn)
     end
 end
 
 local function registerPlayer(player)
     if player == LocalPlayer then return end
-    if playerConnections[player] then return end
+    if S.playerConnections[player] then return end
 
-    playerConnections[player] = {}
+    S.playerConnections[player] = {}
 
     local charAddedConn = player.CharacterAdded:Connect(function(character)
-        processedChars[character] = nil
+        S.processedChars[character] = nil
         task.wait(0.5)
         onCharacterReady(player, character)
     end)
-    table.insert(playerConnections[player], charAddedConn)
+    table.insert(S.playerConnections[player], charAddedConn)
 
     if player.Character then
         task.spawn(function()
@@ -525,7 +511,7 @@ local function unregisterPlayer(player)
         removeBoxESP(player.Character)
     end
     removeNameESP(player)
-    selectedPlayers[player] = nil
+    S.selectedPlayers[player] = nil
 end
 
 -- ─── UI HELPERS ───────────────────────────────────────────────────────────────
@@ -610,7 +596,7 @@ local function startFly()
     bg.MaxTorque = Vector3.new(9e9,9e9,9e9)
     bg.CFrame = hrp.CFrame
     bg.Parent = hrp
-    flyConnection = RunService.RenderStepped:Connect(function()
+    S.flyConnection = RunService.RenderStepped:Connect(function()
         local cam = workspace.CurrentCamera
         local move = Vector3.new()
         local md = humanoid.MoveDirection
@@ -631,13 +617,13 @@ local function startFly()
             move -= Vector3.new(0, 1, 0)
         end
         if move.Magnitude > 0 then
-            bv.Velocity = move.Unit * (flySpeed * 60)
+            bv.Velocity = move.Unit * (S.flySpeed * 60)
         else
             bv.Velocity = Vector3.new()
         end
         bg.CFrame = cam.CFrame
     end)
-    noclipConnection = RunService.Stepped:Connect(function()
+    S.noclipConnection = RunService.Stepped:Connect(function()
         for _,v in pairs(char:GetDescendants()) do
             if v:IsA("BasePart") then
                 v.CanCollide = false
@@ -647,8 +633,8 @@ local function startFly()
 end
 
 local function stopFly()
-    if flyConnection then flyConnection:Disconnect(); flyConnection = nil end
-    if noclipConnection then noclipConnection:Disconnect(); noclipConnection = nil end
+    if S.flyConnection then S.flyConnection:Disconnect(); S.flyConnection = nil end
+    if S.noclipConnection then S.noclipConnection:Disconnect(); S.noclipConnection = nil end
     local char = LocalPlayer.Character
     if char then
         local humanoid = char:FindFirstChildOfClass("Humanoid")
@@ -665,8 +651,8 @@ end
 -- INF JUMP SYSTEM
 
 local function startInfJump()
-    infJumpConnection = UserInputService.JumpRequest:Connect(function()
-        if infJumpEnabled then
+    S.infJumpConnection = UserInputService.JumpRequest:Connect(function()
+        if S.infJumpEnabled then
             local char = LocalPlayer.Character
             if not char then return end
             local humanoid = char:FindFirstChildOfClass("Humanoid")
@@ -676,14 +662,14 @@ local function startInfJump()
 end
 
 local function stopInfJump()
-    if infJumpConnection then infJumpConnection:Disconnect(); infJumpConnection = nil end
+    if S.infJumpConnection then S.infJumpConnection:Disconnect(); S.infJumpConnection = nil end
 end
 
 -- NOCLIP SYSTEM
 
 local function startNoclip()
-    noclipLoop = RunService.Stepped:Connect(function()
-        if noclipEnabled then
+    S.noclipLoop = RunService.Stepped:Connect(function()
+        if S.noclipEnabled then
             local char = LocalPlayer.Character
             if char then
                 for _,v in pairs(char:GetDescendants()) do
@@ -695,7 +681,7 @@ local function startNoclip()
 end
 
 local function stopNoclip()
-    if noclipLoop then noclipLoop:Disconnect(); noclipLoop = nil end
+    if S.noclipLoop then S.noclipLoop:Disconnect(); S.noclipLoop = nil end
 end
 
 -- ─── FLING LOGIC ──────────────────────────────────────────────────────────────
@@ -784,7 +770,7 @@ local function SkidFling(TargetPlayer)
                         task.wait()
                     end
                 end
-            until Time + TimeToWait < tick() or not FlingActive
+            until Time + TimeToWait < tick() or not S.FlingActive
         end
 
         workspace.FallenPartsDestroyHeight = 0/0
@@ -831,24 +817,24 @@ end
 -- ─── WALK FLING ──────────────────────────────────────────────────────────────
 
 local function toggleWalkFling()
-    walkflinging = not walkflinging
+    S.walkflinging = not S.walkflinging
 
-    if walkflinging then
+    if S.walkflinging then
         local character = speaker.Character
         local humanoid = character and character:FindFirstChildWhichIsA("Humanoid")
 
-        if walkFlingHumanoidDiedConn then
-            walkFlingHumanoidDiedConn:Disconnect()
-            walkFlingHumanoidDiedConn = nil
+        if S.walkFlingHumanoidDiedConn then
+            S.walkFlingHumanoidDiedConn:Disconnect()
+            S.walkFlingHumanoidDiedConn = nil
         end
 
         if humanoid then
-            walkFlingHumanoidDiedConn = humanoid.Died:Connect(function()
-                walkflinging = false
-                if walkFlingBtn then
-                    walkFlingBtn.Text = "WALK FLING : OFF"
-                    walkFlingBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
-                    walkFlingBtn.BackgroundTransparency = 0.35
+            S.walkFlingHumanoidDiedConn = humanoid.Died:Connect(function()
+                S.walkflinging = false
+                if S.walkFlingBtn then
+                    S.walkFlingBtn.Text = "WALK FLING : OFF"
+                    S.walkFlingBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
+                    S.walkFlingBtn.BackgroundTransparency = 0.35
                 end
             end)
         end
@@ -856,7 +842,7 @@ local function toggleWalkFling()
         task.spawn(function()
             local movel = 0.1
 
-            while walkflinging do
+            while S.walkflinging do
                 RunService.Heartbeat:Wait()
 
                 local char = speaker.Character
@@ -880,17 +866,17 @@ local function toggleWalkFling()
             end
         end)
     else
-        if walkFlingHumanoidDiedConn then
-            walkFlingHumanoidDiedConn:Disconnect()
-            walkFlingHumanoidDiedConn = nil
+        if S.walkFlingHumanoidDiedConn then
+            S.walkFlingHumanoidDiedConn:Disconnect()
+            S.walkFlingHumanoidDiedConn = nil
         end
     end
 end
 -- ─── ANTI FLING ──────────────────────────────────────────────────────────────
 
 local function enableAntiFling()
-    if antiFlingConnection then antiFlingConnection:Disconnect(); antiFlingConnection = nil end
-    antiFlingConnection = RunService.Stepped:Connect(function()
+    if S.antiFlingConnection then S.antiFlingConnection:Disconnect(); S.antiFlingConnection = nil end
+    S.antiFlingConnection = RunService.Stepped:Connect(function()
         local myChar = LocalPlayer.Character
         if not myChar then return end
 
@@ -916,7 +902,7 @@ local function enableAntiFling()
 end
 
 local function disableAntiFling()
-    if antiFlingConnection then antiFlingConnection:Disconnect(); antiFlingConnection = nil end
+    if S.antiFlingConnection then S.antiFlingConnection:Disconnect(); S.antiFlingConnection = nil end
     createNotification("Anti Fling", "OFF", 3)
 end
 
@@ -1168,60 +1154,58 @@ do
     _lbl.TextSize = 14
 end
 
-sizeInput = createTransparentInput("Size (e.g. 15)", tostring(DEFAULT_HITBOX_SIZE), panel2)
+S.sizeInput = createTransparentInput("Size (e.g. 15)", tostring(DEFAULT_HITBOX_SIZE), panel2)
 local autoToggle = createTransparentButton("Head Hit Box: OFF", Color3.fromRGB(38, 38, 38), panel2)
 autoToggle.BackgroundColor3 = Color3.fromRGB(38,38,38)
 autoToggle.BackgroundTransparency = 0.35
 local removeAllBtn = createTransparentButton("Remove All Hitboxes", Color3.fromRGB(180, 50, 50), panel2)
 removeAllBtn.BackgroundColor3 = Color3.fromRGB(38,38,38)
 removeAllBtn.BackgroundTransparency = 0.35
-local statusLabel = createTransparentLabel("Processing: 0 Players", panel2)
+S.statusLabel = createTransparentLabel("Processing: 0 Players", panel2)
 createTransparentLabel("Spectate Player", panel2)
 
-local selectedSpecButton = nil
-local specButtons = {}
-local specContainer = Instance.new("ScrollingFrame")
-specContainer.Size = UDim2.new(1,0,0,120)
-specContainer.BackgroundTransparency = 1
-specContainer.BorderSizePixel = 0
-specContainer.ScrollBarThickness = 4
-specContainer.CanvasSize = UDim2.new(0,0,0,0)
-specContainer.Parent = panel2
+S.specContainer = Instance.new("ScrollingFrame")
+S.specContainer.Size = UDim2.new(1,0,0,120)
+S.specContainer.BackgroundTransparency = 1
+S.specContainer.BorderSizePixel = 0
+S.specContainer.ScrollBarThickness = 4
+S.specContainer.CanvasSize = UDim2.new(0,0,0,0)
+S.specContainer.Parent = panel2
 
 do
     local specLayout = Instance.new("UIListLayout")
-    specLayout.Parent = specContainer
+    specLayout.Parent = S.specContainer
     specLayout.Padding = UDim.new(0,4)
     specLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
-        specContainer.CanvasSize = UDim2.new(0,0,0,specLayout.AbsoluteContentSize.Y + 10)
+        S.specContainer.CanvasSize = UDim2.new(0,0,0,specLayout.AbsoluteContentSize.Y + 10)
     end)
 end
 local function refreshSpecList()
 
-    for _,b in pairs(specButtons) do
+    for _,b in pairs(S.specButtons) do
         b:Destroy()
     end
 
-    specButtons = {}
+    S.specButtons = {}
 
     for _,plr in pairs(Players:GetPlayers()) do
         if plr ~= LocalPlayer then
 
-           local btn = createTransparentButton(plr.Name, Color3.fromRGB(38, 38, 38), specContainer)
+           local btn = createTransparentButton(plr.Name, Color3.fromRGB(38, 38, 38), S.specContainer)
 btn.BackgroundTransparency = 0.35
 btn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
-            table.insert(specButtons, btn)
+            table.insert(S.specButtons, btn)
 
             btn.MouseButton1Click:Connect(function()
 
-                if selectedSpecButton then
-    selectedSpecButton.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
-    selectedSpecButton.BackgroundTransparency = 0.35
+                if S.selectedSpecButton then
+    S.selectedSpecButton.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
+    S.selectedSpecButton.BackgroundTransparency = 0.35
 end
 
                 btn.BackgroundColor3 = Color3.fromRGB(50, 200, 120)
 btn.BackgroundTransparency = 0
-selectedSpecButton = btn
+S.selectedSpecButton = btn
 
                 SpectatePlayer(plr)
 
@@ -1246,14 +1230,14 @@ stopSpec.MouseButton1Click:Connect(function()
 
     StopSpectate()
 
-    for _,v in pairs(specContainer:GetChildren()) do
+    for _,v in pairs(S.specContainer:GetChildren()) do
     if v:IsA("TextButton") then
         v.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
         v.BackgroundTransparency = 0.35
     end
 end
 
-selectedSpecButton = nil
+S.selectedSpecButton = nil
 
     task.delay(0.2, function()
         if stopSpec then
@@ -1265,19 +1249,19 @@ end)
 
 createTransparentLabel("Loopspeed", panel2)
 
-local loopspeedInput = createTransparentInput("Speed (e.g. 16)", "16", panel2)
+S.loopspeedInput = createTransparentInput("Speed (e.g. 16)", "16", panel2)
 
-local loopspeedToggle = createTransparentButton("Loopspeed: OFF", Color3.fromRGB(38, 38, 38), panel2)
-loopspeedToggle.BackgroundTransparency = 0.35
-loopspeedToggle.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
+S.loopspeedToggle = createTransparentButton("Loopspeed: OFF", Color3.fromRGB(38, 38, 38), panel2)
+S.loopspeedToggle.BackgroundTransparency = 0.35
+S.loopspeedToggle.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
 
-invisButton = createTransparentButton("Invisible: OFF", Color3.fromRGB(38, 38, 38), panel2)
-invisButton.BackgroundTransparency = 0.35
-invisButton.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
-invisSound = Instance.new("Sound")
-invisSound.SoundId = INVIS_CONFIG.SOUND_ID
-invisSound.Volume = 0.5
-invisSound.Parent = gui
+S.invisButton = createTransparentButton("Invisible: OFF", Color3.fromRGB(38, 38, 38), panel2)
+S.invisButton.BackgroundTransparency = 0.35
+S.invisButton.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
+S.invisSound = Instance.new("Sound")
+S.invisSound.SoundId = INVIS_CONFIG.SOUND_ID
+S.invisSound.Volume = 0.5
+S.invisSound.Parent = gui
 
 -- ─── PANEL 2: OTHER (ESP / Fly) ───────────────────────────────────────────────
 
@@ -1288,20 +1272,20 @@ do
     _lbl.TextSize = 14
 end
 
-local playerList = Instance.new("ScrollingFrame")
-playerList.Size = UDim2.new(1, 0, 0, 110)
-playerList.BackgroundTransparency = 1
-playerList.BorderSizePixel = 0
-playerList.ScrollBarThickness = 4
-playerList.CanvasSize = UDim2.new(0, 0, 0, 0)
-playerList.Parent = panel3
+S.playerList = Instance.new("ScrollingFrame")
+S.playerList.Size = UDim2.new(1, 0, 0, 110)
+S.playerList.BackgroundTransparency = 1
+S.playerList.BorderSizePixel = 0
+S.playerList.ScrollBarThickness = 4
+S.playerList.CanvasSize = UDim2.new(0, 0, 0, 0)
+S.playerList.Parent = panel3
 do
     local playerListLayout = Instance.new("UIListLayout")
     playerListLayout.SortOrder = Enum.SortOrder.LayoutOrder
     playerListLayout.Padding = UDim.new(0, 2)
-    playerListLayout.Parent = playerList
+    playerListLayout.Parent = S.playerList
     playerListLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
-        playerList.CanvasSize = UDim2.new(0,0,0,playerListLayout.AbsoluteContentSize.Y + 10)
+        S.playerList.CanvasSize = UDim2.new(0,0,0,playerListLayout.AbsoluteContentSize.Y + 10)
     end)
 end
 
@@ -1318,9 +1302,9 @@ boxESPBtn.BackgroundTransparency = 0.35
 boxESPBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
 createTransparentLabel("Fly", panel2)
 local flySpeedInput = createTransparentInput("Fly Speed", "2", panel2)
-local flyToggle = createTransparentButton("Fly: OFF", Color3.fromRGB(38, 38, 38), panel2)
-flyToggle.BackgroundTransparency = 0.35
-flyToggle.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
+S.flyToggle = createTransparentButton("Fly: OFF", Color3.fromRGB(38, 38, 38), panel2)
+S.flyToggle.BackgroundTransparency = 0.35
+S.flyToggle.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
 
 local infJumpToggle = createTransparentButton("Inf Jump: OFF", Color3.fromRGB(38, 38, 38), panel2)
 infJumpToggle.BackgroundTransparency = 0.35
@@ -1339,25 +1323,25 @@ do
     _lbl.TextSize = 14
 end
 
-local tpPlayerList = Instance.new("ScrollingFrame")
-tpPlayerList.Size = UDim2.new(1,0,0,110)
-tpPlayerList.BackgroundTransparency = 1
-tpPlayerList.BorderSizePixel = 0
-tpPlayerList.ScrollBarThickness = 4
-tpPlayerList.CanvasSize = UDim2.new(0,0,0,0)
-tpPlayerList.Parent = panel4
+S.tpPlayerList = Instance.new("ScrollingFrame")
+S.tpPlayerList.Size = UDim2.new(1,0,0,110)
+S.tpPlayerList.BackgroundTransparency = 1
+S.tpPlayerList.BorderSizePixel = 0
+S.tpPlayerList.ScrollBarThickness = 4
+S.tpPlayerList.CanvasSize = UDim2.new(0,0,0,0)
+S.tpPlayerList.Parent = panel4
 do
     local tpListLayout = Instance.new("UIListLayout")
     tpListLayout.Padding = UDim.new(0,2)
-    tpListLayout.Parent = tpPlayerList
+    tpListLayout.Parent = S.tpPlayerList
     tpListLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
-        tpPlayerList.CanvasSize = UDim2.new(0,0,0,tpListLayout.AbsoluteContentSize.Y + 5)
+        S.tpPlayerList.CanvasSize = UDim2.new(0,0,0,tpListLayout.AbsoluteContentSize.Y + 5)
     end)
 end
 
-local autoTPBtn = createTransparentButton("Auto TP: OFF", Color3.fromRGB(38, 38, 38), panel4)
-autoTPBtn.BackgroundTransparency = 0.35
-autoTPBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
+S.autoTPBtn = createTransparentButton("Auto TP: OFF", Color3.fromRGB(38, 38, 38), panel4)
+S.autoTPBtn.BackgroundTransparency = 0.35
+S.autoTPBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
 
 local teleportBtn = createTransparentButton("TP", Color3.fromRGB(38, 38, 38), panel4)
 teleportBtn.BackgroundTransparency = 0.35
@@ -1376,46 +1360,44 @@ do
     _lbl.TextSize = 14
 end
 
-local flingStatusLabel = createTransparentLabel("Select targets to fling", panel5)
-flingStatusLabel.TextColor3 = Color3.fromRGB(255,255,255)
+S.flingStatusLabel = createTransparentLabel("Select targets to fling", panel5)
+S.flingStatusLabel.TextColor3 = Color3.fromRGB(255,255,255)
 
 -- Fling player list
-local flingPlayerList = Instance.new("ScrollingFrame")
-flingPlayerList.Size = UDim2.new(1, 0, 0, 130)
-flingPlayerList.BackgroundColor3 = Color3.fromRGB(30,30,30)
-flingPlayerList.BackgroundTransparency = 0.5
-flingPlayerList.BorderSizePixel = 0
-flingPlayerList.ScrollBarThickness = 5
-flingPlayerList.CanvasSize = UDim2.new(0, 0, 0, 0)
-flingPlayerList.Parent = panel5
+S.flingPlayerList = Instance.new("ScrollingFrame")
+S.flingPlayerList.Size = UDim2.new(1, 0, 0, 130)
+S.flingPlayerList.BackgroundColor3 = Color3.fromRGB(30,30,30)
+S.flingPlayerList.BackgroundTransparency = 0.5
+S.flingPlayerList.BorderSizePixel = 0
+S.flingPlayerList.ScrollBarThickness = 5
+S.flingPlayerList.CanvasSize = UDim2.new(0, 0, 0, 0)
+S.flingPlayerList.Parent = panel5
 do
     local flingListLayout = Instance.new("UIListLayout")
     flingListLayout.SortOrder = Enum.SortOrder.LayoutOrder
     flingListLayout.Padding = UDim.new(0, 3)
-    flingListLayout.Parent = flingPlayerList
+    flingListLayout.Parent = S.flingPlayerList
     flingListLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
-        flingPlayerList.CanvasSize = UDim2.new(0,0,0,flingListLayout.AbsoluteContentSize.Y + 10)
+        S.flingPlayerList.CanvasSize = UDim2.new(0,0,0,flingListLayout.AbsoluteContentSize.Y + 10)
     end)
 end
 
-local flingStartBtn = createTransparentButton("FLING PLAYER : OFF", Color3.fromRGB(38, 38, 38), panel5)
-flingStartBtn.BackgroundTransparency = 0.35
-flingStartBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
+S.flingStartBtn = createTransparentButton("FLING PLAYER : OFF", Color3.fromRGB(38, 38, 38), panel5)
+S.flingStartBtn.BackgroundTransparency = 0.35
+S.flingStartBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
 
-local walkFlingBtn = createTransparentButton("WALK FLING : OFF", Color3.fromRGB(38, 38, 38), panel5)
-walkFlingBtn.BackgroundTransparency = 0.35
-walkFlingBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
+S.walkFlingBtn = createTransparentButton("WALK FLING : OFF", Color3.fromRGB(38, 38, 38), panel5)
+S.walkFlingBtn.BackgroundTransparency = 0.35
+S.walkFlingBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
 
-local bangBtn = createTransparentButton("BANG PLAYER : OFF", Color3.fromRGB(38, 38, 38), panel5)
-bangBtn.BackgroundTransparency = 0.35
-bangBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
+S.bangBtn = createTransparentButton("BANG PLAYER : OFF", Color3.fromRGB(38, 38, 38), panel5)
+S.bangBtn.BackgroundTransparency = 0.35
+S.bangBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
 
-local loopBringActive = false
-local loopBringStates = {}
 
-local loopBringBtn = createTransparentButton("LOOP BRING PLAYER : OFF", Color3.fromRGB(38, 38, 38), panel5)
-loopBringBtn.BackgroundTransparency = 0.35
-loopBringBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
+S.loopBringBtn = createTransparentButton("LOOP BRING PLAYER : OFF", Color3.fromRGB(38, 38, 38), panel5)
+S.loopBringBtn.BackgroundTransparency = 0.35
+S.loopBringBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
 local flingSelectAllBtn = createTransparentButton("Select All", Color3.fromRGB(38, 38, 38), panel5)
 flingSelectAllBtn.BackgroundTransparency = 0.35
 flingSelectAllBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
@@ -1451,13 +1433,12 @@ loopFBBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
 local noFogBtn = createTransparentButton("No Fog", Color3.fromRGB(38, 38, 38), panel6)
 noFogBtn.BackgroundTransparency = 0.35
 noFogBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
-local antiAfkEnabled = false
 
 antiAfkBtn.MouseButton1Click:Connect(function()
-    antiAfkEnabled = not antiAfkEnabled
-    antiAfkBtn.Text = "Anti AFK: "..(antiAfkEnabled and "ON" or "OFF")
+    S.antiAfkEnabled = not S.antiAfkEnabled
+    antiAfkBtn.Text = "Anti AFK: "..(S.antiAfkEnabled and "ON" or "OFF")
 
-    if antiAfkEnabled then
+    if S.antiAfkEnabled then
         antiAfkBtn.BackgroundColor3 = Color3.fromRGB(50, 200, 120)
         antiAfkBtn.BackgroundTransparency = 0
         createNotification("Anti AFK", "ON")
@@ -1469,7 +1450,7 @@ antiAfkBtn.MouseButton1Click:Connect(function()
 end)
 
 game:GetService("Players").LocalPlayer.Idled:Connect(function()
-    if antiAfkEnabled then
+    if S.antiAfkEnabled then
         local VU = game:GetService("VirtualUser")
         VU:Button2Down(Vector2.new(0,0), workspace.CurrentCamera.CFrame)
         task.wait(1)
@@ -1697,38 +1678,38 @@ end
 -- ─── AURA FLOAT ───────────────────────────────────────────────────────────────
 
 local function destroyAuraFloat()
-    if auraFloatBtn then
-        auraFloatBtn:Destroy()
-        auraFloatBtn = nil
+    if S.auraFloatBtn then
+        S.auraFloatBtn:Destroy()
+        S.auraFloatBtn = nil
     end
 end
 
 local function createAuraFloat()
     destroyAuraFloat()
-    auraFloatBtn = Instance.new("TextButton")
-    auraFloatBtn.Size = UDim2.new(0, floatBtnSize, 0, floatBtnSize)
-    auraFloatBtn.Position = UDim2.new(0.85, 0, 0.5, -(floatBtnSize + 6))
-    auraFloatBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
-    auraFloatBtn.BackgroundTransparency = 0.35
-    auraFloatBtn.BorderSizePixel = 0
-    auraFloatBtn.Text = "Aura"
-    auraFloatBtn.TextColor3 = Color3.fromRGB(255, 220, 220)
-    auraFloatBtn.TextScaled = true
-    auraFloatBtn.Font = Enum.Font.GothamBold
-    auraFloatBtn.Active = true
-    auraFloatBtn.ZIndex = 15
-    auraFloatBtn.Parent = gui
-    local c = Instance.new("UICorner", auraFloatBtn)
+    S.auraFloatBtn = Instance.new("TextButton")
+    S.auraFloatBtn.Size = UDim2.new(0, S.floatBtnSize, 0, S.floatBtnSize)
+    S.auraFloatBtn.Position = UDim2.new(0.85, 0, 0.5, -(S.floatBtnSize + 6))
+    S.auraFloatBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
+    S.auraFloatBtn.BackgroundTransparency = 0.35
+    S.auraFloatBtn.BorderSizePixel = 0
+    S.auraFloatBtn.Text = "Aura"
+    S.auraFloatBtn.TextColor3 = Color3.fromRGB(255, 220, 220)
+    S.auraFloatBtn.TextScaled = true
+    S.auraFloatBtn.Font = Enum.Font.GothamBold
+    S.auraFloatBtn.Active = true
+    S.auraFloatBtn.ZIndex = 15
+    S.auraFloatBtn.Parent = gui
+    local c = Instance.new("UICorner", S.auraFloatBtn)
     c.CornerRadius = UDim.new(0, 8)
-    local s = Instance.new("UIStroke", auraFloatBtn)
+    local s = Instance.new("UIStroke", S.auraFloatBtn)
    s.Color = Color3.fromRGB(60, 60, 60)
     s.Thickness = 1.5
 
-    local getWasMoved, clearMoved = makeDraggableFloat(auraFloatBtn)
+    local getWasMoved, clearMoved = makeDraggableFloat(S.auraFloatBtn)
 
-    auraFloatBtn.MouseButton1Click:Connect(function()
+    S.auraFloatBtn.MouseButton1Click:Connect(function()
     if getWasMoved() then clearMoved(); return end
-    flashButton(auraFloatBtn)
+    flashButton(S.auraFloatBtn)
     runToolAura()
 end)
 end
@@ -1736,38 +1717,38 @@ end
 -- ─── DROP FLOAT ───────────────────────────────────────────────────────────────
 
 local function destroyDropFloat()
-    if dropFloatBtn then
-        dropFloatBtn:Destroy()
-        dropFloatBtn = nil
+    if S.dropFloatBtn then
+        S.dropFloatBtn:Destroy()
+        S.dropFloatBtn = nil
     end
 end
 
 local function createDropFloat()
     destroyDropFloat()
-    dropFloatBtn = Instance.new("TextButton")
-    dropFloatBtn.Size = UDim2.new(0, floatBtnSize, 0, floatBtnSize)
-    dropFloatBtn.Position = UDim2.new(0.85, 0, 0.5, 6)
-    dropFloatBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
-    dropFloatBtn.BackgroundTransparency = 0.35
-    dropFloatBtn.BorderSizePixel = 0
-    dropFloatBtn.Text = "Drop\nTool"
-    dropFloatBtn.TextColor3 = Color3.fromRGB(210, 230, 255)
-    dropFloatBtn.TextScaled = true
-    dropFloatBtn.Font = Enum.Font.GothamBold
-    dropFloatBtn.Active = true
-    dropFloatBtn.ZIndex = 15
-    dropFloatBtn.Parent = gui
-    local c = Instance.new("UICorner", dropFloatBtn)
+    S.dropFloatBtn = Instance.new("TextButton")
+    S.dropFloatBtn.Size = UDim2.new(0, S.floatBtnSize, 0, S.floatBtnSize)
+    S.dropFloatBtn.Position = UDim2.new(0.85, 0, 0.5, 6)
+    S.dropFloatBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
+    S.dropFloatBtn.BackgroundTransparency = 0.35
+    S.dropFloatBtn.BorderSizePixel = 0
+    S.dropFloatBtn.Text = "Drop\nTool"
+    S.dropFloatBtn.TextColor3 = Color3.fromRGB(210, 230, 255)
+    S.dropFloatBtn.TextScaled = true
+    S.dropFloatBtn.Font = Enum.Font.GothamBold
+    S.dropFloatBtn.Active = true
+    S.dropFloatBtn.ZIndex = 15
+    S.dropFloatBtn.Parent = gui
+    local c = Instance.new("UICorner", S.dropFloatBtn)
     c.CornerRadius = UDim.new(0, 8)
-    local s = Instance.new("UIStroke", dropFloatBtn)
+    local s = Instance.new("UIStroke", S.dropFloatBtn)
    s.Color = Color3.fromRGB(60, 60, 60)
     s.Thickness = 1.5
 
-    local getWasMoved, clearMoved = makeDraggableFloat(dropFloatBtn)
+    local getWasMoved, clearMoved = makeDraggableFloat(S.dropFloatBtn)
 
-    dropFloatBtn.MouseButton1Click:Connect(function()
+    S.dropFloatBtn.MouseButton1Click:Connect(function()
     if getWasMoved() then clearMoved(); return end
-    flashButton(dropFloatBtn)
+    flashButton(S.dropFloatBtn)
     local char = LocalPlayer.Character
     if not char then return end
     local tool = char:FindFirstChildOfClass("Tool")
@@ -1777,98 +1758,97 @@ end
 -- ─── EQUIP ALL FLOAT ──────────────────────────────────────────────────────────
 
 local function destroyEquipAllFloat()
-    if equipAllFloatBtn then
-        equipAllFloatBtn:Destroy()
-        equipAllFloatBtn = nil
+    if S.equipAllFloatBtn then
+        S.equipAllFloatBtn:Destroy()
+        S.equipAllFloatBtn = nil
     end
 end
 
 local function createEquipAllFloat()
     destroyEquipAllFloat()
-    equipAllFloatBtn = Instance.new("TextButton")
-    equipAllFloatBtn.Size = UDim2.new(0, floatBtnSize, 0, floatBtnSize)
-    equipAllFloatBtn.Position = UDim2.new(0.85, 0, 0.5, floatBtnSize + 18)
-    equipAllFloatBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
-    equipAllFloatBtn.BackgroundTransparency = 0.35
-    equipAllFloatBtn.BorderSizePixel = 0
-    equipAllFloatBtn.Text = "Equip\nAll"
-    equipAllFloatBtn.TextColor3 = Color3.fromRGB(255, 235, 180)
-    equipAllFloatBtn.TextScaled = true
-    equipAllFloatBtn.Font = Enum.Font.GothamBold
-    equipAllFloatBtn.Active = true
-    equipAllFloatBtn.ZIndex = 15
-    equipAllFloatBtn.Parent = gui
+    S.equipAllFloatBtn = Instance.new("TextButton")
+    S.equipAllFloatBtn.Size = UDim2.new(0, S.floatBtnSize, 0, S.floatBtnSize)
+    S.equipAllFloatBtn.Position = UDim2.new(0.85, 0, 0.5, S.floatBtnSize + 18)
+    S.equipAllFloatBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
+    S.equipAllFloatBtn.BackgroundTransparency = 0.35
+    S.equipAllFloatBtn.BorderSizePixel = 0
+    S.equipAllFloatBtn.Text = "Equip\nAll"
+    S.equipAllFloatBtn.TextColor3 = Color3.fromRGB(255, 235, 180)
+    S.equipAllFloatBtn.TextScaled = true
+    S.equipAllFloatBtn.Font = Enum.Font.GothamBold
+    S.equipAllFloatBtn.Active = true
+    S.equipAllFloatBtn.ZIndex = 15
+    S.equipAllFloatBtn.Parent = gui
 
-    local c = Instance.new("UICorner", equipAllFloatBtn)
+    local c = Instance.new("UICorner", S.equipAllFloatBtn)
     c.CornerRadius = UDim.new(0, 8)
 
-    local s = Instance.new("UIStroke", equipAllFloatBtn)
+    local s = Instance.new("UIStroke", S.equipAllFloatBtn)
     s.Color = Color3.fromRGB(60, 60, 60)
     s.Thickness = 1.5
 
-    local getWasMoved, clearMoved = makeDraggableFloat(equipAllFloatBtn)
+    local getWasMoved, clearMoved = makeDraggableFloat(S.equipAllFloatBtn)
 
-    equipAllFloatBtn.MouseButton1Click:Connect(function()
+    S.equipAllFloatBtn.MouseButton1Click:Connect(function()
         if getWasMoved() then
             clearMoved()
             return
         end
 
-        flashButton(equipAllFloatBtn)
+        flashButton(S.equipAllFloatBtn)
         runEquipAllTools()
     end)
 end
 -- ─── FETOOL BUTTONS ───────────────────────────────────────────────────────────
 
-local feAuraBtn = createTransparentButton("Tool Aura [" .. auraKey.Name .. "]", Color3.fromRGB(38, 38, 38), panel8)
-feAuraBtn.BackgroundTransparency = 0.35
-feAuraBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
+S.feAuraBtn = createTransparentButton("Tool Aura [" .. S.auraKey.Name .. "]", Color3.fromRGB(38, 38, 38), panel8)
+S.feAuraBtn.BackgroundTransparency = 0.35
+S.feAuraBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
 
-feAuraBtn.MouseButton1Click:Connect(runToolAura)
+S.feAuraBtn.MouseButton1Click:Connect(runToolAura)
 
 -- Keybind row
-local feKBBtn
 do
     local feKBRow = Instance.new("Frame")
     feKBRow.BackgroundTransparency = 1
     feKBRow.Size = UDim2.new(1, 0, 0, 42)
     feKBRow.Parent = panel8
 
-    feKBBtn = Instance.new("TextButton")
-    feKBBtn.Parent = feKBRow
-    feKBBtn.Size = UDim2.new(1, 0, 1, 0)
-    feKBBtn.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
-    feKBBtn.BackgroundTransparency = 0.2
-    feKBBtn.BorderSizePixel = 0
-    feKBBtn.Text = auraKey.Name
-feKBBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-feKBBtn.TextScaled = false
-feKBBtn.TextSize = 14
-feKBBtn.Font = Enum.Font.GothamBold
-    feKBBtn.AutoButtonColor = true
-    _mkCorner(6, feKBBtn)
+    S.feKBBtn = Instance.new("TextButton")
+    S.feKBBtn.Parent = feKBRow
+    S.feKBBtn.Size = UDim2.new(1, 0, 1, 0)
+    S.feKBBtn.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
+    S.feKBBtn.BackgroundTransparency = 0.2
+    S.feKBBtn.BorderSizePixel = 0
+    S.feKBBtn.Text = S.auraKey.Name
+S.feKBBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+S.feKBBtn.TextScaled = false
+S.feKBBtn.TextSize = 14
+S.feKBBtn.Font = Enum.Font.GothamBold
+    S.feKBBtn.AutoButtonColor = true
+    _mkCorner(6, S.feKBBtn)
 
     local stroke = Instance.new("UIStroke")
-    stroke.Parent = feKBBtn
+    stroke.Parent = S.feKBBtn
     stroke.Color = Color3.fromRGB(60, 60, 60)
     stroke.Thickness = 1
     stroke.Transparency = 0.35
 end
 
-feKBBtn.MouseButton1Click:Connect(function()
-    if auraListening then return end
-    auraListening = true
-    feKBBtn.Text = "..."
-    feKBBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+S.feKBBtn.MouseButton1Click:Connect(function()
+    if S.auraListening then return end
+    S.auraListening = true
+    S.feKBBtn.Text = "..."
+    S.feKBBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
     local conn
     conn = UserInputService.InputBegan:Connect(function(input, gpe)
         if gpe then return end
         if input.UserInputType == Enum.UserInputType.Keyboard then
-            auraKey = input.KeyCode
-            feKBBtn.Text = auraKey.Name
-            feKBBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-            feAuraBtn.Text = "Tool Aura [" .. auraKey.Name .. "]"
-            auraListening = false
+            S.auraKey = input.KeyCode
+            S.feKBBtn.Text = S.auraKey.Name
+            S.feKBBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+            S.feAuraBtn.Text = "Tool Aura [" .. S.auraKey.Name .. "]"
+            S.auraListening = false
             conn:Disconnect()
         end
     end)
@@ -1880,9 +1860,9 @@ feAuraFloatBtn.BackgroundTransparency = 0.35
 feAuraFloatBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
 
 feAuraFloatBtn.MouseButton1Click:Connect(function()
-    auraFloatEnabled = not auraFloatEnabled
+    S.auraFloatEnabled = not S.auraFloatEnabled
 
-    if auraFloatEnabled then
+    if S.auraFloatEnabled then
         feAuraFloatBtn.Text = "Aura Float: ON"
         feAuraFloatBtn.BackgroundColor3 = Color3.fromRGB(50, 200, 120)
         feAuraFloatBtn.BackgroundTransparency = 0
@@ -1915,9 +1895,9 @@ feDropFloatBtn.BackgroundTransparency = 0.35
 feDropFloatBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
 
 feDropFloatBtn.MouseButton1Click:Connect(function()
-    dropFloatEnabled = not dropFloatEnabled
+    S.dropFloatEnabled = not S.dropFloatEnabled
 
-    if dropFloatEnabled then
+    if S.dropFloatEnabled then
         feDropFloatBtn.Text = "Drop Float: ON"
         feDropFloatBtn.BackgroundColor3 = Color3.fromRGB(50, 200, 120)
         feDropFloatBtn.BackgroundTransparency = 0
@@ -1945,9 +1925,9 @@ feEquipAllFloatToggleBtn.BackgroundTransparency = 0.35
 feEquipAllFloatToggleBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
 
 feEquipAllFloatToggleBtn.MouseButton1Click:Connect(function()
-    equipAllFloatEnabled = not equipAllFloatEnabled
+    S.equipAllFloatEnabled = not S.equipAllFloatEnabled
 
-    if equipAllFloatEnabled then
+    if S.equipAllFloatEnabled then
         feEquipAllFloatToggleBtn.Text = "Equip All Float: ON"
         feEquipAllFloatToggleBtn.BackgroundColor3 = Color3.fromRGB(50, 200, 120)
         feEquipAllFloatToggleBtn.BackgroundTransparency = 0
@@ -1965,7 +1945,7 @@ do
     local sizeValueLabel = Instance.new("TextLabel")
     sizeValueLabel.Size = UDim2.new(1, 0, 0, 20)
     sizeValueLabel.BackgroundTransparency = 1
-    sizeValueLabel.Text = "Float Size: " .. tostring(floatBtnSize)
+    sizeValueLabel.Text = "Float Size: " .. tostring(S.floatBtnSize)
     sizeValueLabel.TextColor3 = Color3.fromRGB(190, 190, 190)
     sizeValueLabel.Font = Enum.Font.Gotham
     sizeValueLabel.TextSize = 12
@@ -1992,7 +1972,7 @@ do
     -- Slider value 1-100 → pixel size 30-130
     local function valToSize(v) return v + 29 end  -- 1→30, 100→129
     local function sizeToVal(s) return math.clamp(s - 29, 1, 100) end
-    local curVal = sizeToVal(floatBtnSize)
+    local curVal = sizeToVal(S.floatBtnSize)
 
     local fill = Instance.new("Frame")
     fill.Size = UDim2.new((curVal - 1) / 99, 0, 1, 0)
@@ -2028,20 +2008,20 @@ do
         local sz  = track.AbsoluteSize
         local rel = math.clamp((screenPos.X - abs.X) / sz.X, 0, 1)
         curVal = math.floor(rel * 99) + 1
-        floatBtnSize = valToSize(curVal)
+        S.floatBtnSize = valToSize(curVal)
         sizeValueLabel.Text = "Float Size: " .. tostring(curVal)
         local fillRel = (curVal - 1) / 99
         fill.Size  = UDim2.new(fillRel, 0, 1, 0)
         thumb.Position = UDim2.new(fillRel, 0, 0.5, 0)
         -- Cập nhật kích thước float button đang hiển thị
-        if auraFloatBtn then
-            auraFloatBtn.Size = UDim2.new(0, floatBtnSize, 0, floatBtnSize)
+        if S.auraFloatBtn then
+            S.auraFloatBtn.Size = UDim2.new(0, S.floatBtnSize, 0, S.floatBtnSize)
         end
-        if dropFloatBtn then
-            dropFloatBtn.Size = UDim2.new(0, floatBtnSize, 0, floatBtnSize)
+        if S.dropFloatBtn then
+            S.dropFloatBtn.Size = UDim2.new(0, S.floatBtnSize, 0, S.floatBtnSize)
         end
-        if equipAllFloatBtn then
-    equipAllFloatBtn.Size = UDim2.new(0, floatBtnSize, 0, floatBtnSize)
+        if S.equipAllFloatBtn then
+    S.equipAllFloatBtn.Size = UDim2.new(0, S.floatBtnSize, 0, S.floatBtnSize)
 end
     end
 
@@ -2196,15 +2176,12 @@ feRefreshBtn.MouseButton1Click:Connect(function()
     flashButton(feRefreshBtn)
     refreshFeTools()
 end)
-local feRefreshBusy = false
-local lastFeToolSignature = ""
-local feAutoScanRunning = false
 local function scheduleFeRefresh()
-    if feRefreshBusy then return end
-    feRefreshBusy = true
+    if S.feRefreshBusy then return end
+    S.feRefreshBusy = true
 
     task.delay(0.06, function()
-        feRefreshBusy = false
+        S.feRefreshBusy = false
         pcall(function()
             refreshFeTools()
         end)
@@ -2260,12 +2237,333 @@ end)
 refreshFeTools()
 -- ─── PANEL 9: AIMBOT ─────────────────────────────────────────────────────────
 
-do
+do -- AIMBOT SCOPE: isolated do..end tránh vượt 200 local
     local _lbl = createTransparentLabel("Aimbot", panel9)
     _lbl.TextColor3 = Color3.fromRGB(255, 255, 255)
     _lbl.Font = Enum.Font.GothamBold
     _lbl.TextSize = 14
-end
+
+    -- Settings table (1 local thay vì nhiều local riêng lẻ)
+    local AimSettings = {
+        AimEnabled          = false,
+        FOV                 = 110,
+        AimPart             = "Head",
+        WallCheck           = true,
+        HPCheck             = true,
+        ShowFOV             = false,
+        TeamCheck           = false,
+        FriendCheck         = true,
+        ForceFieldCheck     = true,
+        Smoothness          = 0.90,
+        FOVOffsetX          = 0,
+        FOVOffsetY          = -55,
+        Prediction          = true,
+        PredictionAmount    = 0.12,
+        AirPrediction       = true,
+        AirPredictionAmount = 0.16,
+    }
+
+    local AIM_ON  = Color3.fromRGB(70, 255, 90)
+    local AIM_OFF = Color3.fromRGB(38, 38, 38)
+    local FOV_COL = Color3.fromRGB(80, 255, 100)
+
+    -- Dọn standalone AimAssistUI cũ nếu có
+    pcall(function()
+        local cg = game:GetService("CoreGui")
+        if cg:FindFirstChild("AimAssistUI") then cg.AimAssistUI:Destroy() end
+    end)
+
+    -- ScreenGui riêng cho FOV Circle (CoreGui)
+    local aimGui = Instance.new("ScreenGui")
+    aimGui.Name             = "AimAssistUI"
+    aimGui.ResetOnSpawn     = false
+    aimGui.ZIndexBehavior   = Enum.ZIndexBehavior.Sibling
+    local _cgOk = pcall(function() aimGui.Parent = game:GetService("CoreGui") end)
+    if not _cgOk then aimGui.Parent = LocalPlayer.PlayerGui end
+
+    local FOVCircleAim = Instance.new("Frame")
+    FOVCircleAim.Name                   = "FOVCircle"
+    FOVCircleAim.Parent                 = aimGui
+    FOVCircleAim.AnchorPoint            = Vector2.new(0.5, 0.5)
+    FOVCircleAim.BackgroundTransparency = 1
+    FOVCircleAim.BorderSizePixel        = 0
+    FOVCircleAim.ZIndex                 = 999
+    FOVCircleAim.Visible                = AimSettings.ShowFOV
+    do
+        local _fc = Instance.new("UICorner", FOVCircleAim)
+        _fc.CornerRadius = UDim.new(1, 0)
+        local _fs = Instance.new("UIStroke", FOVCircleAim)
+        _fs.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+        _fs.Color           = FOV_COL
+        _fs.Thickness       = 2
+        _fs.Transparency    = 0.08
+    end
+
+    -- Helper style button
+    local function aimStyle(btn, state)
+        btn.BackgroundColor3       = state and AIM_ON or AIM_OFF
+        btn.BackgroundTransparency = state and 0 or 0.35
+    end
+
+    -- ── Toggle buttons ──────────────────────────────────────────────────────
+    local aimToggleBtn = createTransparentButton("Aim Assist: OFF", AIM_OFF, panel9)
+    aimStyle(aimToggleBtn, false)
+
+    local wallCheckBtn = createTransparentButton("Wall Check: ON", AIM_OFF, panel9)
+    aimStyle(wallCheckBtn, AimSettings.WallCheck)
+
+    local teamCheckBtn = createTransparentButton("Team Check: OFF", AIM_OFF, panel9)
+    aimStyle(teamCheckBtn, false)
+
+    local friendCheckBtn = createTransparentButton("Friend Check: ON", AIM_OFF, panel9)
+    aimStyle(friendCheckBtn, AimSettings.FriendCheck)
+
+    local predictionBtn = createTransparentButton("Prediction: ON", AIM_OFF, panel9)
+    aimStyle(predictionBtn, AimSettings.Prediction)
+
+    local deadCheckBtn = createTransparentButton("Dead Check: ON", AIM_OFF, panel9)
+    aimStyle(deadCheckBtn, AimSettings.HPCheck)
+
+    -- FOV Circle không có button riêng — bật/tắt theo Aim Assist
+
+    -- Aim Part label + row
+    do
+        local _aplbl = createTransparentLabel("Aim Part:", panel9)
+        _aplbl.TextColor3 = Color3.fromRGB(200, 200, 200)
+    end
+    do
+        local aimPartRow = Instance.new("Frame")
+        aimPartRow.BackgroundTransparency = 1
+        aimPartRow.Size   = UDim2.new(1, 0, 0, 32)
+        aimPartRow.Parent = panel9
+
+        local headBtn = Instance.new("TextButton")
+        headBtn.Size                   = UDim2.new(0.48, 0, 1, 0)
+        headBtn.Text                   = "Head"
+        headBtn.BackgroundColor3       = AIM_ON
+        headBtn.BackgroundTransparency = 0
+        headBtn.TextColor3             = Color3.new(1,1,1)
+        headBtn.Font                   = Enum.Font.GothamBold
+        headBtn.TextSize               = 13
+        headBtn.BorderSizePixel        = 0
+        headBtn.Parent                 = aimPartRow
+        Instance.new("UICorner", headBtn).CornerRadius = UDim.new(0, 4)
+
+        local bodyBtn = Instance.new("TextButton")
+        bodyBtn.Size                   = UDim2.new(0.48, 0, 1, 0)
+        bodyBtn.Position               = UDim2.new(0.52, 0, 0, 0)
+        bodyBtn.Text                   = "Body"
+        bodyBtn.BackgroundColor3       = AIM_OFF
+        bodyBtn.BackgroundTransparency = 0.35
+        bodyBtn.TextColor3             = Color3.new(1,1,1)
+        bodyBtn.Font                   = Enum.Font.GothamBold
+        bodyBtn.TextSize               = 13
+        bodyBtn.BorderSizePixel        = 0
+        bodyBtn.Parent                 = aimPartRow
+        Instance.new("UICorner", bodyBtn).CornerRadius = UDim.new(0, 4)
+
+        headBtn.MouseButton1Click:Connect(function()
+            AimSettings.AimPart            = "Head"
+            headBtn.BackgroundColor3       = AIM_ON;  headBtn.BackgroundTransparency = 0
+            bodyBtn.BackgroundColor3       = AIM_OFF; bodyBtn.BackgroundTransparency = 0.35
+        end)
+        bodyBtn.MouseButton1Click:Connect(function()
+            AimSettings.AimPart            = "HumanoidRootPart"
+            bodyBtn.BackgroundColor3       = AIM_ON;  bodyBtn.BackgroundTransparency = 0
+            headBtn.BackgroundColor3       = AIM_OFF; headBtn.BackgroundTransparency = 0.35
+        end)
+    end
+
+    -- FOV +/- row
+    do
+        local fovRow = Instance.new("Frame")
+        fovRow.BackgroundTransparency = 1
+        fovRow.Size   = UDim2.new(1, 0, 0, 32)
+        fovRow.Parent = panel9
+
+        local fovMinus = Instance.new("TextButton")
+        fovMinus.Size                   = UDim2.new(0.3, 0, 1, 0)
+        fovMinus.Text                   = "FOV -"
+        fovMinus.BackgroundColor3       = AIM_OFF
+        fovMinus.BackgroundTransparency = 0.35
+        fovMinus.TextColor3             = Color3.new(1,1,1)
+        fovMinus.Font                   = Enum.Font.GothamBold
+        fovMinus.TextSize               = 13
+        fovMinus.BorderSizePixel        = 0
+        fovMinus.Parent                 = fovRow
+        Instance.new("UICorner", fovMinus).CornerRadius = UDim.new(0, 4)
+
+        local fovDisplay = Instance.new("TextLabel")
+        fovDisplay.Size                   = UDim2.new(0.4, 0, 1, 0)
+        fovDisplay.Position               = UDim2.new(0.3, 0, 0, 0)
+        fovDisplay.BackgroundTransparency = 1
+        fovDisplay.Text                   = tostring(AimSettings.FOV)
+        fovDisplay.TextColor3             = Color3.fromRGB(255, 255, 255)
+        fovDisplay.Font                   = Enum.Font.GothamBold
+        fovDisplay.TextSize               = 14
+        fovDisplay.Parent                 = fovRow
+
+        local fovPlus = Instance.new("TextButton")
+        fovPlus.Size                   = UDim2.new(0.3, 0, 1, 0)
+        fovPlus.Position               = UDim2.new(0.7, 0, 0, 0)
+        fovPlus.Text                   = "FOV +"
+        fovPlus.BackgroundColor3       = AIM_OFF
+        fovPlus.BackgroundTransparency = 0.35
+        fovPlus.TextColor3             = Color3.new(1,1,1)
+        fovPlus.Font                   = Enum.Font.GothamBold
+        fovPlus.TextSize               = 13
+        fovPlus.BorderSizePixel        = 0
+        fovPlus.Parent                 = fovRow
+        Instance.new("UICorner", fovPlus).CornerRadius = UDim.new(0, 4)
+
+        local function _updateFOVDisplay()
+            fovDisplay.Text  = tostring(AimSettings.FOV)
+            FOVCircleAim.Size = UDim2.new(0, AimSettings.FOV * 2, 0, AimSettings.FOV * 2)
+        end
+        _updateFOVDisplay()
+
+        fovMinus.MouseButton1Click:Connect(function()
+            AimSettings.FOV = math.clamp(AimSettings.FOV - 10, 20, 300)
+            _updateFOVDisplay()
+        end)
+        fovPlus.MouseButton1Click:Connect(function()
+            AimSettings.FOV = math.clamp(AimSettings.FOV + 10, 20, 300)
+            _updateFOVDisplay()
+        end)
+    end
+
+    -- ── Click handlers cho toggle buttons ───────────────────────────────────
+    aimToggleBtn.MouseButton1Click:Connect(function()
+        AimSettings.AimEnabled = not AimSettings.AimEnabled
+        AimSettings.ShowFOV    = AimSettings.AimEnabled
+        aimToggleBtn.Text = "Aim Assist: " .. (AimSettings.AimEnabled and "ON" or "OFF")
+        aimStyle(aimToggleBtn, AimSettings.AimEnabled)
+        FOVCircleAim.Visible = AimSettings.ShowFOV
+    end)
+
+    wallCheckBtn.MouseButton1Click:Connect(function()
+        AimSettings.WallCheck = not AimSettings.WallCheck
+        wallCheckBtn.Text = "Wall Check: " .. (AimSettings.WallCheck and "ON" or "OFF")
+        aimStyle(wallCheckBtn, AimSettings.WallCheck)
+    end)
+
+    teamCheckBtn.MouseButton1Click:Connect(function()
+        AimSettings.TeamCheck = not AimSettings.TeamCheck
+        teamCheckBtn.Text = "Team Check: " .. (AimSettings.TeamCheck and "ON" or "OFF")
+        aimStyle(teamCheckBtn, AimSettings.TeamCheck)
+    end)
+
+    friendCheckBtn.MouseButton1Click:Connect(function()
+        AimSettings.FriendCheck = not AimSettings.FriendCheck
+        friendCheckBtn.Text = "Friend Check: " .. (AimSettings.FriendCheck and "ON" or "OFF")
+        aimStyle(friendCheckBtn, AimSettings.FriendCheck)
+    end)
+
+    predictionBtn.MouseButton1Click:Connect(function()
+        AimSettings.Prediction = not AimSettings.Prediction
+        predictionBtn.Text = "Prediction: " .. (AimSettings.Prediction and "ON" or "OFF")
+        aimStyle(predictionBtn, AimSettings.Prediction)
+    end)
+
+    deadCheckBtn.MouseButton1Click:Connect(function()
+        AimSettings.HPCheck = not AimSettings.HPCheck
+        deadCheckBtn.Text = "Dead Check: " .. (AimSettings.HPCheck and "ON" or "OFF")
+        aimStyle(deadCheckBtn, AimSettings.HPCheck)
+    end)
+    -- ── Aim logic (hàm nội bộ, prefix _ tránh xung đột với scope ngoài) ────
+    local function _aimAlive(char)
+        local h = char and char:FindFirstChildOfClass("Humanoid")
+        return h and h.Health > 0
+    end
+
+    local function _aimFriend(player)
+        if not AimSettings.FriendCheck then return false end
+        local ok, res = pcall(function() return LocalPlayer:IsFriendsWith(player.UserId) end)
+        if ok and res then return true end
+        return player:GetAttribute("Friendly") == true
+    end
+
+    local function _aimHasFF(char)
+        if not AimSettings.ForceFieldCheck then return false end
+        if char:FindFirstChildOfClass("ForceField") then return true end
+        return char:GetAttribute("SpawnProtected") == true
+    end
+
+    local function _aimCanSee(part, char)
+        if not AimSettings.WallCheck then return true end
+        local rp = RaycastParams.new()
+        rp.FilterType = Enum.RaycastFilterType.Exclude
+        rp.FilterDescendantsInstances = {LocalPlayer.Character, Camera}
+        rp.IgnoreWater = true
+        local result = workspace:Raycast(
+            Camera.CFrame.Position,
+            part.Position - Camera.CFrame.Position,
+            rp
+        )
+        if result then return result.Instance:IsDescendantOf(char) end
+        return true
+    end
+
+    local function _getClosest()
+        local closest, shortest = nil, AimSettings.FOV
+        local cx = Camera.ViewportSize.X / 2 + AimSettings.FOVOffsetX
+        local cy = Camera.ViewportSize.Y / 2 + AimSettings.FOVOffsetY
+        for _, p in ipairs(Players:GetPlayers()) do
+            if p == LocalPlayer then continue end
+            if AimSettings.TeamCheck and LocalPlayer.Team ~= nil and p.Team == LocalPlayer.Team then continue end
+            if _aimFriend(p) then continue end
+            local char = p.Character
+            if char and _aimAlive(char) then
+                if _aimHasFF(char) then continue end
+                local hum  = char:FindFirstChildOfClass("Humanoid")
+                local part = char:FindFirstChild(AimSettings.AimPart)
+                if hum and part then
+                    if AimSettings.HPCheck and hum.Health <= 0 then continue end
+                    if not _aimCanSee(part, char) then continue end
+                    local sp, onScreen = Camera:WorldToViewportPoint(part.Position)
+                    if onScreen then
+                        local d = (Vector2.new(sp.X, sp.Y) - Vector2.new(cx, cy)).Magnitude
+                        if d < shortest then shortest = d; closest = part end
+                    end
+                end
+            end
+        end
+        return closest
+    end
+
+    local function _aimAt(part)
+        if not part then return end
+        local pos = part.Position
+        if AimSettings.Prediction then
+            local vel = Vector3.zero
+            pcall(function() vel = part.AssemblyLinearVelocity end)
+            if vel.Magnitude <= 0.05 then pcall(function() vel = part.Velocity end) end
+            local t = AimSettings.PredictionAmount
+            if AimSettings.AirPrediction and math.abs(vel.Y) > 2 then
+                t = AimSettings.AirPredictionAmount
+            end
+            pos = pos + vel * t
+        end
+        Camera.CFrame = Camera.CFrame:Lerp(
+            CFrame.new(Camera.CFrame.Position, pos),
+            AimSettings.Smoothness
+        )
+    end
+
+    -- RenderStepped: FOV circle update + aim
+    RunService.RenderStepped:Connect(function()
+        local vs = Camera.ViewportSize
+        FOVCircleAim.Position = UDim2.new(
+            0, vs.X / 2 + AimSettings.FOVOffsetX,
+            0, vs.Y / 2 + AimSettings.FOVOffsetY
+        )
+        FOVCircleAim.Size    = UDim2.new(0, AimSettings.FOV * 2, 0, AimSettings.FOV * 2)
+        FOVCircleAim.Visible = AimSettings.ShowFOV
+
+        if not AimSettings.AimEnabled then return end
+        _aimAt(_getClosest())
+    end)
+end -- END AIMBOT SCOPE
 
 -- ─── TAB SWITCH ───────────────────────────────────────────────────────────────
 
@@ -2289,26 +2587,26 @@ switchTab(1)
 
 local function CountFlingTargets()
     local n = 0
-    for _ in pairs(SelectedFlingTargets) do n = n + 1 end
+    for _ in pairs(S.SelectedFlingTargets) do n = n + 1 end
     return n
 end
 
 local function UpdateFlingStatus()
     local count = CountFlingTargets()
-    if FlingActive then
-        flingStatusLabel.Text = "Flinging " .. count .. " target(s)"
-        flingStatusLabel.TextColor3 = Color3.fromRGB(255,80,80)
+    if S.FlingActive then
+        S.flingStatusLabel.Text = "Flinging " .. count .. " target(s)"
+        S.flingStatusLabel.TextColor3 = Color3.fromRGB(255,80,80)
     else
-        flingStatusLabel.Text = count .. " target(s) selected"
-        flingStatusLabel.TextColor3 = Color3.fromRGB(255,255,255)
+        S.flingStatusLabel.Text = count .. " target(s) selected"
+        S.flingStatusLabel.TextColor3 = Color3.fromRGB(255,255,255)
     end
 end
 
 local function RefreshFlingPlayerList()
-    for _, child in pairs(flingPlayerList:GetChildren()) do
+    for _, child in pairs(S.flingPlayerList:GetChildren()) do
         if child:IsA("Frame") or child:IsA("TextButton") then child:Destroy() end
     end
-    FlingPlayerCheckboxes = {}
+    S.FlingPlayerCheckboxes = {}
 
     local PlayerList = Players:GetPlayers()
     table.sort(PlayerList, function(a, b) return a.Name:lower() < b.Name:lower() end)
@@ -2320,7 +2618,7 @@ local function RefreshFlingPlayerList()
             entry.BackgroundColor3 = Color3.fromRGB(50,50,50)
             entry.BackgroundTransparency = 0.5
             entry.BorderSizePixel = 0
-            entry.Parent = flingPlayerList
+            entry.Parent = S.flingPlayerList
             local ec = Instance.new("UICorner"); ec.CornerRadius = UDim.new(0,4); ec.Parent = entry
 
             local checkBtn = Instance.new("TextButton")
@@ -2339,7 +2637,7 @@ local function RefreshFlingPlayerList()
             checkmark.TextColor3 = Color3.fromRGB(0,255,100)
             checkmark.TextSize = 16
             checkmark.Font = Enum.Font.GothamBold
-            checkmark.Visible = SelectedFlingTargets[player.Name] ~= nil
+            checkmark.Visible = S.SelectedFlingTargets[player.Name] ~= nil
             checkmark.Parent = checkBtn
 
             local nameLabel = Instance.new("TextLabel")
@@ -2361,17 +2659,17 @@ local function RefreshFlingPlayerList()
             clickArea.Parent = entry
 
             clickArea.MouseButton1Click:Connect(function()
-                if SelectedFlingTargets[player.Name] then
-                    SelectedFlingTargets[player.Name] = nil
+                if S.SelectedFlingTargets[player.Name] then
+                    S.SelectedFlingTargets[player.Name] = nil
                     checkmark.Visible = false
                 else
-                    SelectedFlingTargets[player.Name] = player
+                    S.SelectedFlingTargets[player.Name] = player
                     checkmark.Visible = true
                 end
                 UpdateFlingStatus()
             end)
 
-            FlingPlayerCheckboxes[player.Name] = {Entry = entry, Checkmark = checkmark}
+            S.FlingPlayerCheckboxes[player.Name] = {Entry = entry, Checkmark = checkmark}
         end
     end
     UpdateFlingStatus()
@@ -2380,13 +2678,13 @@ end
 local function ToggleAllFling(select)
     for _, player in ipairs(Players:GetPlayers()) do
         if player ~= LocalPlayer then
-            local cb = FlingPlayerCheckboxes[player.Name]
+            local cb = S.FlingPlayerCheckboxes[player.Name]
             if cb then
                 if select then
-                    SelectedFlingTargets[player.Name] = player
+                    S.SelectedFlingTargets[player.Name] = player
                     cb.Checkmark.Visible = true
                 else
-                    SelectedFlingTargets[player.Name] = nil
+                    S.SelectedFlingTargets[player.Name] = nil
                     cb.Checkmark.Visible = false
                 end
             end
@@ -2396,30 +2694,30 @@ local function ToggleAllFling(select)
 end
 
 local function StartFling()
-    if FlingActive then return end
+    if S.FlingActive then return end
     if CountFlingTargets() == 0 then
-        flingStatusLabel.Text = "No targets selected!"
+        S.flingStatusLabel.Text = "No targets selected!"
         task.delay(1.5, function() UpdateFlingStatus() end)
         return
     end
-    FlingActive = true
+    S.FlingActive = true
     UpdateFlingStatus()
     FlingMessage("Fling Started", "Flinging " .. CountFlingTargets() .. " target(s)", 2)
 
     spawn(function()
-        while FlingActive do
+        while S.FlingActive do
             local validTargets = {}
-            for name, player in pairs(SelectedFlingTargets) do
+            for name, player in pairs(S.SelectedFlingTargets) do
                 if player and player.Parent then
                     validTargets[name] = player
                 else
-                    SelectedFlingTargets[name] = nil
-                    local cb = FlingPlayerCheckboxes[name]
+                    S.SelectedFlingTargets[name] = nil
+                    local cb = S.FlingPlayerCheckboxes[name]
                     if cb then cb.Checkmark.Visible = false end
                 end
             end
             for _, player in pairs(validTargets) do
-                if FlingActive then
+                if S.FlingActive then
                     SkidFling(player)
                     wait(0.1)
                 else
@@ -2433,24 +2731,24 @@ local function StartFling()
 end
 
 local function StopFling()
-    if not FlingActive then return end
-    FlingActive = false
+    if not S.FlingActive then return end
+    S.FlingActive = false
     UpdateFlingStatus()
     FlingMessage("Fling Stopped", "Fling has been stopped", 2)
 end
 
 -- ─── FLING BUTTON EVENTS ──────────────────────────────────────────────────────
-flingStartBtn.MouseButton1Click:Connect(function()
+S.flingStartBtn.MouseButton1Click:Connect(function()
 
-    if FlingActive then
+    if S.FlingActive then
         StopFling()
-        flingStartBtn.Text = "FLING PLAYER : OFF"
-        flingStartBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
-        flingStartBtn.BackgroundTransparency = 0.35
+        S.flingStartBtn.Text = "FLING PLAYER : OFF"
+        S.flingStartBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
+        S.flingStartBtn.BackgroundTransparency = 0.35
     else
-        flingStartBtn.Text = "FLING PLAYER : ON"
-        flingStartBtn.BackgroundColor3 = Color3.fromRGB(50, 200, 120)
-        flingStartBtn.BackgroundTransparency = 0
+        S.flingStartBtn.Text = "FLING PLAYER : ON"
+        S.flingStartBtn.BackgroundColor3 = Color3.fromRGB(50, 200, 120)
+        S.flingStartBtn.BackgroundTransparency = 0
         StartFling()
     end
 
@@ -2458,18 +2756,18 @@ end)
 
 do
 local bangTrack
-bangBtn.MouseButton1Click:Connect(function()
+S.bangBtn.MouseButton1Click:Connect(function()
 
-    BangActive = not BangActive
+    S.BangActive = not S.BangActive
 
-    if BangActive then
-        bangBtn.Text = "BANG PLAYER : ON"
-        bangBtn.BackgroundColor3 = Color3.fromRGB(50, 200, 120)
-        bangBtn.BackgroundTransparency = 0
+    if S.BangActive then
+        S.bangBtn.Text = "BANG PLAYER : ON"
+        S.bangBtn.BackgroundColor3 = Color3.fromRGB(50, 200, 120)
+        S.bangBtn.BackgroundTransparency = 0
     else
-        bangBtn.Text = "BANG PLAYER : OFF"
-        bangBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
-        bangBtn.BackgroundTransparency = 0.35
+        S.bangBtn.Text = "BANG PLAYER : OFF"
+        S.bangBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
+        S.bangBtn.BackgroundTransparency = 0.35
         if bangTrack then
             bangTrack:Stop()
         end
@@ -2487,7 +2785,7 @@ bangTrack = humanoid:LoadAnimation(anim)
 bangTrack:Play()
 
 spawn(function()
-    while BangActive do
+    while S.BangActive do
 
         local char = LocalPlayer.Character
         if not char then task.wait() continue end
@@ -2496,8 +2794,8 @@ spawn(function()
         if not hrp then task.wait() continue end
         local humanoid = char:FindFirstChildOfClass("Humanoid")
 
-        for _,player in pairs(SelectedFlingTargets) do
-            if not BangActive then break end
+        for _,player in pairs(S.SelectedFlingTargets) do
+            if not S.BangActive then break end
 
             if player.Character then
                 local targetHRP = player.Character:FindFirstChild("HumanoidRootPart")
@@ -2507,12 +2805,12 @@ spawn(function()
 
                     for i = 1,15 do
 
-                        if not BangActive then break end
+                        if not S.BangActive then break end
 
                         hrp.CFrame = targetHRP.CFrame * CFrame.new(0,0,1)
                         task.wait(0.05)
 
-                        if not BangActive then break end
+                        if not S.BangActive then break end
 
                         hrp.CFrame = targetHRP.CFrame * CFrame.new(0,0,1.5)
                         task.wait(0.05)
@@ -2531,14 +2829,14 @@ end)
 end)
 end -- bangTrack do
 
-walkFlingBtn.MouseButton1Click:Connect(function()
-    local antiFlingWasManuallyEnabled = antiFlingEnabled and not walkFlingAutoEnabledAntiFling
+S.walkFlingBtn.MouseButton1Click:Connect(function()
+    local antiFlingWasManuallyEnabled = S.antiFlingEnabled and not walkFlingAutoEnabledAntiFling
 
     toggleWalkFling()
 
-    if walkflinging then
-        if not antiFlingEnabled then
-            antiFlingEnabled = true
+    if S.walkflinging then
+        if not S.antiFlingEnabled then
+            S.antiFlingEnabled = true
             walkFlingAutoEnabledAntiFling = true
             antiFlingBtn.Text = "Anti Fling: ON"
             antiFlingBtn.BackgroundColor3 = Color3.fromRGB(50, 200, 120)
@@ -2551,12 +2849,12 @@ walkFlingBtn.MouseButton1Click:Connect(function()
             end
         end
 
-        walkFlingBtn.Text = "WALK FLING : ON"
-        walkFlingBtn.BackgroundColor3 = Color3.fromRGB(50, 200, 120)
-        walkFlingBtn.BackgroundTransparency = 0
+        S.walkFlingBtn.Text = "WALK FLING : ON"
+        S.walkFlingBtn.BackgroundColor3 = Color3.fromRGB(50, 200, 120)
+        S.walkFlingBtn.BackgroundTransparency = 0
     else
-        if walkFlingAutoEnabledAntiFling and antiFlingEnabled then
-            antiFlingEnabled = false
+        if walkFlingAutoEnabledAntiFling and S.antiFlingEnabled then
+            S.antiFlingEnabled = false
             walkFlingAutoEnabledAntiFling = false
             antiFlingBtn.Text = "Anti-Fling: OFF"
             antiFlingBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
@@ -2564,34 +2862,34 @@ walkFlingBtn.MouseButton1Click:Connect(function()
             disableAntiFling()
         end
 
-        walkFlingBtn.Text = "WALK FLING : OFF"
-        walkFlingBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
-        walkFlingBtn.BackgroundTransparency = 0.35
+        S.walkFlingBtn.Text = "WALK FLING : OFF"
+        S.walkFlingBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
+        S.walkFlingBtn.BackgroundTransparency = 0.35
     end
 end)
-loopBringBtn.MouseButton1Click:Connect(function()
+S.loopBringBtn.MouseButton1Click:Connect(function()
 
-    loopBringActive = not loopBringActive
+    S.loopBringActive = not S.loopBringActive
 
-    if loopBringActive then
+    if S.loopBringActive then
         if CountFlingTargets() == 0 then
-            loopBringActive = false
-            loopBringBtn.Text = "LOOP BRING PLAYER : OFF"
-            loopBringBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
-            loopBringBtn.BackgroundTransparency = 0.35
-            flingStatusLabel.Text = "No targets selected for LoopBring!"
+            S.loopBringActive = false
+            S.loopBringBtn.Text = "LOOP BRING PLAYER : OFF"
+            S.loopBringBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
+            S.loopBringBtn.BackgroundTransparency = 0.35
+            S.flingStatusLabel.Text = "No targets selected for LoopBring!"
             task.delay(1.5, function()
                 UpdateFlingStatus()
             end)
             return
         end
 
-        loopBringBtn.Text = "LOOP BRING PLAYER : ON"
-        loopBringBtn.BackgroundColor3 = Color3.fromRGB(50, 200, 120)
-        loopBringBtn.BackgroundTransparency = 0
+        S.loopBringBtn.Text = "LOOP BRING PLAYER : ON"
+        S.loopBringBtn.BackgroundColor3 = Color3.fromRGB(50, 200, 120)
+        S.loopBringBtn.BackgroundTransparency = 0
 
         task.spawn(function()
-            while loopBringActive do
+            while S.loopBringActive do
                 local char = LocalPlayer.Character
                 if not char then
                     task.wait(0.03)
@@ -2606,12 +2904,12 @@ loopBringBtn.MouseButton1Click:Connect(function()
 
                 local validTargets = {}
 
-                for name, player in pairs(SelectedFlingTargets) do
+                for name, player in pairs(S.SelectedFlingTargets) do
                     if player and player.Parent then
                         validTargets[name] = player
                     else
-                        SelectedFlingTargets[name] = nil
-                        local cb = FlingPlayerCheckboxes[name]
+                        S.SelectedFlingTargets[name] = nil
+                        local cb = S.FlingPlayerCheckboxes[name]
                         if cb then
                             cb.Checkmark.Visible = false
                         end
@@ -2619,7 +2917,7 @@ loopBringBtn.MouseButton1Click:Connect(function()
                 end
 
                 for _, player in pairs(validTargets) do
-                    if not loopBringActive then break end
+                    if not S.loopBringActive then break end
 
                     if player.Character then
                         local targetHRP = player.Character:FindFirstChild("HumanoidRootPart")
@@ -2627,8 +2925,8 @@ loopBringBtn.MouseButton1Click:Connect(function()
 
                         if targetHRP and hum then
                             -- lưu state gốc 1 lần
-                            if not loopBringStates[player] then
-                                loopBringStates[player] = {
+                            if not S.loopBringStates[player] then
+                                S.loopBringStates[player] = {
                                     WalkSpeed = hum.WalkSpeed,
                                     JumpPower = hum.JumpPower,
                                     AutoRotate = hum.AutoRotate,
@@ -2666,12 +2964,12 @@ loopBringBtn.MouseButton1Click:Connect(function()
         end)
 
     else
-        loopBringBtn.Text = "LOOP BRING PLAYER : OFF"
-        loopBringBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
-        loopBringBtn.BackgroundTransparency = 0.35
+        S.loopBringBtn.Text = "LOOP BRING PLAYER : OFF"
+        S.loopBringBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
+        S.loopBringBtn.BackgroundTransparency = 0.35
 
         -- trả lại state khi OFF
-        for player, state in pairs(loopBringStates) do
+        for player, state in pairs(S.loopBringStates) do
             if player and player.Parent and player.Character then
                 local hum = player.Character:FindFirstChildOfClass("Humanoid")
 
@@ -2690,7 +2988,7 @@ loopBringBtn.MouseButton1Click:Connect(function()
             end
         end
 
-        loopBringStates = {}
+        S.loopBringStates = {}
     end
 
 end)
@@ -2731,8 +3029,8 @@ end)
 
 
 antiFlingBtn.MouseButton1Click:Connect(function()
-    antiFlingEnabled = not antiFlingEnabled
-    if antiFlingEnabled then
+    S.antiFlingEnabled = not S.antiFlingEnabled
+    if S.antiFlingEnabled then
         antiFlingBtn.Text = "Anti Fling: ON"
         antiFlingBtn.BackgroundColor3 = Color3.fromRGB(50, 200, 120)
         antiFlingBtn.BackgroundTransparency = 0
@@ -2814,9 +3112,9 @@ do
 
     local function setLoopspeedEnabled(state)
         loopspeedEnabled = state
-        loopspeedToggle.Text = loopspeedEnabled and "Loopspeed: ON" or "Loopspeed: OFF"
-        loopspeedToggle.BackgroundColor3 = loopspeedEnabled and Color3.fromRGB(50, 200, 120) or Color3.fromRGB(38, 38, 38)
-        loopspeedToggle.BackgroundTransparency = loopspeedEnabled and 0 or 0.35
+        S.loopspeedToggle.Text = loopspeedEnabled and "Loopspeed: ON" or "Loopspeed: OFF"
+        S.loopspeedToggle.BackgroundColor3 = loopspeedEnabled and Color3.fromRGB(50, 200, 120) or Color3.fromRGB(38, 38, 38)
+        S.loopspeedToggle.BackgroundTransparency = loopspeedEnabled and 0 or 0.35
 
         if loopspeedConnection then
             loopspeedConnection:Disconnect()
@@ -2828,7 +3126,7 @@ do
                 local char = LocalPlayer.Character
                 if char then
                     local hum = char:FindFirstChildOfClass("Humanoid")
-                    if hum then hum.WalkSpeed = tonumber(loopspeedInput.Text) or 16 end
+                    if hum then hum.WalkSpeed = tonumber(S.loopspeedInput.Text) or 16 end
                 end
             end)
         else
@@ -2840,7 +3138,7 @@ do
         end
     end
 
-    loopspeedToggle.MouseButton1Click:Connect(function() setLoopspeedEnabled(not loopspeedEnabled) end)
+    S.loopspeedToggle.MouseButton1Click:Connect(function() setLoopspeedEnabled(not loopspeedEnabled) end)
 end
 
 -- ─── BUTTON EVENTS ────────────────────────────────────────────────────────────
@@ -2877,10 +3175,10 @@ closeButton.MouseButton1Click:Connect(function()
 end)
 
 autoToggle.MouseButton1Click:Connect(function()
-    autoHitboxEnabled = not autoHitboxEnabled
-    autoToggle.Text = autoHitboxEnabled and "Head Hit Box: ON" or "Head Hit Box: OFF"
+    S.autoHitboxEnabled = not S.autoHitboxEnabled
+    autoToggle.Text = S.autoHitboxEnabled and "Head Hit Box: ON" or "Head Hit Box: OFF"
 
-    if autoHitboxEnabled then
+    if S.autoHitboxEnabled then
         autoToggle.BackgroundColor3 = Color3.fromRGB(50, 200, 120)
         autoToggle.BackgroundTransparency = 0
     else
@@ -2888,32 +3186,32 @@ autoToggle.MouseButton1Click:Connect(function()
         autoToggle.BackgroundTransparency = 0.35
     end
 
-    local size = tonumber(sizeInput.Text) or DEFAULT_HITBOX_SIZE
+    local size = tonumber(S.sizeInput.Text) or DEFAULT_HITBOX_SIZE
 
-    if autoHitboxEnabled then
+    if S.autoHitboxEnabled then
         for _, player in pairs(Players:GetPlayers()) do
             if player ~= LocalPlayer and player.Character and isAlive(player.Character) then
                 applyHeadHitbox(player.Character, size)
             end
         end
     else
-        for char, _ in pairs(processedChars) do
+        for char, _ in pairs(S.processedChars) do
             removeHeadHitbox(char)
         end
     end
 
-    statusLabel.Text = "Processing: " .. tableCount(processedChars) .. " Players"
+    S.statusLabel.Text = "Processing: " .. tableCount(S.processedChars) .. " Players"
 end)
 
 removeAllBtn.MouseButton1Click:Connect(function()
     removeAllBtn.BackgroundColor3 = Color3.fromRGB(50, 200, 120)
     removeAllBtn.BackgroundTransparency = 0
 
-    for char, _ in pairs(processedChars) do
+    for char, _ in pairs(S.processedChars) do
         removeHeadHitbox(char)
     end
 
-    statusLabel.Text = "Processing: 0 Players"
+    S.statusLabel.Text = "Processing: 0 Players"
 
     task.delay(0.2, function()
         if removeAllBtn then
@@ -2924,9 +3222,9 @@ removeAllBtn.MouseButton1Click:Connect(function()
 end)
 
 autoNameESP.MouseButton1Click:Connect(function()
-    nameESPEnabled = not nameESPEnabled
+    S.nameESPEnabled = not S.nameESPEnabled
 
-    if nameESPEnabled then
+    if S.nameESPEnabled then
         autoNameESP.Text = "ESP Name: ON"
         autoNameESP.BackgroundColor3 = Color3.fromRGB(50, 200, 120)
         autoNameESP.BackgroundTransparency = 0
@@ -2936,12 +3234,12 @@ autoNameESP.MouseButton1Click:Connect(function()
         autoNameESP.BackgroundTransparency = 0.35
     end
 
-    if not nameESPEnabled then
-        for player, _ in pairs(nameESPObjects) do
+    if not S.nameESPEnabled then
+        for player, _ in pairs(S.nameESPObjects) do
             removeNameESP(player)
         end
     else
-        for player, selected in pairs(selectedPlayers) do
+        for player, selected in pairs(S.selectedPlayers) do
             if selected and player.Character and isAlive(player.Character) then
                 createNameESP(player, player.Character)
             end
@@ -2951,9 +3249,9 @@ end)
 
 
 espNameAllBtn.MouseButton1Click:Connect(function()
-    espNameAllState = not espNameAllState
+    S.espNameAllState = not S.espNameAllState
 
-    if espNameAllState then
+    if S.espNameAllState then
         espNameAllBtn.Text = "ESP Name All: ON"
         espNameAllBtn.BackgroundColor3 = Color3.fromRGB(50, 200, 120)
         espNameAllBtn.BackgroundTransparency = 0
@@ -2965,8 +3263,8 @@ espNameAllBtn.MouseButton1Click:Connect(function()
 
     for _, player in pairs(Players:GetPlayers()) do
         if player ~= LocalPlayer then
-            selectedPlayers[player] = espNameAllState
-            if espNameAllState and player.Character and isAlive(player.Character) then
+            S.selectedPlayers[player] = S.espNameAllState
+            if S.espNameAllState and player.Character and isAlive(player.Character) then
                 createNameESP(player, player.Character)
             else
                 removeNameESP(player)
@@ -2978,9 +3276,9 @@ espNameAllBtn.MouseButton1Click:Connect(function()
 end)
 
 boxESPBtn.MouseButton1Click:Connect(function()
-    boxESPEnabled = not boxESPEnabled
+    S.boxESPEnabled = not S.boxESPEnabled
 
-    if boxESPEnabled then
+    if S.boxESPEnabled then
         boxESPBtn.Text = "ESP Box Cham: ON"
         boxESPBtn.BackgroundColor3 = Color3.fromRGB(50, 200, 120)
         boxESPBtn.BackgroundTransparency = 0
@@ -2990,11 +3288,11 @@ boxESPBtn.MouseButton1Click:Connect(function()
         boxESPBtn.BackgroundTransparency = 0.35
     end
 
-    local size = tonumber(sizeInput.Text) or DEFAULT_HITBOX_SIZE
+    local size = tonumber(S.sizeInput.Text) or DEFAULT_HITBOX_SIZE
 
     for _, player in pairs(Players:GetPlayers()) do
         if player ~= LocalPlayer and player.Character and isAlive(player.Character) then
-            if boxESPEnabled then
+            if S.boxESPEnabled then
                 addBoxESP(player.Character, getTeamColor(player), size)
             else
                 removeBoxESP(player.Character)
@@ -3003,15 +3301,15 @@ boxESPBtn.MouseButton1Click:Connect(function()
     end
 end)
 
-invisButton.MouseButton1Click:Connect(toggleInvisibility)
+S.invisButton.MouseButton1Click:Connect(toggleInvisibility)
 
 infJumpToggle.MouseButton1Click:Connect(function()
-    infJumpEnabled = not infJumpEnabled
-    infJumpToggle.Text = infJumpEnabled and "Inf Jump: ON" or "Inf Jump: OFF"
-    infJumpToggle.BackgroundColor3 = infJumpEnabled and Color3.fromRGB(50, 200, 120) or Color3.fromRGB(38, 38, 38)
-infJumpToggle.BackgroundTransparency = infJumpEnabled and 0 or 0.35
+    S.infJumpEnabled = not S.infJumpEnabled
+    infJumpToggle.Text = S.infJumpEnabled and "Inf Jump: ON" or "Inf Jump: OFF"
+    infJumpToggle.BackgroundColor3 = S.infJumpEnabled and Color3.fromRGB(50, 200, 120) or Color3.fromRGB(38, 38, 38)
+infJumpToggle.BackgroundTransparency = S.infJumpEnabled and 0 or 0.35
 
-    if infJumpEnabled then
+    if S.infJumpEnabled then
         startInfJump()
     else
         stopInfJump()
@@ -3019,27 +3317,27 @@ infJumpToggle.BackgroundTransparency = infJumpEnabled and 0 or 0.35
 end)
 
 noclipToggle.MouseButton1Click:Connect(function()
-    noclipEnabled = not noclipEnabled
-    noclipToggle.Text = noclipEnabled and "Noclip: ON" or "Noclip: OFF"
-   noclipToggle.BackgroundColor3 = noclipEnabled and Color3.fromRGB(50, 200, 120) or Color3.fromRGB(38, 38, 38)
-noclipToggle.BackgroundTransparency = noclipEnabled and 0 or 0.35
+    S.noclipEnabled = not S.noclipEnabled
+    noclipToggle.Text = S.noclipEnabled and "Noclip: ON" or "Noclip: OFF"
+   noclipToggle.BackgroundColor3 = S.noclipEnabled and Color3.fromRGB(50, 200, 120) or Color3.fromRGB(38, 38, 38)
+noclipToggle.BackgroundTransparency = S.noclipEnabled and 0 or 0.35
 
-    if noclipEnabled then
+    if S.noclipEnabled then
         startNoclip()
     else
         stopNoclip()
     end
 end)
 
-flyToggle.MouseButton1Click:Connect(function()
-    flySpeed = tonumber(flySpeedInput.Text) or 2
-    flyEnabled = not flyEnabled
+S.flyToggle.MouseButton1Click:Connect(function()
+    S.flySpeed = tonumber(flySpeedInput.Text) or 2
+    S.flyEnabled = not S.flyEnabled
 
-    flyToggle.Text = flyEnabled and "Fly: ON" or "Fly: OFF"
-   flyToggle.BackgroundColor3 = flyEnabled and Color3.fromRGB(50, 200, 120) or Color3.fromRGB(38, 38, 38)
-flyToggle.BackgroundTransparency = flyEnabled and 0 or 0.35
+    S.flyToggle.Text = S.flyEnabled and "Fly: ON" or "Fly: OFF"
+   S.flyToggle.BackgroundColor3 = S.flyEnabled and Color3.fromRGB(50, 200, 120) or Color3.fromRGB(38, 38, 38)
+S.flyToggle.BackgroundTransparency = S.flyEnabled and 0 or 0.35
 
-    if flyEnabled then
+    if S.flyEnabled then
         startFly()
     else
         stopFly()
@@ -3196,13 +3494,13 @@ tpPosBtn.MouseButton1Click:Connect(function()
         return
     end
 
-    manualPositionCFrame = CFrame.new(x, y, z)
+    S.manualPositionCFrame = CFrame.new(x, y, z)
 
     local char = LocalPlayer.Character
     local hrp = char and char:FindFirstChild("HumanoidRootPart")
 
     if hrp then
-        hrp.CFrame = manualPositionCFrame
+        hrp.CFrame = S.manualPositionCFrame
 
         pcall(function()
             game:GetService("StarterGui"):SetCore("SendNotification",{
@@ -3260,32 +3558,32 @@ end)
 
 ---- ─── TP BUTTON EVENTS ─────────────────────────────────────────────────────────
 
-autoTPBtn.MouseButton1Click:Connect(function()
-    autoTPEnabled = not autoTPEnabled
+S.autoTPBtn.MouseButton1Click:Connect(function()
+    S.autoTPEnabled = not S.autoTPEnabled
 
-    if autoTPEnabled then
-        autoTPBtn.Text = "Auto TP: ON"
-        autoTPBtn.BackgroundColor3 = Color3.fromRGB(50, 200, 120)
-        autoTPBtn.BackgroundTransparency = 0
+    if S.autoTPEnabled then
+        S.autoTPBtn.Text = "Auto TP: ON"
+        S.autoTPBtn.BackgroundColor3 = Color3.fromRGB(50, 200, 120)
+        S.autoTPBtn.BackgroundTransparency = 0
     else
-        autoTPBtn.Text = "Auto TP: OFF"
-        autoTPBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
-        autoTPBtn.BackgroundTransparency = 0.35
+        S.autoTPBtn.Text = "Auto TP: OFF"
+        S.autoTPBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
+        S.autoTPBtn.BackgroundTransparency = 0.35
     end
 
-    if autoTPConnection then
-        autoTPConnection:Disconnect()
-        autoTPConnection = nil
+    if S.autoTPConnection then
+        S.autoTPConnection:Disconnect()
+        S.autoTPConnection = nil
     end
 
-    if autoTPEnabled then
-        autoTPConnection = RunService.Heartbeat:Connect(function()
+    if S.autoTPEnabled then
+        S.autoTPConnection = RunService.Heartbeat:Connect(function()
             local myChar = LocalPlayer.Character
             if not myChar then return end
             local myHRP = myChar:FindFirstChild("HumanoidRootPart")
             if not myHRP then return end
 
-            for player,_ in pairs(selectedTPPlayers) do
+            for player,_ in pairs(S.selectedTPPlayers) do
                 local targetChar = player.Character
                 if targetChar then
                     local targetHRP = targetChar:FindFirstChild("HumanoidRootPart")
@@ -3307,7 +3605,7 @@ teleportBtn.BackgroundTransparency = 0
     local myHRP = myChar:FindFirstChild("HumanoidRootPart")
     if not myHRP then return end
 
-    for player,_ in pairs(selectedTPPlayers) do
+    for player,_ in pairs(S.selectedTPPlayers) do
         local targetChar = player.Character
         if targetChar then
             local targetHRP = targetChar:FindFirstChild("HumanoidRootPart")
@@ -3368,7 +3666,7 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
     end
 
     -- Tool Aura keybind: luôn ưu tiên bắt phím E
-    if input.KeyCode == auraKey and not auraListening then
+    if input.KeyCode == S.auraKey and not S.auraListening then
         runToolAura()
         return
     end
@@ -3390,18 +3688,18 @@ end)
 -- ─── LOCAL PLAYER EVENTS ──────────────────────────────────────────────────────
 
 LocalPlayer.CharacterAdded:Connect(function(character)
-    flyEnabled = false
+    S.flyEnabled = false
     stopFly()
-   if flyToggle then
-    flyToggle.Text = "Fly: OFF"
-    flyToggle.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
-    flyToggle.BackgroundTransparency = 0.35
+   if S.flyToggle then
+    S.flyToggle.Text = "Fly: OFF"
+    S.flyToggle.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
+    S.flyToggle.BackgroundTransparency = 0.35
 end
-    isInvisible = false
-if invisButton then
-    invisButton.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
-    invisButton.BackgroundTransparency = 0.35
-    invisButton.Text = "Invisible: OFF"
+    S.isInvisible = false
+if S.invisButton then
+    S.invisButton.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
+    S.invisButton.BackgroundTransparency = 0.35
+    S.invisButton.Text = "Invisible: OFF"
 end
     local chair = workspace:FindFirstChild("invischair")
     if chair then chair:Destroy() end
@@ -3422,8 +3720,8 @@ Players.PlayerRemoving:Connect(function(player)
         return
     end
     unregisterPlayer(player)
-    if SelectedFlingTargets[player.Name] then
-        SelectedFlingTargets[player.Name] = nil
+    if S.SelectedFlingTargets[player.Name] then
+        S.SelectedFlingTargets[player.Name] = nil
     end
     RefreshFlingPlayerList()
 end)
@@ -3431,7 +3729,7 @@ end)
 -- ─── PLAYER LIST UIs ──────────────────────────────────────────────────────────
 
 local function updateTPList()
-    for _,v in pairs(tpPlayerList:GetChildren()) do
+    for _,v in pairs(S.tpPlayerList:GetChildren()) do
         if v:IsA("TextButton") then v:Destroy() end
     end
     for _,player in pairs(Players:GetPlayers()) do
@@ -3439,17 +3737,17 @@ local function updateTPList()
             local btn = Instance.new("TextButton")
             btn.Size = UDim2.new(1,-6,0,28)
             btn.Text = player.Name
-            btn.BackgroundColor3 = selectedTPPlayers[player] and Color3.fromRGB(50, 200, 120) or Color3.fromRGB(38, 38, 38)
-btn.BackgroundTransparency = selectedTPPlayers[player] and 0 or 0.35
+            btn.BackgroundColor3 = S.selectedTPPlayers[player] and Color3.fromRGB(50, 200, 120) or Color3.fromRGB(38, 38, 38)
+btn.BackgroundTransparency = S.selectedTPPlayers[player] and 0 or 0.35
             btn.TextColor3 = Color3.new(1,1,1)
             btn.Font = Enum.Font.Gotham
             btn.TextSize = 14
             btn.BorderSizePixel = 0
-            btn.Parent = tpPlayerList
+            btn.Parent = S.tpPlayerList
             local c = Instance.new("UICorner"); c.CornerRadius = UDim.new(0,4); c.Parent = btn
             btn.MouseButton1Click:Connect(function()
-                selectedTPPlayers = {}
-                selectedTPPlayers[player] = true
+                S.selectedTPPlayers = {}
+                S.selectedTPPlayers[player] = true
                 updateTPList()
             end)
         end
@@ -3457,7 +3755,7 @@ btn.BackgroundTransparency = selectedTPPlayers[player] and 0 or 0.35
 end
 
 function updatePlayerList()
-    for _, child in pairs(playerList:GetChildren()) do
+    for _, child in pairs(S.playerList:GetChildren()) do
         if child:IsA("TextButton") then child:Destroy() end
     end
     for _, player in pairs(Players:GetPlayers()) do
@@ -3465,19 +3763,19 @@ function updatePlayerList()
             local btn = Instance.new("TextButton")
             btn.Size = UDim2.new(1,-6,0,28)
             btn.Text = player.Name
-           btn.BackgroundColor3 = selectedPlayers[player] and Color3.fromRGB(50, 200, 120) or Color3.fromRGB(38, 38, 38)
-btn.BackgroundTransparency = selectedPlayers[player] and 0 or 0.35
+           btn.BackgroundColor3 = S.selectedPlayers[player] and Color3.fromRGB(50, 200, 120) or Color3.fromRGB(38, 38, 38)
+btn.BackgroundTransparency = S.selectedPlayers[player] and 0 or 0.35
             btn.TextColor3 = Color3.new(1,1,1)
             btn.Font = Enum.Font.Gotham
             btn.TextSize = 14
             btn.BorderSizePixel = 0
-            btn.Parent = playerList
+            btn.Parent = S.playerList
             local c = Instance.new("UICorner"); c.CornerRadius = UDim.new(0,4); c.Parent = btn
             btn.MouseButton1Click:Connect(function()
-                selectedPlayers[player] = not selectedPlayers[player]
+                S.selectedPlayers[player] = not S.selectedPlayers[player]
                 updatePlayerList()
-                if nameESPEnabled then
-                    if selectedPlayers[player] then
+                if S.nameESPEnabled then
+                    if S.selectedPlayers[player] then
                         if player.Character then createNameESP(player, player.Character) end
                     else
                         removeNameESP(player)
@@ -3506,18 +3804,18 @@ end)
 task.spawn(function()
     while true do
         task.wait(2)
-        if autoHitboxEnabled then
-            local size = tonumber(sizeInput.Text) or DEFAULT_HITBOX_SIZE
+        if S.autoHitboxEnabled then
+            local size = tonumber(S.sizeInput.Text) or DEFAULT_HITBOX_SIZE
             for _, player in pairs(Players:GetPlayers()) do
                 if player ~= LocalPlayer then
                     local char = player.Character
                     if char and isAlive(char) then
-                        if not playerConnections[player] then registerPlayer(player) end
+                        if not S.playerConnections[player] then registerPlayer(player) end
                         applyHeadHitbox(char, size)
                     end
                 end
             end
-            statusLabel.Text = "Processing: " .. tableCount(processedChars) .. " Players"
+            S.statusLabel.Text = "Processing: " .. tableCount(S.processedChars) .. " Players"
         end
     end
 end)
@@ -3531,6 +3829,6 @@ end)
 
 -- ─── INIT ─────────────────────────────────────────────────────────────────────
 
-statusLabel.Text = "Processing: 0 Players"
+S.statusLabel.Text = "Processing: 0 Players"
 updatePlayerList()
 RefreshFlingPlayerList()
