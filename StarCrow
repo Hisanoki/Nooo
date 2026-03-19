@@ -1296,7 +1296,7 @@ local espNameAllBtn = createTransparentButton("ESP Name All: OFF", Color3.fromRG
 espNameAllBtn.BackgroundTransparency = 0.35
 espNameAllBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
 
-local boxESPBtn = createTransparentButton("ESP Box Cham: OFF", Color3.fromRGB(38, 38, 38), panel3)
+local boxESPBtn = createTransparentButton("ESP Box Chams: OFF", Color3.fromRGB(38, 38, 38), panel3)
 boxESPBtn.BackgroundTransparency = 0.35
 boxESPBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
 createTransparentLabel("Fly", panel2)
@@ -3281,11 +3281,11 @@ boxESPBtn.MouseButton1Click:Connect(function()
     S.boxESPEnabled = not S.boxESPEnabled
 
     if S.boxESPEnabled then
-        boxESPBtn.Text = "ESP Box Cham: ON"
+        boxESPBtn.Text = "ESP Box Chams: ON"
         boxESPBtn.BackgroundColor3 = Color3.fromRGB(50, 200, 120)
         boxESPBtn.BackgroundTransparency = 0
     else
-        boxESPBtn.Text = "ESP Box Cham: OFF"
+        boxESPBtn.Text = "ESP Box Chams: OFF"
         boxESPBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
         boxESPBtn.BackgroundTransparency = 0.35
     end
