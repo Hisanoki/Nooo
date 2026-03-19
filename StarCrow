@@ -1343,10 +1343,8 @@ chamsToggle.MouseButton1Click:Connect(function()
         chamsToggle.BackgroundColor3 = Color3.fromRGB(50, 200, 120)
         chamsToggle.BackgroundTransparency = 0
         
-        -- NẾU THIẾU ĐOẠN DƯỚI NÀY THÌ BẤM NÚT SẼ KHÔNG CÓ TÁC DỤNG NGAY
         for _, p in pairs(game.Players:GetPlayers()) do
             if p ~= game.Players.LocalPlayer and p.Character then
-                -- Gọi hàm addChams trực tiếp khi vừa bấm nút ON
                 addChams(p.Character, getTeamColor(p))
             end
         end
@@ -1355,7 +1353,7 @@ chamsToggle.MouseButton1Click:Connect(function()
         chamsToggle.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
         chamsToggle.BackgroundTransparency = 0.35
         
-        -- Xóa sạch khi OFF
+        
         for _, p in pairs(game.Players:GetPlayers()) do
             if p.Character then
                 removeChams(p.Character)
