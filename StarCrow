@@ -1661,7 +1661,10 @@ local function makeDraggableFloat(btn)
 
     UserInputService.InputChanged:Connect(function(input)
         -- Chỉ move khi đúng input object đã bắt đầu drag → joystick không can thiệp
-        if fDragging and input == fDragInput then
+        if fDragging and (
+    input == fDragInput or 
+    input.UserInputType == Enum.UserInputType.MouseMovement
+) then
             local delta = input.Position - fDragStart
             if delta.Magnitude > 6 then fMoved = true end
             btn.Position = UDim2.new(
