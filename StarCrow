@@ -3,57 +3,6 @@ local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 local Camera = workspace.CurrentCamera
 
-function SpectatePlayer(player)
-
-    S.SpectatingPlayer = player
-    S.spectating = true
-
-    if S.specConnection then
-        S.specConnection:Disconnect()
-        S.specConnection = nil
-    end
-
-    local function setCamera(character)
-        if not S.spectating then return end
-        local humanoid = character:WaitForChild("Humanoid")
-        Camera.CameraSubject = humanoid
-    end
-
-    if player.Character then
-        setCamera(player.Character)
-    end
-
-    S.specConnection = player.CharacterAdded:Connect(function(char)
-        if S.spectating then
-            setCamera(char)
-        end
-    end)
-
-end
-
-function StopSpectate()
-
-    S.spectating = false
-    S.SpectatingPlayer = nil
-
-    if S.specConnection then
-        S.specConnection:Disconnect()
-        S.specConnection = nil
-    end
-
-    if S.selectedSpecButton then
-        S.selectedSpecButton.BackgroundColor3 = Color3.fromRGB(70,70,70)
-        S.selectedSpecButton = nil
-    end
-
-    if LocalPlayer.Character then
-        local humanoid = LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
-        if humanoid then
-            Camera.CameraSubject = humanoid
-        end
-    end
-
-end
 local RunService = game:GetService("RunService")
 local StarterGui = game:GetService("StarterGui")
 local UserInputService = game:GetService("UserInputService")
@@ -91,6 +40,56 @@ local S = {
     specContainer=nil,
 }
 S.speaker = LocalPlayer
+
+-- ─── SPECTATE ─────────────────────────────────────────────────────────────────
+
+function SpectatePlayer(player)
+    S.SpectatingPlayer = player
+    S.spectating = true
+
+    if S.specConnection then
+        S.specConnection:Disconnect()
+        S.specConnection = nil
+    end
+
+    local function setCamera(character)
+        if not S.spectating then return end
+        local humanoid = character:WaitForChild("Humanoid")
+        Camera.CameraSubject = humanoid
+    end
+
+    if player.Character then
+        setCamera(player.Character)
+    end
+
+    S.specConnection = player.CharacterAdded:Connect(function(char)
+        if S.spectating then
+            setCamera(char)
+        end
+    end)
+end
+
+function StopSpectate()
+    S.spectating = false
+    S.SpectatingPlayer = nil
+
+    if S.specConnection then
+        S.specConnection:Disconnect()
+        S.specConnection = nil
+    end
+
+    if S.selectedSpecButton then
+        S.selectedSpecButton.BackgroundColor3 = Color3.fromRGB(70,70,70)
+        S.selectedSpecButton = nil
+    end
+
+    if LocalPlayer.Character then
+        local humanoid = LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+        if humanoid then
+            Camera.CameraSubject = humanoid
+        end
+    end
+end
 
 
 
@@ -820,7 +819,7 @@ local function toggleWalkFling()
     S.walkflinging = not S.walkflinging
 
     if S.walkflinging then
-        local character = speaker.Character
+        local character = S.speaker.Character
         local humanoid = character and character:FindFirstChildWhichIsA("Humanoid")
 
         if S.walkFlingHumanoidDiedConn then
@@ -845,7 +844,7 @@ local function toggleWalkFling()
             while S.walkflinging do
                 RunService.Heartbeat:Wait()
 
-                local char = speaker.Character
+                local char = S.speaker.Character
                 local root = char and char:FindFirstChild("HumanoidRootPart")
 
                 if char and root and root.Parent then
@@ -2306,7 +2305,7 @@ do -- AIMBOT SCOPE: isolated do..end tránh vượt 200 local
     end
 
     -- ── Toggle buttons ──────────────────────────────────────────────────────
-    local aimToggleBtn = createTransparentButton("Aimbot: OFF", AIM_OFF, panel9)
+    local aimToggleBtn = createTransparentButton("Aim Assist: OFF", AIM_OFF, panel9)
     aimStyle(aimToggleBtn, false)
 
     local wallCheckBtn = createTransparentButton("Wall Check: ON", AIM_OFF, panel9)
@@ -2321,10 +2320,10 @@ do -- AIMBOT SCOPE: isolated do..end tránh vượt 200 local
     local predictionBtn = createTransparentButton("Prediction: ON", AIM_OFF, panel9)
     aimStyle(predictionBtn, AimSettings.Prediction)
 
-    -- Dead Check luôn bật, không có button riêng
-    AimSettings.HPCheck = true
+    local deadCheckBtn = createTransparentButton("Dead Check: ON", AIM_OFF, panel9)
+    aimStyle(deadCheckBtn, AimSettings.HPCheck)
 
-    -- FOV Circle không có button riêng — bật/tắt theo 
+    -- FOV Circle không có button riêng — bật/tắt theo Aim Assist
 
     -- Aim Part label + row
     do
@@ -2436,7 +2435,7 @@ do -- AIMBOT SCOPE: isolated do..end tránh vượt 200 local
     aimToggleBtn.MouseButton1Click:Connect(function()
         AimSettings.AimEnabled = not AimSettings.AimEnabled
         AimSettings.ShowFOV    = AimSettings.AimEnabled
-        aimToggleBtn.Text = "Aimbot: " .. (AimSettings.AimEnabled and "ON" or "OFF")
+        aimToggleBtn.Text = "Aim Assist: " .. (AimSettings.AimEnabled and "ON" or "OFF")
         aimStyle(aimToggleBtn, AimSettings.AimEnabled)
         FOVCircleAim.Visible = AimSettings.ShowFOV
     end)
@@ -2465,6 +2464,11 @@ do -- AIMBOT SCOPE: isolated do..end tránh vượt 200 local
         aimStyle(predictionBtn, AimSettings.Prediction)
     end)
 
+    deadCheckBtn.MouseButton1Click:Connect(function()
+        AimSettings.HPCheck = not AimSettings.HPCheck
+        deadCheckBtn.Text = "Dead Check: " .. (AimSettings.HPCheck and "ON" or "OFF")
+        aimStyle(deadCheckBtn, AimSettings.HPCheck)
+    end)
     -- ── Aim logic (hàm nội bộ, prefix _ tránh xung đột với scope ngoài) ────
     local function _aimAlive(char)
         local h = char and char:FindFirstChildOfClass("Humanoid")
