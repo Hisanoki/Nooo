@@ -1,42 +1,38 @@
 --===== SERVICES =====--
-local Players       = game:GetService("Players")
-local TweenService  = game:GetService("TweenService")
-local RunService    = game:GetService("RunService")
-local LocalPlayer   = Players.LocalPlayer
+local Players      = game:GetService("Players")
+local TweenService = game:GetService("TweenService")
+local LocalPlayer  = Players.LocalPlayer
 
 --===== CONFIG =====--
 local CFG = { SIZE = 4, W = 280, PAD = 15, BATCH = 5, DEBOUNCE = 0.8 }
 
 local C = {
     PRI  = Color3.fromRGB(140, 185, 255), PRI_D = Color3.fromRGB(100, 150, 255),
-    ACC  = Color3.fromRGB(180, 220, 255), FRAME = Color3.fromRGB(40, 60, 100),
-    TITL = Color3.fromRGB(30, 50, 90),   INP   = Color3.fromRGB(60, 90, 140),
-    TXT  = Color3.fromRGB(255, 255, 255), DNG   = Color3.fromRGB(200, 80, 80),
-    GOOD = Color3.fromRGB(80, 180, 120), WARN  = Color3.fromRGB(255, 170, 80),
-    PURP = Color3.fromRGB(120, 80, 180), BLUE  = Color3.fromRGB(80, 140, 200),
+    ACC  = Color3.fromRGB(180, 220, 255), FRAME = Color3.fromRGB(40,  60,  100),
+    TITL = Color3.fromRGB(30,  50,  90),  INP   = Color3.fromRGB(60,  90,  140),
+    TXT  = Color3.fromRGB(255, 255, 255), DNG   = Color3.fromRGB(200, 80,  80),
+    GOOD = Color3.fromRGB(80,  180, 120), BLUE  = Color3.fromRGB(80,  140, 200),
     STA  = Color3.fromRGB(180, 255, 200),
 }
 
 --===== STATE =====--
--- [Model] = { conns={RBXConn}, esp=Instance, mesh=Instance, hitboxSize=number }
-local npcs        = {}
-local workConns   = {}   -- workspace-level connections (DescendantAdded / ChildAdded)
-local lastProc    = {}   -- debounce: [Model] = tick()
-local autoHitbox  = false
-local autoMesh    = false
-local npcCheck    = false  -- filter immortal / dialog NPCs
+-- [Model] = { conns, esp, hitboxSize, targetPart, synthetic }
+local npcs      = {}
+local workConns = {}
+local lastProc  = {}
+local origSizes = {}   -- [BasePart] = Vector3  (Lua-side, anticheat-safe)
+local autoHitbox = false
+local npcCheck   = false
 
 --===== GUI ROOT =====--
 local gui = Instance.new("ScreenGui")
-gui.Name          = "NPC_HB"
-gui.ResetOnSpawn  = false
-gui.Parent        = game.CoreGui
+gui.Name         = "NPC_HB"
+gui.ResetOnSpawn = false
+gui.Parent       = game.CoreGui
 
--- forward declares so helpers can reference them
-local statusLabel
-local flashStatus
+local statusLabel, flashStatus  -- forward declare
 
---===== SMALL HELPERS =====--
+--===== HELPERS =====--
 local function discAll(list)
     for _, c in ipairs(list) do pcall(c.Disconnect, c) end
 end
@@ -46,8 +42,7 @@ local function safeDes(obj)
 end
 
 local function mkCorner(p, r)
-    local u = Instance.new("UICorner", p)
-    u.CornerRadius = UDim.new(0, r or 8)
+    Instance.new("UICorner", p).CornerRadius = UDim.new(0, r or 8)
 end
 
 local function mkStroke(p, col, th)
@@ -55,16 +50,14 @@ local function mkStroke(p, col, th)
     s.Color = col or C.ACC; s.Thickness = th or 1
 end
 
--- Drag works for BOTH touch and mouse
+-- Drag: mouse + touch, clamped to viewport
 local function makeDraggable(obj)
-    local drag, start, orig = false, nil, nil
+    local drag, start, orig = false
     local cam = workspace.CurrentCamera
     obj.InputBegan:Connect(function(i)
         if i.UserInputType == Enum.UserInputType.Touch
         or i.UserInputType == Enum.UserInputType.MouseButton1 then
-            drag  = true
-            start = i.Position
-            orig  = obj.Position
+            drag = true; start = i.Position; orig = obj.Position
             i.Changed:Connect(function()
                 if i.UserInputState == Enum.UserInputState.End then drag = false end
             end)
@@ -84,7 +77,6 @@ local function makeDraggable(obj)
     end)
 end
 
--- Button factory
 local function mkBtn(parent, text, pos, size, color)
     local btn = Instance.new("TextButton")
     btn.Position         = pos
@@ -97,30 +89,33 @@ local function mkBtn(parent, text, pos, size, color)
     btn.AutoButtonColor  = false
     btn.Parent           = parent
     mkCorner(btn, 8); mkStroke(btn, C.ACC, 1)
-
     btn.MouseEnter:Connect(function()
-        TweenService:Create(btn, TweenInfo.new(0.12), {BackgroundColor3 = color:Lerp(C.ACC, 0.25)}):Play()
+        TweenService:Create(btn, TweenInfo.new(0.12), {
+            BackgroundColor3 = color:Lerp(C.ACC, 0.25)
+        }):Play()
     end)
     btn.MouseLeave:Connect(function()
-        TweenService:Create(btn, TweenInfo.new(0.12), {BackgroundColor3 = color}):Play()
+        TweenService:Create(btn, TweenInfo.new(0.12), {
+            BackgroundColor3 = color
+        }):Play()
     end)
     return btn
 end
 
 --===== BUILD PANEL =====--
 local frame = Instance.new("Frame")
-frame.Name            = "Panel"
-frame.Position        = UDim2.fromOffset(10, 100)
-frame.Size            = UDim2.fromOffset(CFG.W, 0)
+frame.Name             = "Panel"
+frame.Position         = UDim2.fromOffset(10, 100)
+frame.Size             = UDim2.fromOffset(CFG.W, 0)
 frame.BackgroundColor3 = C.FRAME
 frame.ClipsDescendants = true
-frame.Visible         = false
-frame.Active          = true
-frame.Parent          = gui
+frame.Visible          = false
+frame.Active           = true
+frame.Parent           = gui
 mkCorner(frame, 12); mkStroke(frame, C.ACC, 2)
 makeDraggable(frame)
 
-do  -- title bar
+do -- title bar
     local t = Instance.new("TextLabel", frame)
     t.Size             = UDim2.fromOffset(CFG.W, 36)
     t.BackgroundColor3 = C.TITL
@@ -132,55 +127,51 @@ do  -- title bar
 end
 
 local sizeInput = Instance.new("TextBox", frame)
-sizeInput.Position        = UDim2.fromOffset(CFG.PAD, 46)
-sizeInput.Size            = UDim2.fromOffset(CFG.W - CFG.PAD * 2, 32)
-sizeInput.PlaceholderText = "Hitbox Size (default 4)"
-sizeInput.Text            = tostring(CFG.SIZE)
+sizeInput.Position         = UDim2.fromOffset(CFG.PAD, 46)
+sizeInput.Size             = UDim2.fromOffset(CFG.W - CFG.PAD * 2, 32)
+sizeInput.PlaceholderText  = "Hitbox Size (default 4)"
+sizeInput.Text             = tostring(CFG.SIZE)
 sizeInput.BackgroundColor3 = C.INP
-sizeInput.TextColor3      = C.TXT
-sizeInput.Font            = Enum.Font.Gotham
-sizeInput.TextSize        = 14
+sizeInput.TextColor3       = C.TXT
+sizeInput.Font             = Enum.Font.Gotham
+sizeInput.TextSize         = 14
 sizeInput.ClearTextOnFocus = false
 mkCorner(sizeInput, 8)
 
--- ── Buttons (ordered) ─────────────────────────────────────────
 local Y, SP = 86, 38
 
-local autoToggle    = mkBtn(frame, "Auto Hitbox: OFF",   UDim2.fromOffset(CFG.PAD, Y)); Y += SP
-local autoMeshBtn   = mkBtn(frame, "Auto Mesh: OFF",     UDim2.fromOffset(CFG.PAD, Y), nil, C.WARN); Y += SP
-local npcCheckBtn   = mkBtn(frame, "NPC Check: OFF",     UDim2.fromOffset(CFG.PAD, Y), nil, C.BLUE); Y += SP
-local removeAllBtn  = mkBtn(frame, "Remove All Hitboxes",UDim2.fromOffset(CFG.PAD, Y), nil, C.DNG);  Y += SP
-local clearMeshBtn  = mkBtn(frame, "Clear All Mesh",     UDim2.fromOffset(CFG.PAD, Y), nil, C.PURP); Y += SP
+local autoToggle   = mkBtn(frame, "Auto Hitbox: OFF",    UDim2.fromOffset(CFG.PAD, Y)); Y += SP
+local npcCheckBtn  = mkBtn(frame, "NPC Check: OFF",      UDim2.fromOffset(CFG.PAD, Y), nil, C.BLUE); Y += SP
+local removeAllBtn = mkBtn(frame, "Remove All Hitboxes", UDim2.fromOffset(CFG.PAD, Y), nil, C.DNG); Y += SP
 
 statusLabel = Instance.new("TextLabel", frame)
-statusLabel.Position          = UDim2.fromOffset(CFG.PAD, Y)
-statusLabel.Size              = UDim2.fromOffset(CFG.W - CFG.PAD * 2, 24)
+statusLabel.Position               = UDim2.fromOffset(CFG.PAD, Y)
+statusLabel.Size                   = UDim2.fromOffset(CFG.W - CFG.PAD * 2, 24)
 statusLabel.BackgroundTransparency = 1
-statusLabel.Text              = "Ready"
-statusLabel.TextColor3        = C.STA
-statusLabel.Font              = Enum.Font.Gotham
-statusLabel.TextSize          = 13
-statusLabel.TextXAlignment    = Enum.TextXAlignment.Left
+statusLabel.Text                   = "Ready"
+statusLabel.TextColor3             = C.STA
+statusLabel.Font                   = Enum.Font.Gotham
+statusLabel.TextSize               = 13
+statusLabel.TextXAlignment         = Enum.TextXAlignment.Left
 
-local PANEL_H = Y + 30   -- final panel height
+local PANEL_H = Y + 30
 
--- ── Floating toggle button ─────────────────────────────────────
+-- Floating toggle button
 local toggleBtn = mkBtn(gui, "Menu", UDim2.fromOffset(10, 10), UDim2.fromOffset(90, 34), C.PRI)
 toggleBtn.ZIndex = 10
 makeDraggable(toggleBtn)
 
--- ── Status flash ──────────────────────────────────────────────
 flashStatus = function(ok, msg)
     statusLabel.Text = msg
-    local col = ok and Color3.fromRGB(190, 255, 210) or Color3.fromRGB(255, 200, 200)
-    TweenService:Create(statusLabel, TweenInfo.new(0.1), {TextColor3 = col}):Play()
-    task.delay(2, function()
+    TweenService:Create(statusLabel, TweenInfo.new(0.1), {
+        TextColor3 = ok and Color3.fromRGB(190, 255, 210) or Color3.fromRGB(255, 200, 200)
+    }):Play()
+    task.delay(2.5, function()
         TweenService:Create(statusLabel, TweenInfo.new(0.3), {TextColor3 = C.STA}):Play()
     end)
 end
 
--- ── Menu open/close animation ─────────────────────────────────
-do
+do -- open/close animation
     local anim = false
     toggleBtn.MouseButton1Click:Connect(function()
         if anim then return end
@@ -201,37 +192,54 @@ do
     end)
 end
 
---===== NPC FILTER HELPERS =====--
+--===== NPC FILTER =====--
 local function isImmortal(hum)
-    -- math.huge = invincible; MaxHealth==0 = old Roblox invincible pattern
     return hum.MaxHealth == math.huge
         or hum.Health    == math.huge
         or hum.MaxHealth == 0
 end
 
-local function hasDialog(model)
-    for _, v in ipairs(model:GetDescendants()) do
-        if v:IsA("Dialog") then return true end
-    end
-    return false
-end
-
--- Returns true if we should SKIP this NPC (npcCheck must be ON)
 local function isFiltered(model)
     if not npcCheck then return false end
     local hum = model:FindFirstChildOfClass("Humanoid")
     if not hum then return false end
-    return isImmortal(hum) or hasDialog(model)
+    -- Immortal check
+    if isImmortal(hum) then return true end
+    -- Dialog check (FindFirstChildWhichIsA searches descendants)
+    return model:FindFirstChildWhichIsA("Dialog", true) ~= nil
 end
 
 local function isValidNPC(model)
-    if not model or not model.Parent then return false end
-    if not model:IsA("Model")        then return false end
-    if model == LocalPlayer.Character then return false end
+    if not model or not model.Parent    then return false end
+    if not model:IsA("Model")           then return false end
+    if model == LocalPlayer.Character   then return false end
     if Players:GetPlayerFromCharacter(model) then return false end
     local hum  = model:FindFirstChildOfClass("Humanoid")
     local root = model:FindFirstChild("HumanoidRootPart")
     return hum ~= nil and root ~= nil
+end
+
+--===== TOP-PART FINDER =====--
+-- Returns highest non-massless, non-structural BasePart.
+-- Uses top-edge Y (Position.Y + Size.Y/2) so tall parts don't win unfairly.
+local SKIP = { HumanoidRootPart = true, Torso = true, UpperTorso = true,
+               LowerTorso = true, LeftFoot = true, RightFoot = true,
+               LeftLowerArm = true, RightLowerArm = true }
+
+local function findTopPart(model)
+    local best, bestY = nil, -math.huge
+    for _, v in ipairs(model:GetDescendants()) do
+        if v:IsA("BasePart")
+        and not v.Massless          -- skip accessory handles
+        and not SKIP[v.Name] then
+            local topEdge = v.Position.Y + v.Size.Y * 0.5
+            if topEdge > bestY then
+                bestY = topEdge
+                best  = v
+            end
+        end
+    end
+    return best
 end
 
 --===== STATUS =====--
@@ -242,8 +250,7 @@ local function updateStatus()
 end
 
 --===== NPC CORE =====--
--- Forward declare so applyHitbox callbacks can reference it
-local cleanupNPC
+local cleanupNPC  -- forward declare
 
 local function addESP(npc)
     if npc:FindFirstChild("_ESP") then return npc:FindFirstChild("_ESP") end
@@ -262,69 +269,55 @@ local function addESP(npc)
 end
 
 local function applyHitbox(npc, size)
-    if not isValidNPC(npc)  then return end
-    if npcs[npc]            then return end   -- already processed
-    if isFiltered(npc)      then return end   -- filtered by NPC Check
+    if not isValidNPC(npc) then return end
+    if npcs[npc]           then return end
+    if isFiltered(npc)     then return end
 
-    local hum  = npc:FindFirstChildOfClass("Humanoid")
+    local hum = npc:FindFirstChildOfClass("Humanoid")
     if hum and hum.Health <= 0 then return end
 
-    local head = npc:FindFirstChild("Head")
-    local root = npc:FindFirstChild("HumanoidRootPart")
+    local synthetic = false
+    local target    = npc:FindFirstChild("Head")
 
-    -- Synthesise head if the NPC lacks one
-    if not head and root then
-        head            = Instance.new("Part")
-        head.Name       = "Head"
-        head.Size       = Vector3.new(2, 1, 1)
-        head.CFrame     = root.CFrame * CFrame.new(0, root.Size.Y / 2 + 1, 0)
-        head.Anchored   = false
-        head.CanCollide = false
-        head.Massless   = true
-        head.Transparency = 1
-        head.Parent     = npc
+    if not target then
+        -- No named Head — find highest visible part (real head position)
+        local topPart = findTopPart(npc)
+        if not topPart then return end
+
+        -- Synthesise a fake Head welded on top of that part
+        local fake        = Instance.new("Part")
+        fake.Name         = "Head"
+        fake.Size         = Vector3.new(2, 1, 1)
+        fake.CFrame       = topPart.CFrame * CFrame.new(0, topPart.Size.Y * 0.5 + 0.5, 0)
+        fake.Anchored     = false
+        fake.CanCollide   = false
+        fake.Massless     = true
+        fake.Transparency = 1
+        fake.Parent       = npc
         local w = Instance.new("WeldConstraint")
-        w.Part0 = root; w.Part1 = head; w.Parent = head
-    end
-    if not head then return end
+        w.Part0 = topPart; w.Part1 = fake; w.Parent = fake
 
-    -- Store original size once
-    if not head:FindFirstChild("_OrigSize") then
-        local v = Instance.new("Vector3Value")
-        v.Name  = "_OrigSize"
-        v.Value = head.Size
-        v.Parent = head
+        target    = fake
+        synthetic = true
     end
 
-    head.Massless     = true
-    head.Size         = Vector3.new(size, size, size)
-    head.CanCollide   = false
-    head.Transparency = 0.7
-    head.Material     = Enum.Material.ForceField
+    -- Store original size in Lua table — no workspace instance, anticheat-safe
+    origSizes[target] = target.Size
 
-    -- Mesh (if auto-mesh is ON)
-    local mesh
-    if autoMesh then
-        if not head:FindFirstChild("_Mesh") then
-            mesh           = Instance.new("SpecialMesh")
-            mesh.Name      = "_Mesh"
-            mesh.MeshType  = Enum.MeshType.Head
-            mesh.Scale     = Vector3.one
-            mesh.Parent    = head
-        else
-            mesh = head:FindFirstChild("_Mesh")
-        end
-    end
+    target.Massless     = true
+    target.Size         = Vector3.new(size, size, size)
+    target.CanCollide   = false
+    target.Transparency = 0.7
+    target.Material     = Enum.Material.ForceField
 
-    -- Per-NPC connections (no global Heartbeat needed)
     local conns = {}
 
-    -- Size guard — reads hitboxSize from data, not stale closure
-    table.insert(conns, head:GetPropertyChangedSignal("Size"):Connect(function()
+    -- Size guard reads live data.hitboxSize — no stale closure bug
+    table.insert(conns, target:GetPropertyChangedSignal("Size"):Connect(function()
         local data = npcs[npc]
         if not data then return end
         local want = Vector3.new(data.hitboxSize, data.hitboxSize, data.hitboxSize)
-        if head.Size ~= want then head.Size = want end
+        if target.Size ~= want then target.Size = want end
     end))
 
     if hum then
@@ -335,7 +328,13 @@ local function applyHitbox(npc, size)
         if not parent then cleanupNPC(npc) end
     end))
 
-    npcs[npc] = { conns = conns, esp = addESP(npc), mesh = mesh, hitboxSize = size }
+    npcs[npc] = {
+        conns      = conns,
+        esp        = addESP(npc),
+        hitboxSize = size,
+        targetPart = target,
+        synthetic  = synthetic,
+    }
     updateStatus()
 end
 
@@ -345,32 +344,28 @@ cleanupNPC = function(npc)
 
     discAll(data.conns)
 
-    -- Only restore head properties if NPC still exists in workspace
-    if npc and npc.Parent then
-        local head = npc:FindFirstChild("Head")
-        if head then
-            local orig = head:FindFirstChild("_OrigSize")
-            if orig then
-                head.Size = orig.Value
-                safeDes(orig)
-            end
-            head.Massless     = false
-            head.CanCollide   = true
-            head.Transparency = 0
-            head.Material     = Enum.Material.Plastic
-            safeDes(head:FindFirstChild("_Mesh"))
-        end
+    local target = data.targetPart
+    if data.synthetic then
+        safeDes(target)                          -- fake head: just destroy
+    elseif target and target.Parent then
+        -- Real head: restore from Lua-side table
+        target.Size        = origSizes[target] or Vector3.new(2, 1, 1)
+        target.Massless    = false
+        target.CanCollide  = true
+        target.Transparency = 0
+        target.Material    = Enum.Material.Plastic
     end
 
+    origSizes[target] = nil
     safeDes(data.esp)
     npcs[npc]     = nil
     lastProc[npc] = nil
     updateStatus()
 end
 
--- Scan the whole workspace in batches
+-- Batch workspace scan
 local function scanAll()
-    local size  = tonumber(sizeInput.Text) or CFG.SIZE
+    local size = tonumber(sizeInput.Text) or CFG.SIZE
     local count, batch = 0, 0
     for _, v in ipairs(workspace:GetDescendants()) do
         if isValidNPC(v) and not npcs[v] then
@@ -382,7 +377,7 @@ local function scanAll()
     return count
 end
 
--- Debounced apply for new descendants
+-- Debounced apply for newly added descendants
 local function tryApply(model)
     local now = tick()
     if lastProc[model] and now - lastProc[model] < CFG.DEBOUNCE then return end
@@ -394,60 +389,25 @@ local function tryApply(model)
     end)
 end
 
--- Clear everything
 local function clearAll()
     for npc in pairs(npcs) do cleanupNPC(npc) end
     discAll(workConns); table.clear(workConns)
     flashStatus(true, "All hitboxes removed")
 end
 
--- Mesh helpers
-local function addMeshAll()
-    local n = 0
-    for _, v in ipairs(workspace:GetDescendants()) do
-        if isValidNPC(v) then
-            local head = v:FindFirstChild("Head")
-            if head and not head:FindFirstChild("_Mesh") then
-                local m = Instance.new("SpecialMesh")
-                m.Name = "_Mesh"; m.MeshType = Enum.MeshType.Head
-                m.Scale = Vector3.one; m.Parent = head
-                if npcs[v] then npcs[v].mesh = m end
-                n += 1
-            end
-        end
-    end
-    return n
-end
-
-local function clearMeshAll()
-    local n = 0
-    for _, v in ipairs(workspace:GetDescendants()) do
-        local head = v:FindFirstChild("Head")
-        if head then
-            local m = head:FindFirstChild("_Mesh")
-            if m then m:Destroy(); n += 1 end
-        end
-    end
-    for _, data in pairs(npcs) do data.mesh = nil end
-    return n
-end
-
 --===== BUTTON EVENTS =====--
 
--- Auto Hitbox toggle
 autoToggle.MouseButton1Click:Connect(function()
     autoHitbox = not autoHitbox
     autoToggle.Text             = "Auto Hitbox: " .. (autoHitbox and "ON" or "OFF")
     autoToggle.BackgroundColor3 = autoHitbox and C.GOOD or C.PRI_D
 
-    -- Always clear old workspace listeners first (prevent stacking)
-    discAll(workConns); table.clear(workConns)
+    discAll(workConns); table.clear(workConns)  -- clear old listeners first
 
     if autoHitbox then
         flashStatus(true, "Scanning...")
         task.spawn(function()
-            local n = scanAll()
-            flashStatus(true, ("Auto ON → %d NPCs"):format(n))
+            flashStatus(true, ("Auto ON → %d NPCs"):format(scanAll()))
         end)
         table.insert(workConns, workspace.DescendantAdded:Connect(function(d)
             local m = d:FindFirstAncestorOfClass("Model") or (d:IsA("Model") and d)
@@ -461,33 +421,17 @@ autoToggle.MouseButton1Click:Connect(function()
     end
 end)
 
--- Auto Mesh toggle
-autoMeshBtn.MouseButton1Click:Connect(function()
-    autoMesh = not autoMesh
-    autoMeshBtn.Text             = "Auto Mesh: " .. (autoMesh and "ON" or "OFF")
-    autoMeshBtn.BackgroundColor3 = autoMesh and C.GOOD or C.WARN
-    if autoMesh then
-        task.spawn(function()
-            flashStatus(true, ("Mesh added: %d"):format(addMeshAll()))
-        end)
-    else
-        flashStatus(false, "Auto Mesh OFF")
-    end
-end)
-
--- NPC Check toggle — skip dialog / immortal NPCs
 npcCheckBtn.MouseButton1Click:Connect(function()
     npcCheck = not npcCheck
     npcCheckBtn.Text             = "NPC Check: " .. (npcCheck and "ON" or "OFF")
     npcCheckBtn.BackgroundColor3 = npcCheck and C.GOOD or C.BLUE
 
     if npcCheck then
-        -- Retroactively remove hitboxes from NPCs that are now filtered
         local removed = 0
         for npc in pairs(npcs) do
             if isFiltered(npc) then cleanupNPC(npc); removed += 1 end
         end
-        flashStatus(true, ("NPC Check ON — skipped %d dialog/immortal"):format(removed))
+        flashStatus(true, ("NPC Check ON — removed %d dialog/immortal"):format(removed))
     else
         flashStatus(false, "NPC Check OFF")
     end
@@ -495,19 +439,14 @@ end)
 
 removeAllBtn.MouseButton1Click:Connect(clearAll)
 
-clearMeshBtn.MouseButton1Click:Connect(function()
-    flashStatus(true, ("Cleared %d meshes"):format(clearMeshAll()))
-end)
-
--- Size input — update all active hitboxes live
 sizeInput.FocusLost:Connect(function()
     local v = tonumber(sizeInput.Text)
     if v and v > 0 and v <= 50 then
         local n = 0
         for npc, data in pairs(npcs) do
-            data.hitboxSize = v   -- update BEFORE setting Size (guards read this)
-            local head = npc:FindFirstChild("Head")
-            if head then head.Size = Vector3.new(v, v, v); n += 1 end
+            data.hitboxSize = v   -- update BEFORE writing Size (guard reads this)
+            local t = data.targetPart
+            if t and t.Parent then t.Size = Vector3.new(v, v, v); n += 1 end
         end
         flashStatus(true, ("Updated %d hitboxes → size %g"):format(n, v))
     else
@@ -522,11 +461,6 @@ LocalPlayer.CharacterAdded:Connect(function()
     if autoHitbox then
         task.spawn(function()
             flashStatus(true, ("Rescanned: %d NPCs"):format(scanAll()))
-        end)
-    end
-    if autoMesh then
-        task.spawn(function()
-            flashStatus(true, ("Mesh refresh: %d"):format(addMeshAll()))
         end)
     end
 end)
