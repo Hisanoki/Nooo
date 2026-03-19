@@ -2262,7 +2262,7 @@ do -- AIMBOT SCOPE: isolated do..end tránh vượt 200 local
         AirPredictionAmount = 0.16,
     }
 
-    local AIM_ON  = Color3.fromRGB(70, 255, 90)
+    local AIM_ON  = Color3.fromRGB(50, 200, 120)
     local AIM_OFF = Color3.fromRGB(38, 38, 38)
     local FOV_COL = Color3.fromRGB(80, 255, 100)
 
@@ -2300,12 +2300,17 @@ do -- AIMBOT SCOPE: isolated do..end tránh vượt 200 local
 
     -- Helper style button
     local function aimStyle(btn, state)
-        btn.BackgroundColor3       = state and AIM_ON or AIM_OFF
-        btn.BackgroundTransparency = state and 0 or 0.35
+    if state then
+        btn.BackgroundColor3 = Color3.fromRGB(50, 200, 120) -- giống tab khác
+        btn.BackgroundTransparency = 0
+    else
+        btn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
+        btn.BackgroundTransparency = 0.35
     end
+end
 
     -- ── Toggle buttons ──────────────────────────────────────────────────────
-    local aimToggleBtn = createTransparentButton("Aim Assist: OFF", AIM_OFF, panel9)
+    local aimToggleBtn = createTransparentButton("Aimbot: OFF", AIM_OFF, panel9)
     aimStyle(aimToggleBtn, false)
 
     local wallCheckBtn = createTransparentButton("Wall Check: ON", AIM_OFF, panel9)
@@ -2320,8 +2325,7 @@ do -- AIMBOT SCOPE: isolated do..end tránh vượt 200 local
     local predictionBtn = createTransparentButton("Prediction: ON", AIM_OFF, panel9)
     aimStyle(predictionBtn, AimSettings.Prediction)
 
-    local deadCheckBtn = createTransparentButton("Dead Check: ON", AIM_OFF, panel9)
-    aimStyle(deadCheckBtn, AimSettings.HPCheck)
+    
 
     -- FOV Circle không có button riêng — bật/tắt theo Aim Assist
 
@@ -2435,7 +2439,7 @@ do -- AIMBOT SCOPE: isolated do..end tránh vượt 200 local
     aimToggleBtn.MouseButton1Click:Connect(function()
         AimSettings.AimEnabled = not AimSettings.AimEnabled
         AimSettings.ShowFOV    = AimSettings.AimEnabled
-        aimToggleBtn.Text = "Aim Assist: " .. (AimSettings.AimEnabled and "ON" or "OFF")
+       aimToggleBtn.Text = "Aimbot: " .. (AimSettings.AimEnabled and "ON" or "OFF")
         aimStyle(aimToggleBtn, AimSettings.AimEnabled)
         FOVCircleAim.Visible = AimSettings.ShowFOV
     end)
@@ -2464,11 +2468,7 @@ do -- AIMBOT SCOPE: isolated do..end tránh vượt 200 local
         aimStyle(predictionBtn, AimSettings.Prediction)
     end)
 
-    deadCheckBtn.MouseButton1Click:Connect(function()
-        AimSettings.HPCheck = not AimSettings.HPCheck
-        deadCheckBtn.Text = "Dead Check: " .. (AimSettings.HPCheck and "ON" or "OFF")
-        aimStyle(deadCheckBtn, AimSettings.HPCheck)
-    end)
+    
     -- ── Aim logic (hàm nội bộ, prefix _ tránh xung đột với scope ngoài) ────
     local function _aimAlive(char)
         local h = char and char:FindFirstChildOfClass("Humanoid")
