@@ -1494,7 +1494,9 @@ loopFBBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
 local noFogBtn = createTransparentButton("No Fog", Color3.fromRGB(38, 38, 38), panel6)
 noFogBtn.BackgroundTransparency = 0.35
 noFogBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
-
+local instantBuyBtn = createTransparentButton("Instant Interact: OFF", Color3.fromRGB(38, 38, 38), panel6)
+instantBuyBtn.BackgroundTransparency = 0.35
+instantBuyBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
 antiAfkBtn.MouseButton1Click:Connect(function()
     S.antiAfkEnabled = not S.antiAfkEnabled
     antiAfkBtn.Text = "Anti AFK: "..(S.antiAfkEnabled and "ON" or "OFF")
@@ -3122,6 +3124,85 @@ noFogBtn.MouseButton1Click:Connect(function()
     noFogBtn.BackgroundTransparency = 0.35
 
 end)
+do
+    local instantBuyEnabled = false
+    local instantBuyConnections = {}
+    local instantBuySeen = {}
+
+    local function clearInstantBuyConnections()
+        for _, conn in ipairs(instantBuyConnections) do
+            if conn then
+                conn:Disconnect()
+            end
+        end
+        table.clear(instantBuyConnections)
+        table.clear(instantBuySeen)
+    end
+
+    local function setupPrompt(prompt)
+        if not prompt or not prompt:IsA("ProximityPrompt") then
+            return
+        end
+
+        if instantBuySeen[prompt] then
+            return
+        end
+        instantBuySeen[prompt] = true
+
+        -- Chỉ chỉnh những prompt có hold duration (phải giữ)
+        if prompt.HoldDuration and prompt.HoldDuration > 0 then
+            pcall(function()
+                prompt.HoldDuration = 0
+            end)
+        end
+
+        table.insert(instantBuyConnections, prompt:GetPropertyChangedSignal("HoldDuration"):Connect(function()
+            if not instantBuyEnabled then return end
+            if prompt.HoldDuration > 0 then
+                pcall(function()
+                    prompt.HoldDuration = 0
+                end)
+            end
+        end))
+    end
+
+    local function enableInstantBuy()
+        for _, v in ipairs(workspace:GetDescendants()) do
+            if v:IsA("ProximityPrompt") then
+                setupPrompt(v)
+            end
+        end
+
+        table.insert(instantBuyConnections, workspace.DescendantAdded:Connect(function(v)
+            if not instantBuyEnabled then return end
+            if v:IsA("ProximityPrompt") then
+                task.wait()
+                setupPrompt(v)
+            end
+        end))
+    end
+
+    local function setInstantBuyEnabled(state)
+        instantBuyEnabled = state
+
+        instantBuyBtn.Text = instantBuyEnabled and "Instant Interact: ON" or "Instant Interact: OFF"
+        instantBuyBtn.BackgroundColor3 = instantBuyEnabled and Color3.fromRGB(50, 200, 120) or Color3.fromRGB(38, 38, 38)
+        instantBuyBtn.BackgroundTransparency = instantBuyEnabled and 0 or 0.35
+
+        clearInstantBuyConnections()
+
+        if instantBuyEnabled then
+            enableInstantBuy()
+            createNotification("Instant Interact", "ON")
+        else
+            createNotification("Instant Interact", "OFF")
+        end
+    end
+
+    instantBuyBtn.MouseButton1Click:Connect(function()
+        setInstantBuyEnabled(not instantBuyEnabled)
+    end)
+end
 -- ─── LOOPSPEED ────────────────────────────────────────────────────────────────
 
 do
