@@ -20,7 +20,7 @@ local S = {
     selectedPlayers={}, selectedTPPlayers={}, boxESPObjects={}, nameESPObjects={},
     processedChars={}, playerConnections={}, manualPositionCFrame=nil,
     isInvisible=false, invisButton=nil, invisSound=nil,
-    auraKey=Enum.KeyCode.E, auraListening=false,
+    auraListening=false,
     auraFloatEnabled=false, dropFloatEnabled=false,
     auraFloatBtn=nil, dropFloatBtn=nil, equipAllFloatEnabled=false, equipAllFloatBtn=nil,
     auraFloatDragConn=nil, dropFloatDragConn=nil, floatBtnSize=62,
@@ -1865,58 +1865,12 @@ local function createEquipAllFloat()
 end
 -- ─── FETOOL BUTTONS ───────────────────────────────────────────────────────────
 
-S.feAuraBtn = createTransparentButton("Tool Aura [" .. S.auraKey.Name .. "]", Color3.fromRGB(38, 38, 38), panel8)
+S.feAuraBtn = createTransparentButton("Tool Aura", Color3.fromRGB(38, 38, 38), panel8)
 S.feAuraBtn.BackgroundTransparency = 0.35
 S.feAuraBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
 
 S.feAuraBtn.MouseButton1Click:Connect(runToolAura)
 
--- Keybind row
-do
-    local feKBRow = Instance.new("Frame")
-    feKBRow.BackgroundTransparency = 1
-    feKBRow.Size = UDim2.new(1, 0, 0, 42)
-    feKBRow.Parent = panel8
-
-    S.feKBBtn = Instance.new("TextButton")
-    S.feKBBtn.Parent = feKBRow
-    S.feKBBtn.Size = UDim2.new(1, 0, 1, 0)
-    S.feKBBtn.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
-    S.feKBBtn.BackgroundTransparency = 0.2
-    S.feKBBtn.BorderSizePixel = 0
-    S.feKBBtn.Text = S.auraKey.Name
-S.feKBBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-S.feKBBtn.TextScaled = false
-S.feKBBtn.TextSize = 14
-S.feKBBtn.Font = Enum.Font.GothamBold
-    S.feKBBtn.AutoButtonColor = true
-    _mkCorner(6, S.feKBBtn)
-
-    local stroke = Instance.new("UIStroke")
-    stroke.Parent = S.feKBBtn
-    stroke.Color = Color3.fromRGB(60, 60, 60)
-    stroke.Thickness = 1
-    stroke.Transparency = 0.35
-end
-
-S.feKBBtn.MouseButton1Click:Connect(function()
-    if S.auraListening then return end
-    S.auraListening = true
-    S.feKBBtn.Text = "..."
-    S.feKBBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-    local conn
-    conn = UserInputService.InputBegan:Connect(function(input, gpe)
-        if gpe then return end
-        if input.UserInputType == Enum.UserInputType.Keyboard then
-            S.auraKey = input.KeyCode
-            S.feKBBtn.Text = S.auraKey.Name
-            S.feKBBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-            S.feAuraBtn.Text = "Tool Aura [" .. S.auraKey.Name .. "]"
-            S.auraListening = false
-            conn:Disconnect()
-        end
-    end)
-end)
 
 -- Aura Float toggle
 local feAuraFloatBtn = createTransparentButton("Aura Float: OFF", Color3.fromRGB(38, 38, 38), panel8)
@@ -3729,11 +3683,7 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
         return
     end
 
-    -- Tool Aura keybind: luôn ưu tiên bắt phím E
-    if input.KeyCode == S.auraKey and not S.auraListening then
-        runToolAura()
-        return
-    end
+    
 
     -- Các phím khác mới bị chặn nếu UI đang ăn input
     if gameProcessed then
