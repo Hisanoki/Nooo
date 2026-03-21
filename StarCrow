@@ -1929,7 +1929,7 @@ local function createUseFloat()
     S.useFloatBtn = Instance.new("TextButton")
     S.useFloatBtn.Size = UDim2.new(0, S.floatBtnSize, 0, S.floatBtnSize)
     S.useFloatBtn.Position = UDim2.new(0.85, 0, 0.5, S.floatBtnSize * 2 + 30)
-    S.useFloatBtn.BackgroundColor3 = Color3.fromRGB(180, 30, 30)
+    S.useFloatBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
     S.useFloatBtn.BackgroundTransparency = 0.35
     S.useFloatBtn.BorderSizePixel = 0
     S.useFloatBtn.Text = "USE"
