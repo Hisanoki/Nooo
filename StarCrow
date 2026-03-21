@@ -31,6 +31,7 @@ local S = {
     loopBringActive=false, loopBringStates={},
     antiAfkEnabled=false,
     feRefreshBusy=false, lastFeToolSignature="", feAutoScanRunning=false,
+    useCooling=false, useFloatEnabled=false, useFloatBtn=nil, feUseInput=nil,
     -- Cross-ref UI (assigned later during panel creation)
     statusLabel=nil, sizeInput=nil,
     flyToggle=nil, loopspeedInput=nil, loopspeedToggle=nil,
@@ -1865,6 +1866,93 @@ local function createEquipAllFloat()
         runEquipAllTools()
     end)
 end
+-- ─── USE TOOL FLOAT ──────────────────────────────────────────────────────────
+
+local function destroyUseFloat()
+    if S.useFloatBtn then
+        S.useFloatBtn:Destroy()
+        S.useFloatBtn = nil
+    end
+end
+
+local function findUseTool(name)
+    local low = name:lower()
+    local char = LocalPlayer.Character
+    for _, v in ipairs(LocalPlayer.Backpack:GetChildren()) do
+        if v:IsA("Tool") and v.Name:lower() == low then return v end
+    end
+    if char then
+        for _, v in ipairs(char:GetChildren()) do
+            if v:IsA("Tool") and v.Name:lower() == low then return v end
+        end
+    end
+end
+
+local function doUseTool()
+    if S.useCooling then return end
+    if not S.feUseInput then return end
+    local name = S.feUseInput.Text:match("^%s*(.-)%s*$")
+    if name == "" then
+        createNotification("Use Tool", "Item name not entered")
+        return
+    end
+    local char = LocalPlayer.Character
+    local human = char and char:FindFirstChildOfClass("Humanoid")
+    if not char or not human then
+        createNotification("Use Tool", "Khong thay nhan vat")
+        return
+    end
+    local tool = findUseTool(name)
+    if not tool then
+        createNotification("Use Tool", "Het: " .. name)
+        return
+    end
+    S.useCooling = true
+    if S.useFloatBtn then S.useFloatBtn.Text = "..." end
+    if tool.Parent == LocalPlayer.Backpack then
+        human:EquipTool(tool)
+        task.wait(0.12)
+    end
+    local eq = char:FindFirstChildWhichIsA("Tool")
+    if eq and eq.Name:lower() == name:lower() then
+        eq:Activate()
+    else
+        createNotification("Use Tool", "Equip that bai")
+    end
+    task.wait(0.28)
+    if S.useFloatBtn then S.useFloatBtn.Text = "USE" end
+    S.useCooling = false
+end
+
+local function createUseFloat()
+    destroyUseFloat()
+    S.useFloatBtn = Instance.new("TextButton")
+    S.useFloatBtn.Size = UDim2.new(0, S.floatBtnSize, 0, S.floatBtnSize)
+    S.useFloatBtn.Position = UDim2.new(0.85, 0, 0.5, S.floatBtnSize * 2 + 30)
+    S.useFloatBtn.BackgroundColor3 = Color3.fromRGB(180, 30, 30)
+    S.useFloatBtn.BackgroundTransparency = 0.35
+    S.useFloatBtn.BorderSizePixel = 0
+    S.useFloatBtn.Text = "USE"
+    S.useFloatBtn.TextColor3 = Color3.fromRGB(255, 200, 200)
+    S.useFloatBtn.TextScaled = true
+    S.useFloatBtn.Font = Enum.Font.GothamBold
+    S.useFloatBtn.Active = true
+    S.useFloatBtn.ZIndex = 15
+    S.useFloatBtn.Parent = gui
+    local _c = Instance.new("UICorner", S.useFloatBtn)
+    _c.CornerRadius = UDim.new(0, 8)
+    local _s = Instance.new("UIStroke", S.useFloatBtn)
+    _s.Color = Color3.fromRGB(220, 60, 60)
+    _s.Thickness = 1.5
+
+    local getWasMoved, clearMoved = makeDraggableFloat(S.useFloatBtn)
+
+    S.useFloatBtn.MouseButton1Click:Connect(function()
+        if getWasMoved() then clearMoved(); return end
+        doUseTool()
+    end)
+end
+
 -- ─── FETOOL BUTTONS ───────────────────────────────────────────────────────────
 
 S.feAuraBtn = createTransparentButton("Tool Aura", Color3.fromRGB(38, 38, 38), panel8)
@@ -1959,6 +2047,41 @@ feEquipAllFloatToggleBtn.MouseButton1Click:Connect(function()
         destroyEquipAllFloat()
     end
 end)
+-- ─── USE TOOL PANEL BUTTONS ───────────────────────────────────────────────────
+do
+    local useDiv = createTransparentLabel("── Use Tool ──", panel8)
+    useDiv.TextColor3 = Color3.fromRGB(150, 150, 150)
+end
+
+S.feUseInput = createTransparentInput("Item name", "", panel8)
+
+local feUseBtn = createTransparentButton("Use Tool", Color3.fromRGB(38, 38, 38), panel8)
+feUseBtn.BackgroundTransparency = 0.35
+feUseBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
+
+feUseBtn.MouseButton1Click:Connect(function()
+    flashButton(feUseBtn)
+    doUseTool()
+end)
+
+local feUseFloatToggleBtn = createTransparentButton("Use Float: OFF", Color3.fromRGB(38, 38, 38), panel8)
+feUseFloatToggleBtn.BackgroundTransparency = 0.35
+feUseFloatToggleBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
+
+feUseFloatToggleBtn.MouseButton1Click:Connect(function()
+    S.useFloatEnabled = not S.useFloatEnabled
+    if S.useFloatEnabled then
+        feUseFloatToggleBtn.Text = "Use Float: ON"
+        feUseFloatToggleBtn.BackgroundColor3 = Color3.fromRGB(50, 200, 120)
+        feUseFloatToggleBtn.BackgroundTransparency = 0
+        createUseFloat()
+    else
+        feUseFloatToggleBtn.Text = "Use Float: OFF"
+        feUseFloatToggleBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
+        feUseFloatToggleBtn.BackgroundTransparency = 0.35
+        destroyUseFloat()
+    end
+end)
 -- ─── FLOAT BUTTON SIZE SLIDER ────────────────────────────────────────────────
 do
     -- Label hiển thị giá trị hiện tại
@@ -2043,6 +2166,9 @@ do
         if S.equipAllFloatBtn then
     S.equipAllFloatBtn.Size = UDim2.new(0, S.floatBtnSize, 0, S.floatBtnSize)
 end
+        if S.useFloatBtn then
+            S.useFloatBtn.Size = UDim2.new(0, S.floatBtnSize, 0, S.floatBtnSize)
+        end
     end
 
     sliderBtn.InputBegan:Connect(function(input)
