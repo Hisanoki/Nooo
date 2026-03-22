@@ -103,7 +103,7 @@ local TEXT_ESP_COLOR = Color3.fromRGB(255, 255, 255)
 
 local INVIS_CONFIG = {
     TOGGLE_KEY = Enum.KeyCode.C,
-    SOUND_ID = "rbxassetid://1845556093",
+    SOUND_ID = "rbxassetid://140014208317483",
     INVISIBILITY_POSITION = Vector3.new(-25.95, 84, 3537.55),
     NOTIFICATION_DURATION = 3,
     BACKGROUND_COLOR = Color3.fromRGB(25, 25, 25),
@@ -1023,7 +1023,7 @@ gui.Parent = LocalPlayer:WaitForChild("PlayerGui")
 
 -- Toggle button (middle-left, image, square rounded, white border, draggable)
 local toggleBtn = Instance.new("ImageButton")
-toggleBtn.Size = UDim2.new(0, 50, 0, 55)
+toggleBtn.Size = UDim2.new(0, 60, 0, 50)
 toggleBtn.Position = UDim2.new(0, 8, 0.5, -35)
 toggleBtn.AnchorPoint = Vector2.new(0, 0)
 toggleBtn.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
