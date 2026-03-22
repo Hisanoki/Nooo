@@ -299,8 +299,9 @@ local function removeHeadHitbox(character)
         meshBackup:Destroy()
     end
     head.Transparency = 0
-    head.CanCollide = true
-    head.Material = Enum.Material.Plastic
+head.CanCollide = true
+head.Material = Enum.Material.Plastic
+head.Massless = false
 end
 
 local function applyHeadHitbox(character, size)
@@ -341,16 +342,17 @@ local function applyHeadHitbox(character, size)
         existingMesh:Destroy()
     end
 
-    head.Size = Vector3.new(size, size, size)
-    head.CanCollide = false
-    head.Transparency = 0.5
-    head.Material = Enum.Material.ForceField
+    head.Massless = true
+head.Size = Vector3.new(size, size, size)
+head.CanCollide = false
+head.Transparency = 0.5
+head.Material = Enum.Material.ForceField
 
     addBoxESP(character, ESP_COLOR, size)
     S.processedChars[character] = true
 end
 
--- ─── BODY HITBOX (HRP) ────────────────────────────────────────────────────────
+-- ─── BODY HIT BOX (HRP) ────────────────────────────────────────────────────────
 
 local function removeBodyHitbox(character)
     if not character then return end
@@ -1246,7 +1248,7 @@ S.sizeInput = createTransparentInput("Size (e.g. 15)", tostring(DEFAULT_HITBOX_S
 local autoToggle = createTransparentButton("Head Hit Box: OFF", Color3.fromRGB(38, 38, 38), panel2)
 autoToggle.BackgroundColor3 = Color3.fromRGB(38,38,38)
 autoToggle.BackgroundTransparency = 0.35
-S.bodyHitboxBtn = createTransparentButton("Body Hitbox: OFF", Color3.fromRGB(38, 38, 38), panel2)
+S.bodyHitboxBtn = createTransparentButton("Body Hit Box: OFF", Color3.fromRGB(38, 38, 38), panel2)
 S.bodyHitboxBtn.BackgroundColor3 = Color3.fromRGB(38,38,38)
 S.bodyHitboxBtn.BackgroundTransparency = 0.35
 local removeAllBtn = createTransparentButton("Remove All Hitboxes", Color3.fromRGB(180, 50, 50), panel2)
@@ -3511,7 +3513,7 @@ removeAllBtn.MouseButton1Click:Connect(function()
     autoToggle.BackgroundTransparency = 0.35
 
     S.bodyHitboxEnabled = false
-    S.bodyHitboxBtn.Text = "Body Hitbox: OFF"
+    S.bodyHitboxBtn.Text = "Body Hit Box: OFF"
     S.bodyHitboxBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
     S.bodyHitboxBtn.BackgroundTransparency = 0.35
 
@@ -3527,7 +3529,7 @@ end)
 
 S.bodyHitboxBtn.MouseButton1Click:Connect(function()
     S.bodyHitboxEnabled = not S.bodyHitboxEnabled
-    S.bodyHitboxBtn.Text = S.bodyHitboxEnabled and "Body Hitbox: ON" or "Body Hitbox: OFF"
+    S.bodyHitboxBtn.Text = S.bodyHitboxEnabled and "Body Hit Box: ON" or "Body Hit Box: OFF"
 
     if S.bodyHitboxEnabled then
         S.bodyHitboxBtn.BackgroundColor3 = Color3.fromRGB(50, 200, 120)
