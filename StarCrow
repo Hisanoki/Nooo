@@ -103,7 +103,7 @@ local TEXT_ESP_COLOR = Color3.fromRGB(255, 255, 255)
 
 local INVIS_CONFIG = {
     TOGGLE_KEY = Enum.KeyCode.C,
-    SOUND_ID = "rbxassetid://1845556093",
+    SOUND_ID = "rbxassetid://140014208317483",
     INVISIBILITY_POSITION = Vector3.new(-25.95, 84, 3537.55),
     NOTIFICATION_DURATION = 3,
     BACKGROUND_COLOR = Color3.fromRGB(25, 25, 25),
@@ -112,18 +112,7 @@ local INVIS_CONFIG = {
     TEXT_COLOR = Color3.fromRGB(255, 255, 255),
 }
 
--- STATE
--- FLY SYSTEM
--- INF JUMP
 
--- NOCLIP
-
--- FETOOL STATE
--- Float button state
-
--- FLING STATE
-
--- ANTI FLING STATE
 getgenv().OldPos = nil
 getgenv().FPDH = workspace.FallenPartsDestroyHeight
 
