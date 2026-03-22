@@ -1026,8 +1026,8 @@ gui.Parent = LocalPlayer:WaitForChild("PlayerGui")
 
 -- Toggle button (middle-left, image, square rounded, white border, draggable)
 local toggleBtn = Instance.new("ImageButton")
-toggleBtn.Size = UDim2.new(0, 60, 0, 50)
-toggleBtn.Position = UDim2.new(0, 8, 0.5, -35)
+toggleBtn.Size = UDim2.new(0, 58, 0, 58)
+toggleBtn.Position = UDim2.new(0, 8, 0.5, -29)
 toggleBtn.AnchorPoint = Vector2.new(0, 0)
 toggleBtn.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
 toggleBtn.BackgroundTransparency = 0
