@@ -2458,23 +2458,23 @@ do -- AIMBOT SCOPE: isolated do..end tránh vượt 200 local
 
     -- Settings table (1 local thay vì nhiều local riêng lẻ)
     local AimSettings = {
-        AimEnabled          = false,
-        FOV                 = 110,
-        AimPart             = "Head",
-        WallCheck           = true,
-        HPCheck             = true,
-        ShowFOV             = false,
-        TeamCheck           = false,
-        FriendCheck         = true,
-        ForceFieldCheck     = true,
-        Smoothness          = 0.90,
-        FOVOffsetX          = 0,
-        FOVOffsetY          = -55,
-        Prediction          = true,
-        PredictionAmount    = 0.12,
-        AirPrediction       = true,
-        AirPredictionAmount = 0.16,
-    }
+    AimEnabled          = false,
+    FOV                 = 75,
+    AimPart             = "Head",
+    WallCheck           = false,
+    HPCheck             = true,
+    ShowFOV             = false,
+    TeamCheck           = false,
+    FriendCheck         = false,
+    ForceFieldCheck     = true,
+    Smoothness          = 0.90,
+    FOVOffsetX          = 0,
+    FOVOffsetY          = -55,
+    Prediction          = true,
+    PredictionAmount    = 0.12,
+    AirPrediction       = true,
+    AirPredictionAmount = 0.16,
+}
 
     local AIM_ON  = Color3.fromRGB(50, 200, 120)
     local AIM_OFF = Color3.fromRGB(38, 38, 38)
@@ -2527,13 +2527,13 @@ end
     local aimToggleBtn = createTransparentButton("Aimbot: OFF", AIM_OFF, panel9)
     aimStyle(aimToggleBtn, false)
 
-    local wallCheckBtn = createTransparentButton("Wall Check: ON", AIM_OFF, panel9)
+    local wallCheckBtn = createTransparentButton("Wall Check: OFF", AIM_OFF, panel9)
     aimStyle(wallCheckBtn, AimSettings.WallCheck)
 
     local teamCheckBtn = createTransparentButton("Team Check: OFF", AIM_OFF, panel9)
     aimStyle(teamCheckBtn, false)
 
-    local friendCheckBtn = createTransparentButton("Friend Check: ON", AIM_OFF, panel9)
+   local friendCheckBtn = createTransparentButton("Friend Check: OFF", AIM_OFF, panel9)
     aimStyle(friendCheckBtn, AimSettings.FriendCheck)
 
     local predictionBtn = createTransparentButton("Prediction: ON", AIM_OFF, panel9)
@@ -2685,16 +2685,38 @@ end
     
     -- ── Aim logic (hàm nội bộ, prefix _ tránh xung đột với scope ngoài) ────
     local function _aimAlive(char)
-        local h = char and char:FindFirstChildOfClass("Humanoid")
-        return h and h.Health > 0
+    local h = char and char:FindFirstChildOfClass("Humanoid")
+    return h and h.Health > 0
+end
+
+local AimFriendCache = {}
+
+Players.PlayerRemoving:Connect(function(player)
+    AimFriendCache[player.UserId] = nil
+end)
+
+local function _aimFriend(player)
+    if not AimSettings.FriendCheck then return false end
+
+    local cached = AimFriendCache[player.UserId]
+    if cached ~= nil then
+        return cached
     end
 
-    local function _aimFriend(player)
-        if not AimSettings.FriendCheck then return false end
-        local ok, res = pcall(function() return LocalPlayer:IsFriendsWith(player.UserId) end)
-        if ok and res then return true end
-        return player:GetAttribute("Friendly") == true
+    local isFriend = false
+    local ok, res = pcall(function()
+        return LocalPlayer:IsFriendsWith(player.UserId)
+    end)
+
+    if ok and res then
+        isFriend = true
+    elseif player:GetAttribute("Friendly") == true then
+        isFriend = true
     end
+
+    AimFriendCache[player.UserId] = isFriend
+    return isFriend
+end
 
     local function _aimHasFF(char)
         if not AimSettings.ForceFieldCheck then return false end
@@ -2763,19 +2785,32 @@ end
         )
     end
 
-    -- RenderStepped: FOV circle update + aim
-    RunService.RenderStepped:Connect(function()
-        local vs = Camera.ViewportSize
-        FOVCircleAim.Position = UDim2.new(
-            0, vs.X / 2 + AimSettings.FOVOffsetX,
-            0, vs.Y / 2 + AimSettings.FOVOffsetY
-        )
-        FOVCircleAim.Size    = UDim2.new(0, AimSettings.FOV * 2, 0, AimSettings.FOV * 2)
-        FOVCircleAim.Visible = AimSettings.ShowFOV
+ local currentAimTarget = nil
+local lastAimScan = 0
+local AIM_SCAN_INTERVAL = 0.05 -- 20 lần/giây thay vì mỗi frame
 
-        if not AimSettings.AimEnabled then return end
-        _aimAt(_getClosest())
-    end)
+-- RenderStepped: chỉ update FOV + aim vào target đã cache
+RunService.RenderStepped:Connect(function()
+    local vs = Camera.ViewportSize
+    FOVCircleAim.Position = UDim2.new(
+        0, vs.X / 2 + AimSettings.FOVOffsetX,
+        0, vs.Y / 2 + AimSettings.FOVOffsetY
+    )
+    FOVCircleAim.Size    = UDim2.new(0, AimSettings.FOV * 2, 0, AimSettings.FOV * 2)
+    FOVCircleAim.Visible = AimSettings.ShowFOV
+
+    if not AimSettings.AimEnabled then
+        currentAimTarget = nil
+        return
+    end
+
+    if tick() - lastAimScan >= AIM_SCAN_INTERVAL then
+        lastAimScan = tick()
+        currentAimTarget = _getClosest()
+    end
+
+    _aimAt(currentAimTarget)
+end)   
 end -- END AIMBOT SCOPE
 
 -- ─── TAB SWITCH ───────────────────────────────────────────────────────────────
