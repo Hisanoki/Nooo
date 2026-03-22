@@ -103,7 +103,7 @@ local TEXT_ESP_COLOR = Color3.fromRGB(255, 255, 255)
 
 local INVIS_CONFIG = {
     TOGGLE_KEY = Enum.KeyCode.C,
-    SOUND_ID = "rbxassetid://140014208317483",
+    SOUND_ID = "rbxassetid://1845556093",
     INVISIBILITY_POSITION = Vector3.new(-25.95, 84, 3537.55),
     NOTIFICATION_DURATION = 3,
     BACKGROUND_COLOR = Color3.fromRGB(25, 25, 25),
@@ -111,7 +111,6 @@ local INVIS_CONFIG = {
     SUCCESS_COLOR = Color3.fromRGB(46, 204, 113),
     TEXT_COLOR = Color3.fromRGB(255, 255, 255),
 }
-
 
 getgenv().OldPos = nil
 getgenv().FPDH = workspace.FallenPartsDestroyHeight
@@ -179,7 +178,7 @@ local function toggleInvisibility()
         LocalPlayer.Character:MoveTo(INVIS_CONFIG.INVISIBILITY_POSITION)
         task.wait(0.15)
 
-        local seat = Instance.new("Part")
+        local seat = Instance.new("Seat")
         seat.Name = "invischair"
         seat.Anchored = false
         seat.CanCollide = false
