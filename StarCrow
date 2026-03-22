@@ -16,9 +16,9 @@ local S = {
     infJumpEnabled=false, infJumpConnection=nil,
     autoTPEnabled=false, autoTPConnection=nil,
     noclipEnabled=false, noclipLoop=nil,
-    autoHitboxEnabled=false, nameESPEnabled=false, boxESPEnabled=false, espNameAllState=false,
+    autoHitboxEnabled=false, bodyHitboxEnabled=false, nameESPEnabled=false, boxESPEnabled=false, espNameAllState=false,
     selectedPlayers={}, selectedTPPlayers={}, boxESPObjects={}, nameESPObjects={},
-    processedChars={}, playerConnections={}, manualPositionCFrame=nil,
+    processedChars={}, processedBodyChars={}, playerConnections={}, manualPositionCFrame=nil,
     isInvisible=false, invisButton=nil, invisSound=nil,
     auraListening=false,
     auraFloatEnabled=false, dropFloatEnabled=false,
@@ -33,7 +33,7 @@ local S = {
     feRefreshBusy=false, lastFeToolSignature="", feAutoScanRunning=false,
     useCooling=false, useFloatEnabled=false, useFloatBtn=nil, feUseInput=nil,
     -- Cross-ref UI (assigned later during panel creation)
-    statusLabel=nil, sizeInput=nil,
+    statusLabel=nil, sizeInput=nil, bodyHitboxBtn=nil,
     flyToggle=nil, loopspeedInput=nil, loopspeedToggle=nil,
     walkFlingBtn=nil, flingStatusLabel=nil, flingPlayerList=nil,
     autoTPBtn=nil, tpPlayerList=nil, playerList=nil,
@@ -190,7 +190,7 @@ local function toggleInvisibility()
         LocalPlayer.Character:MoveTo(INVIS_CONFIG.INVISIBILITY_POSITION)
         task.wait(0.15)
 
-        local seat = Instance.new("Seat")
+        local seat = Instance.new("Part")
         seat.Name = "invischair"
         seat.Anchored = false
         seat.CanCollide = false
@@ -220,6 +220,8 @@ local function toggleInvisibility()
 
         if LocalPlayer.Character then
             setCharacterTransparency(LocalPlayer.Character, 0)
+            local hrp = getHumanoidRootPart()
+            if hrp then hrp.Transparency = 1 end
         end
 
         if S.invisButton then
@@ -311,7 +313,6 @@ local function removeHeadHitbox(character)
     head.Transparency = 0
     head.CanCollide = true
     head.Material = Enum.Material.Plastic
-    head.Massless = false
 end
 
 local function applyHeadHitbox(character, size)
@@ -352,7 +353,6 @@ local function applyHeadHitbox(character, size)
         existingMesh:Destroy()
     end
 
-    head.Massless = true
     head.Size = Vector3.new(size, size, size)
     head.CanCollide = false
     head.Transparency = 0.5
@@ -360,6 +360,71 @@ local function applyHeadHitbox(character, size)
 
     addBoxESP(character, ESP_COLOR, size)
     S.processedChars[character] = true
+end
+
+-- ─── BODY HITBOX (HRP) ────────────────────────────────────────────────────────
+
+local function removeBodyHitbox(character)
+    if not character then return end
+    S.processedBodyChars[character] = nil
+    local hrp = character:FindFirstChild("HumanoidRootPart")
+    if not hrp then return end
+    local origSize = hrp:FindFirstChild("OrigBodySize")
+    if origSize then
+        hrp.Size = origSize.Value
+        origSize:Destroy()
+    end
+    local bodyBox = hrp:FindFirstChild("BodyBoxESP")
+    if bodyBox then bodyBox:Destroy() end
+    hrp.Transparency = 1
+    hrp.CanCollide = false
+    hrp.Material = Enum.Material.Plastic
+end
+
+local function applyBodyHitbox(character, size)
+    if not character then return end
+    if not isAlive(character) then return end
+    if S.processedBodyChars[character] then
+        local hrp = character:FindFirstChild("HumanoidRootPart")
+        if hrp and not hrp:FindFirstChild("BodyBoxESP") then
+            local box = Instance.new("BoxHandleAdornment")
+            box.Name = "BodyBoxESP"
+            box.Adornee = hrp
+            box.Size = Vector3.new(size, size, size)
+            box.Color3 = ESP_COLOR
+            box.Transparency = ESP_TRANSPARENCY
+            box.ZIndex = 10
+            box.AlwaysOnTop = true
+            box.Parent = hrp
+        end
+        return
+    end
+    local hrp = character:FindFirstChild("HumanoidRootPart")
+    if not hrp then return end
+
+    if not hrp:FindFirstChild("OrigBodySize") then
+        local sv = Instance.new("Vector3Value")
+        sv.Name = "OrigBodySize"
+        sv.Value = hrp.Size
+        sv.Parent = hrp
+    end
+
+    hrp.Size = Vector3.new(size, size, size)
+    hrp.CanCollide = false
+    hrp.Transparency = 0.5
+    hrp.Material = Enum.Material.ForceField
+
+    local box = Instance.new("BoxHandleAdornment")
+    box.Name = "BodyBoxESP"
+    box.Adornee = hrp
+    box.Size = Vector3.new(size, size, size)
+    box.Color3 = ESP_COLOR
+    box.Transparency = ESP_TRANSPARENCY
+    box.ZIndex = 10
+    box.AlwaysOnTop = true
+    box.Parent = hrp
+
+    S.processedBodyChars[character] = true
 end
 
 -- ─── NAME ESP ─────────────────────────────────────────────────────────────────
@@ -477,6 +542,9 @@ local function onCharacterReady(player, character)
         if S.autoHitboxEnabled and isAlive(character) then
             applyHeadHitbox(character, size)
         end
+        if S.bodyHitboxEnabled and isAlive(character) then
+            applyBodyHitbox(character, size)
+        end
         if S.boxESPEnabled and isAlive(character) then
             addBoxESP(character, getTeamColor(player), size)
         end
@@ -492,6 +560,7 @@ local function onCharacterReady(player, character)
 
     local diedConn = humanoid.Died:Connect(function()
         removeHeadHitbox(character)
+        removeBodyHitbox(character)
         removeBoxESP(character)
         removeNameESP(player)
         removeChams(character)
@@ -500,6 +569,7 @@ local function onCharacterReady(player, character)
     local ancestryConn = character.AncestryChanged:Connect(function(_, parent)
         if not parent then
             removeHeadHitbox(character)
+            removeBodyHitbox(character)
             removeBoxESP(character)
             removeChams(character)
         end
@@ -536,6 +606,7 @@ local function unregisterPlayer(player)
     cleanupPlayerConnections(player)
     if player.Character then
         removeHeadHitbox(player.Character)
+        removeBodyHitbox(player.Character)
         removeBoxESP(player.Character)
         removeChams(player.Character)
     end
@@ -1187,6 +1258,9 @@ S.sizeInput = createTransparentInput("Size (e.g. 15)", tostring(DEFAULT_HITBOX_S
 local autoToggle = createTransparentButton("Head Hit Box: OFF", Color3.fromRGB(38, 38, 38), panel2)
 autoToggle.BackgroundColor3 = Color3.fromRGB(38,38,38)
 autoToggle.BackgroundTransparency = 0.35
+S.bodyHitboxBtn = createTransparentButton("Body Hitbox: OFF", Color3.fromRGB(38, 38, 38), panel2)
+S.bodyHitboxBtn.BackgroundColor3 = Color3.fromRGB(38,38,38)
+S.bodyHitboxBtn.BackgroundTransparency = 0.35
 local removeAllBtn = createTransparentButton("Remove All Hitboxes", Color3.fromRGB(180, 50, 50), panel2)
 removeAllBtn.BackgroundColor3 = Color3.fromRGB(38,38,38)
 removeAllBtn.BackgroundTransparency = 0.35
@@ -3400,6 +3474,9 @@ closeButton.MouseButton1Click:Connect(function()
 end)
 
 autoToggle.MouseButton1Click:Connect(function()
+    -- Bị chặn khi Body Hitbox đang bật
+    if S.bodyHitboxEnabled then return end
+
     S.autoHitboxEnabled = not S.autoHitboxEnabled
     autoToggle.Text = S.autoHitboxEnabled and "Head Hit Box: ON" or "Head Hit Box: OFF"
 
@@ -3435,6 +3512,20 @@ removeAllBtn.MouseButton1Click:Connect(function()
     for char, _ in pairs(S.processedChars) do
         removeHeadHitbox(char)
     end
+    for char, _ in pairs(S.processedBodyChars) do
+        removeBodyHitbox(char)
+    end
+
+    -- Reset cả hai nút về OFF
+    S.autoHitboxEnabled = false
+    autoToggle.Text = "Head Hit Box: OFF"
+    autoToggle.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
+    autoToggle.BackgroundTransparency = 0.35
+
+    S.bodyHitboxEnabled = false
+    S.bodyHitboxBtn.Text = "Body Hitbox: OFF"
+    S.bodyHitboxBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
+    S.bodyHitboxBtn.BackgroundTransparency = 0.35
 
     S.statusLabel.Text = "Processing: 0 Players"
 
@@ -3444,6 +3535,43 @@ removeAllBtn.MouseButton1Click:Connect(function()
             removeAllBtn.BackgroundTransparency = 0.35
         end
     end)
+end)
+
+S.bodyHitboxBtn.MouseButton1Click:Connect(function()
+    S.bodyHitboxEnabled = not S.bodyHitboxEnabled
+    S.bodyHitboxBtn.Text = S.bodyHitboxEnabled and "Body Hitbox: ON" or "Body Hitbox: OFF"
+
+    if S.bodyHitboxEnabled then
+        S.bodyHitboxBtn.BackgroundColor3 = Color3.fromRGB(50, 200, 120)
+        S.bodyHitboxBtn.BackgroundTransparency = 0
+
+        -- Tắt + khoá Head Hitbox khi Body bật
+        if S.autoHitboxEnabled then
+            S.autoHitboxEnabled = false
+            autoToggle.Text = "Head Hit Box: OFF"
+            autoToggle.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
+            autoToggle.BackgroundTransparency = 0.35
+            for char, _ in pairs(S.processedChars) do
+                removeHeadHitbox(char)
+            end
+        end
+
+        local size = tonumber(S.sizeInput.Text) or DEFAULT_HITBOX_SIZE
+        for _, player in pairs(Players:GetPlayers()) do
+            if player ~= LocalPlayer and player.Character and isAlive(player.Character) then
+                applyBodyHitbox(player.Character, size)
+            end
+        end
+    else
+        S.bodyHitboxBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
+        S.bodyHitboxBtn.BackgroundTransparency = 0.35
+
+        for char, _ in pairs(S.processedBodyChars) do
+            removeBodyHitbox(char)
+        end
+    end
+
+    S.statusLabel.Text = "Processing: " .. tableCount(S.processedChars) .. " Players"
 end)
 
 autoNameESP.MouseButton1Click:Connect(function()
@@ -4022,21 +4150,30 @@ task.spawn(function()
     end
 end)
 
-task.spawn(function()
-    while true do
-        task.wait(2)
-        if S.autoHitboxEnabled then
-            local size = tonumber(S.sizeInput.Text) or DEFAULT_HITBOX_SIZE
-            for _, player in pairs(Players:GetPlayers()) do
-                if player ~= LocalPlayer then
-                    local char = player.Character
-                    if char and isAlive(char) then
-                        if not S.playerConnections[player] then registerPlayer(player) end
-                        applyHeadHitbox(char, size)
-                    end
+RunService.RenderStepped:Connect(function()
+    if S.autoHitboxEnabled then
+        local size = tonumber(S.sizeInput.Text) or DEFAULT_HITBOX_SIZE
+        for _, player in pairs(Players:GetPlayers()) do
+            if player ~= LocalPlayer then
+                local char = player.Character
+                if char and isAlive(char) then
+                    if not S.playerConnections[player] then registerPlayer(player) end
+                    applyHeadHitbox(char, size)
                 end
             end
-            S.statusLabel.Text = "Processing: " .. tableCount(S.processedChars) .. " Players"
+        end
+        S.statusLabel.Text = "Processing: " .. tableCount(S.processedChars) .. " Players"
+    end
+    if S.bodyHitboxEnabled then
+        local size = tonumber(S.sizeInput.Text) or DEFAULT_HITBOX_SIZE
+        for _, player in pairs(Players:GetPlayers()) do
+            if player ~= LocalPlayer then
+                local char = player.Character
+                if char and isAlive(char) then
+                    if not S.playerConnections[player] then registerPlayer(player) end
+                    applyBodyHitbox(char, size)
+                end
+            end
         end
     end
 end)
