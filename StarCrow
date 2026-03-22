@@ -1007,11 +1007,21 @@ local gui = Instance.new("ScreenGui")
 gui.Name = "Gui"
 gui.ResetOnSpawn = false
 gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+gui.DisplayOrder = 999999
+gui.IgnoreGuiInset = true
+
 if LocalPlayer:FindFirstChild("PlayerGui") then
     local old = LocalPlayer.PlayerGui:FindFirstChild("Mobile_ESP_GUI_Fixed")
     if old then old:Destroy() end
 end
-gui.Parent = LocalPlayer:WaitForChild("PlayerGui")
+
+pcall(function()
+    gui.Parent = game:GetService("CoreGui")
+end)
+
+if not gui.Parent then
+    gui.Parent = LocalPlayer:WaitForChild("PlayerGui")
+end
 
 -- Toggle button (middle-left, image, square rounded, white border, draggable)
 local toggleBtn = Instance.new("ImageButton")
@@ -1552,6 +1562,9 @@ noFogBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
 local instantBuyBtn = createTransparentButton("Instant Interact: OFF", Color3.fromRGB(38, 38, 38), panel6)
 instantBuyBtn.BackgroundTransparency = 0.35
 instantBuyBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
+local unlockCameraBtn = createTransparentButton("Unlock Camera", Color3.fromRGB(38, 38, 38), panel6)
+unlockCameraBtn.BackgroundTransparency = 0.35
+unlockCameraBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
 antiAfkBtn.MouseButton1Click:Connect(function()
     S.antiAfkEnabled = not S.antiAfkEnabled
     antiAfkBtn.Text = "Anti AFK: "..(S.antiAfkEnabled and "ON" or "OFF")
@@ -3383,6 +3396,27 @@ do
         setInstantBuyEnabled(not instantBuyEnabled)
     end)
 end
+unlockCameraBtn.MouseButton1Click:Connect(function()
+    flashButton(unlockCameraBtn)
+
+    pcall(function()
+        LocalPlayer.CameraMode = Enum.CameraMode.Classic
+    end)
+
+    pcall(function()
+        LocalPlayer.CameraMinZoomDistance = 0.5
+        LocalPlayer.CameraMaxZoomDistance = 128
+    end)
+
+    local cam = workspace.CurrentCamera
+    if cam then
+        pcall(function()
+            cam.CameraType = Enum.CameraType.Custom
+        end)
+    end
+
+    createNotification("Unlock Camera", "Camera Unlocked")
+end)
 -- ─── LOOPSPEED ────────────────────────────────────────────────────────────────
 
 do
