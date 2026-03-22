@@ -707,7 +707,8 @@ local function startFly()
             move -= Vector3.new(0, 1, 0)
         end
         if move.Magnitude > 0 then
-            bv.Velocity = move.Unit * (S.flySpeed * 60)
+         bv.Velocity = move.Unit * (S.flySpeed * 60)   
+bv.Velocity = move.Unit * (S.flySpeed * 60)
         else
             bv.Velocity = Vector3.new()
         end
@@ -3669,6 +3670,12 @@ noclipToggle.BackgroundTransparency = S.noclipEnabled and 0 or 0.35
         startNoclip()
     else
         stopNoclip()
+    end
+end)
+flySpeedInput:GetPropertyChangedSignal("Text"):Connect(function()
+    local n = tonumber(flySpeedInput.Text)
+    if n then
+        S.flySpeed = n
     end
 end)
 
