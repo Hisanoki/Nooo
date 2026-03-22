@@ -16,7 +16,8 @@ local S = {
     infJumpEnabled=false, infJumpConnection=nil,
     autoTPEnabled=false, autoTPConnection=nil,
     noclipEnabled=false, noclipLoop=nil,
-    autoHitboxEnabled=false, nameESPEnabled=false, boxESPEnabled=false, espNameAllState=false,
+    autoHitboxEnabled=false, autoBodyHitboxEnabled=false,
+    nameESPEnabled=false, boxESPEnabled=false, espNameAllState=false,
     selectedPlayers={}, selectedTPPlayers={}, boxESPObjects={}, nameESPObjects={},
     processedChars={}, playerConnections={}, manualPositionCFrame=nil,
     isInvisible=false, invisButton=nil, invisSound=nil,
@@ -273,6 +274,25 @@ local function removeChams(character)
     end
 end
 
+local function removeOutlineChams(character)
+    if not character then return end
+    local h = character:FindFirstChild("StarCrowOutline")
+    if h then h:Destroy() end
+end
+
+local function addOutlineChams(character)
+    if not character or not isAlive(character) then return end
+    removeOutlineChams(character)
+    local h = Instance.new("Highlight")
+    h.Name = "StarCrowOutline"
+    h.Adornee = character
+    h.FillTransparency = 1
+    h.OutlineColor = Color3.fromRGB(255, 80, 80)
+    h.OutlineTransparency = 0
+    h.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+    h.Parent = character
+end
+
 local function addChams(character, color)
     if not character or not isAlive(character) then return end
     removeChams(character)
@@ -292,7 +312,7 @@ end
 local function removeHeadHitbox(character)
     if not character then return end
     S.processedChars[character] = nil
-    removeBoxESP(character)
+    removeOutlineChams(character)
     local head = character:FindFirstChild("Head")
     if not head then return end
     local origSize = head:FindFirstChild("OriginalSize")
@@ -318,18 +338,6 @@ local function applyHeadHitbox(character, size)
     if not character then return end
     if not isAlive(character) then return end
     if S.processedChars[character] then
-        local head = character:FindFirstChild("Head")
-        if head then
-            local found = false
-            for _, c in head:GetChildren() do
-                if c:IsA("BoxHandleAdornment") and c.Name == "BoxChamESP" then
-                    found = true; break
-                end
-            end
-            if not found then
-                addBoxESP(character, ESP_COLOR, size)
-            end
-        end
         return
     end
 
@@ -358,8 +366,36 @@ local function applyHeadHitbox(character, size)
     head.Transparency = 0.5
     head.Material = Enum.Material.ForceField
 
-    addBoxESP(character, ESP_COLOR, size)
+    addOutlineChams(character)
     S.processedChars[character] = true
+end
+
+-- ─── BODY HITBOX (HRP direct resize, loop approach) ──────────────────────────
+
+local function applyBodyHitbox(character, size)
+    if not character then return end
+    local hrp = character:FindFirstChild("HumanoidRootPart")
+    if not hrp then return end
+    pcall(function()
+        hrp.Size = Vector3.new(size, size, size)
+        hrp.CanCollide = false
+        hrp.Transparency = 0.5
+        hrp.Material = Enum.Material.ForceField
+    end)
+    addOutlineChams(character)
+end
+
+local function resetBodyHitbox(character)
+    if not character then return end
+    local hrp = character:FindFirstChild("HumanoidRootPart")
+    if not hrp then return end
+    pcall(function()
+        hrp.Size = Vector3.new(2, 2, 1)
+        hrp.Transparency = 1
+        hrp.CanCollide = false
+        hrp.Material = Enum.Material.Plastic
+    end)
+    removeOutlineChams(character)
 end
 
 -- ─── NAME ESP ─────────────────────────────────────────────────────────────────
@@ -492,6 +528,8 @@ local function onCharacterReady(player, character)
 
     local diedConn = humanoid.Died:Connect(function()
         removeHeadHitbox(character)
+        removeOutlineChams(character)
+        resetBodyHitbox(character)
         removeBoxESP(character)
         removeNameESP(player)
         removeChams(character)
@@ -500,6 +538,8 @@ local function onCharacterReady(player, character)
     local ancestryConn = character.AncestryChanged:Connect(function(_, parent)
         if not parent then
             removeHeadHitbox(character)
+            removeOutlineChams(character)
+            resetBodyHitbox(character)
             removeBoxESP(character)
             removeChams(character)
         end
@@ -1198,6 +1238,9 @@ S.sizeInput = createTransparentInput("Size (e.g. 15)", tostring(DEFAULT_HITBOX_S
 local autoToggle = createTransparentButton("Head Hit Box: OFF", Color3.fromRGB(38, 38, 38), panel2)
 autoToggle.BackgroundColor3 = Color3.fromRGB(38,38,38)
 autoToggle.BackgroundTransparency = 0.35
+local bodyToggle = createTransparentButton("Body Hit Box: OFF", Color3.fromRGB(38, 38, 38), panel2)
+bodyToggle.BackgroundColor3 = Color3.fromRGB(38,38,38)
+bodyToggle.BackgroundTransparency = 0.35
 local removeAllBtn = createTransparentButton("Remove All Hitboxes", Color3.fromRGB(180, 50, 50), panel2)
 removeAllBtn.BackgroundColor3 = Color3.fromRGB(38,38,38)
 removeAllBtn.BackgroundTransparency = 0.35
@@ -3411,6 +3454,9 @@ closeButton.MouseButton1Click:Connect(function()
 end)
 
 autoToggle.MouseButton1Click:Connect(function()
+    -- Mutual exclusion: không bật nếu body đang ON
+    if not S.autoHitboxEnabled and S.autoBodyHitboxEnabled then return end
+
     S.autoHitboxEnabled = not S.autoHitboxEnabled
     autoToggle.Text = S.autoHitboxEnabled and "Head Hit Box: ON" or "Head Hit Box: OFF"
 
@@ -3437,6 +3483,28 @@ autoToggle.MouseButton1Click:Connect(function()
     end
 
     S.statusLabel.Text = "Processing: " .. tableCount(S.processedChars) .. " Players"
+end)
+
+bodyToggle.MouseButton1Click:Connect(function()
+    -- Mutual exclusion: không bật nếu head đang ON
+    if not S.autoBodyHitboxEnabled and S.autoHitboxEnabled then return end
+
+    S.autoBodyHitboxEnabled = not S.autoBodyHitboxEnabled
+    bodyToggle.Text = S.autoBodyHitboxEnabled and "Body Hit Box: ON" or "Body Hit Box: OFF"
+
+    if S.autoBodyHitboxEnabled then
+        bodyToggle.BackgroundColor3 = Color3.fromRGB(50, 200, 120)
+        bodyToggle.BackgroundTransparency = 0
+    else
+        bodyToggle.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
+        bodyToggle.BackgroundTransparency = 0.35
+        -- Reset tất cả về default khi tắt
+        for _, player in pairs(Players:GetPlayers()) do
+            if player ~= LocalPlayer and player.Character then
+                resetBodyHitbox(player.Character)
+            end
+        end
+    end
 end)
 
 removeAllBtn.MouseButton1Click:Connect(function()
@@ -4058,6 +4126,20 @@ task.spawn(function()
                 end
             end
             S.statusLabel.Text = "Processing: " .. tableCount(S.processedChars) .. " Players"
+        end
+    end
+end)
+
+task.spawn(function()
+    while true do
+        task.wait(1.1)
+        if S.autoBodyHitboxEnabled then
+            local size = tonumber(S.sizeInput.Text) or DEFAULT_HITBOX_SIZE
+            for _, player in pairs(Players:GetPlayers()) do
+                if player ~= LocalPlayer and player.Character and isAlive(player.Character) then
+                    applyBodyHitbox(player.Character, size)
+                end
+            end
         end
     end
 end)
