@@ -222,6 +222,8 @@ local function toggleInvisibility()
 
         if LocalPlayer.Character then
             setCharacterTransparency(LocalPlayer.Character, 0)
+            local hrp = LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+            if hrp then hrp.Transparency = 1 end
         end
 
         if S.invisButton then
