@@ -32,6 +32,7 @@ local S = {
     antiFlingEnabled=false, antiFlingConnection=nil, antiFlingAutoEnabledByWalkFling=false,
     loopBringActive=false, loopBringStates={},
     antiAfkEnabled=false,
+    autoClickEnabled=false, autoClickConnection=nil,
     feRefreshBusy=false, lastFeToolSignature="", feAutoScanRunning=false,
     useCooling=false, useFloatEnabled=false, useFloatBtn=nil, feUseInput=nil,
     -- Cross-ref UI (assigned later during panel creation)
@@ -1573,6 +1574,99 @@ instantBuyBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
 local unlockCameraBtn = createTransparentButton("Unlock Camera", Color3.fromRGB(38, 38, 38), panel6)
 unlockCameraBtn.BackgroundTransparency = 0.35
 unlockCameraBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
+local autoClickBtn = createTransparentButton("Auto Click: OFF", Color3.fromRGB(38, 38, 38), panel6)
+autoClickBtn.BackgroundTransparency = 0.35
+autoClickBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
+
+local AUTOCLICK_DELAY_PC = 0.15
+local AUTOCLICK_DELAY_MOBILE = 0.08
+
+local function stopAutoClick()
+    S.autoClickEnabled = false
+    S.autoClickConnection = nil
+end
+
+local function doGlobalClick()
+    local vim = game:GetService("VirtualInputManager")
+    local cam = workspace.CurrentCamera
+    if not cam then return end
+
+    local vp = cam.ViewportSize
+
+    -- lệch xuống góc phải để tránh đè UI
+    local x = math.floor(vp.X * 0.78)
+    local y = math.floor(vp.Y * 0.82)
+
+    pcall(function()
+        vim:SendMouseButtonEvent(x, y, 0, true, game, 0)
+        task.wait()
+        vim:SendMouseButtonEvent(x, y, 0, false, game, 0)
+    end)
+end
+
+local function activateHeldTool()
+    local char = LocalPlayer.Character
+    if not char then return false end
+
+    local tool = char:FindFirstChildWhichIsA("Tool")
+    if not tool then return false end
+
+    pcall(function()
+        tool:Activate()
+    end)
+
+    return true
+end
+
+local function startAutoClick()
+    stopAutoClick()
+    S.autoClickEnabled = true
+
+    local isMobile = UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled
+
+    S.autoClickConnection = task.spawn(function()
+        while S.autoClickEnabled do
+            -- nếu menu đang mở thì pause để khỏi tự bấm vào UI
+            if mainFrame and mainFrame.Visible then
+                task.wait(0.1)
+            else
+                if isMobile then
+                    -- MOBILE: ưu tiên activate tool để không khóa joystick/camera
+                    local usedTool = activateHeldTool()
+
+                    -- nếu không cầm tool thì KHÔNG click giả trên mobile
+                    -- để tránh khóa điều khiển
+                    if not usedTool then
+                        task.wait(0.15)
+                    else
+                        task.wait(AUTOCLICK_DELAY_MOBILE)
+                    end
+                else
+                    -- PC: vẫn dùng global click như cũ
+                    doGlobalClick()
+                    task.wait(AUTOCLICK_DELAY_PC)
+                end
+            end
+        end
+    end)
+end
+
+autoClickBtn.MouseButton1Click:Connect(function()
+    if S.autoClickEnabled then
+        stopAutoClick()
+        autoClickBtn.Text = "Auto Click: OFF"
+        autoClickBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
+        autoClickBtn.BackgroundTransparency = 0.35
+        createNotification("Auto Click", "OFF")
+        return
+    end
+
+    startAutoClick()
+    autoClickBtn.Text = "Auto Click: ON"
+    autoClickBtn.BackgroundColor3 = Color3.fromRGB(50, 200, 120)
+    autoClickBtn.BackgroundTransparency = 0
+    createNotification("Auto Click", UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled and "ON (Mobile Tool Mode)" or "ON")
+end)
 antiAfkBtn.MouseButton1Click:Connect(function()
     S.antiAfkEnabled = not S.antiAfkEnabled
     antiAfkBtn.Text = "Anti AFK: "..(S.antiAfkEnabled and "ON" or "OFF")
