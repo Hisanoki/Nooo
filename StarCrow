@@ -2,7 +2,7 @@
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 local Camera = workspace.CurrentCamera
-
+local mouse = LocalPlayer:GetMouse()
 local RunService = game:GetService("RunService")
 local StarterGui = game:GetService("StarterGui")
 local UserInputService = game:GetService("UserInputService")
@@ -15,6 +15,7 @@ local S = {
     flyEnabled=false, flySpeed=2, flyConnection=nil, noclipConnection=nil,
     infJumpEnabled=false, infJumpConnection=nil,
     autoTPEnabled=false, autoTPConnection=nil,
+    ctrlClickTPEnabled=false,
     noclipEnabled=false, noclipLoop=nil,
     autoHitboxEnabled=false, autoBodyHitboxEnabled=false,
     nameESPEnabled=false, boxESPEnabled=false, espNameAllState=false,
@@ -1477,6 +1478,9 @@ local tpToolBtn = createTransparentButton("TP Tool", Color3.fromRGB(38, 38, 38),
 tpToolBtn.BackgroundTransparency = 0.35
 tpToolBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
 
+local ctrlClickTPBtn = createTransparentButton("Ctrl Click TP: OFF", Color3.fromRGB(38, 38, 38), panel4)
+ctrlClickTPBtn.BackgroundTransparency = 0.35
+ctrlClickTPBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
 -- ─── PANEL 5: TROLL (FLING) ───────────────────────────────────────────────────
 
 do
@@ -4010,8 +4014,7 @@ flashButton(tpToolBtn)
 tpToolBtn.BackgroundColor3 = Color3.fromRGB(50, 200, 120)
 tpToolBtn.BackgroundTransparency = 0
     local player = LocalPlayer
-    local mouse = player:GetMouse()
-
+    
     if player.Backpack:FindFirstChild("Click TP") then
         createNotification("Teleport Tool", "Tool already in backpack")
         return
@@ -4039,18 +4042,40 @@ task.delay(0.2, function()
         tpToolBtn.BackgroundTransparency = 0.35
     end
 end)
+ctrlClickTPBtn.MouseButton1Click:Connect(function()
+    S.ctrlClickTPEnabled = not S.ctrlClickTPEnabled
 
+    if S.ctrlClickTPEnabled then
+        ctrlClickTPBtn.Text = "Ctrl Click TP: ON"
+        ctrlClickTPBtn.BackgroundColor3 = Color3.fromRGB(50, 200, 120)
+        ctrlClickTPBtn.BackgroundTransparency = 0
+        createNotification("Ctrl Click TP", "ON")
+    else
+        ctrlClickTPBtn.Text = "Ctrl Click TP: OFF"
+        ctrlClickTPBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
+        ctrlClickTPBtn.BackgroundTransparency = 0.35
+        createNotification("Ctrl Click TP", "OFF")
+    end
+end)
 
 -- ─── INPUT EVENTS ─────────────────────────────────────────────────────────────
-
 UserInputService.InputBegan:Connect(function(input, gameProcessed)
     if input.UserInputType ~= Enum.UserInputType.Keyboard then
         return
     end
 
     
+    if input.KeyCode == Enum.KeyCode.RightControl then
+        -- nếu đang gõ chat / textbox thì không mở menu
+        if UserInputService:GetFocusedTextBox() then
+            return
+        end
 
-    -- Các phím khác mới bị chặn nếu UI đang ăn input
+        toggleMenu()
+        return
+    end
+
+    -- Các phím khác mới bị chặn nếu UI/game đang ăn input
     if gameProcessed then
         return
     end
@@ -4058,12 +4083,36 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
     if input.KeyCode == INVIS_CONFIG.TOGGLE_KEY then
         toggleInvisibility()
     end
-
-    if input.KeyCode == Enum.KeyCode.LeftControl then
-        toggleMenu()
-    end
 end)
 
+UserInputService.InputBegan:Connect(function(input, gameProcessed)
+    if not S.ctrlClickTPEnabled then
+        return
+    end
+
+    if gameProcessed then
+        return
+    end
+
+    if input.UserInputType ~= Enum.UserInputType.MouseButton1 then
+        return
+    end
+
+    if not (UserInputService:IsKeyDown(Enum.KeyCode.LeftControl) or UserInputService:IsKeyDown(Enum.KeyCode.RightControl)) then
+        return
+    end
+
+    local char = LocalPlayer.Character
+    if not char then return end
+
+    local hrp = char:FindFirstChild("HumanoidRootPart")
+    if not hrp then return end
+
+    local hit = mouse.Hit
+    if not hit then return end
+
+    hrp.CFrame = hit + Vector3.new(0, 5, 0)
+end)
 -- ─── LOCAL PLAYER EVENTS ──────────────────────────────────────────────────────
 
 LocalPlayer.CharacterAdded:Connect(function(character)
