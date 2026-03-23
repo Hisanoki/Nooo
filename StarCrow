@@ -509,21 +509,24 @@ local function onCharacterReady(player, character)
     end
     if not humanoid then return end
 
-    local function applyAll()
-        local size = tonumber(S.sizeInput and S.sizeInput.Text) or DEFAULT_HITBOX_SIZE
-        if S.autoHitboxEnabled and isAlive(character) then
-            applyHeadHitbox(character, size)
-        end
-        if S.boxESPEnabled and isAlive(character) then
-            addBoxESP(character, getTeamColor(player), size)
-        end
-        if (S.espNameAllState or (S.nameESPEnabled and S.selectedPlayers[player])) and isAlive(character) then
-            createNameESP(player, character)
-        end
-        if S.chamsEnabled and isAlive(character) then
-            addChams(character, getTeamColor(player))
-        end
+     local function applyAll()
+    local size = tonumber(S.sizeInput and S.sizeInput.Text) or DEFAULT_HITBOX_SIZE
+    if S.autoHitboxEnabled and isAlive(character) then
+        applyHeadHitbox(character, size)
     end
+    if S.autoBodyHitboxEnabled and isAlive(character) then
+        applyBodyHitbox(character, size)
+    end
+    if S.boxESPEnabled and isAlive(character) then
+        addBoxESP(character, getTeamColor(player), size)
+    end
+    if (S.espNameAllState or (S.nameESPEnabled and S.selectedPlayers[player])) and isAlive(character) then
+        createNameESP(player, character)
+    end
+    if S.chamsEnabled and isAlive(character) then
+        addChams(character, getTeamColor(player))
+    end
+end
 
     applyAll()
 
@@ -1563,9 +1566,20 @@ loopFBBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
 local noFogBtn = createTransparentButton("No Fog", Color3.fromRGB(38, 38, 38), panel6)
 noFogBtn.BackgroundTransparency = 0.35
 noFogBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
+
+do
+    local miscDivider = Instance.new("Frame")
+    miscDivider.Parent = panel6
+    miscDivider.Size = UDim2.new(1, 0, 0, 2)
+    miscDivider.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
+    miscDivider.BackgroundTransparency = 0.2
+    miscDivider.BorderSizePixel = 0
+end
+
 local instantBuyBtn = createTransparentButton("Instant Interact: OFF", Color3.fromRGB(38, 38, 38), panel6)
 instantBuyBtn.BackgroundTransparency = 0.35
 instantBuyBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
+
 local unlockCameraBtn = createTransparentButton("Unlock Camera", Color3.fromRGB(38, 38, 38), panel6)
 unlockCameraBtn.BackgroundTransparency = 0.35
 unlockCameraBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
@@ -3571,6 +3585,17 @@ bodyToggle.MouseButton1Click:Connect(function()
     else
         bodyToggle.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
         bodyToggle.BackgroundTransparency = 0.35
+    end
+
+    local size = tonumber(S.sizeInput.Text) or DEFAULT_HITBOX_SIZE
+
+    if S.autoBodyHitboxEnabled then
+        for _, player in pairs(Players:GetPlayers()) do
+            if player ~= LocalPlayer and player.Character and isAlive(player.Character) then
+                applyBodyHitbox(player.Character, size)
+            end
+        end
+    else
         -- Reset tất cả về default khi tắt
         for _, player in pairs(Players:GetPlayers()) do
             if player ~= LocalPlayer and player.Character then
