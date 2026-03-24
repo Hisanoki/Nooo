@@ -1929,29 +1929,34 @@ local function createAuraFloat()
     S.auraFloatBtn = Instance.new("TextButton")
     S.auraFloatBtn.Size = UDim2.new(0, S.floatBtnSize, 0, S.floatBtnSize)
     S.auraFloatBtn.Position = UDim2.new(0.85, 0, 0.5, -(S.floatBtnSize * 2 + 18))
-    S.auraFloatBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
-    S.auraFloatBtn.BackgroundTransparency = 0.35
+    S.auraFloatBtn.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+    S.auraFloatBtn.BackgroundTransparency = 0.72
     S.auraFloatBtn.BorderSizePixel = 0
     S.auraFloatBtn.Text = "Aura"
-    S.auraFloatBtn.TextColor3 = Color3.fromRGB(255, 220, 220)
+    S.auraFloatBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
     S.auraFloatBtn.TextScaled = true
     S.auraFloatBtn.Font = Enum.Font.GothamBold
+    S.auraFloatBtn.TextStrokeTransparency = 0.7
+    S.auraFloatBtn.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
     S.auraFloatBtn.Active = true
     S.auraFloatBtn.ZIndex = 15
     S.auraFloatBtn.Parent = gui
+
     local c = Instance.new("UICorner", S.auraFloatBtn)
     c.CornerRadius = UDim.new(0, 8)
+
     local s = Instance.new("UIStroke", S.auraFloatBtn)
-   s.Color = Color3.fromRGB(60, 60, 60)
-    s.Thickness = 1.5
+    s.Color = Color3.fromRGB(125, 125, 125)
+    s.Thickness = 1.6
+    s.Transparency = 0.15
 
     local getWasMoved, clearMoved = makeDraggableFloat(S.auraFloatBtn)
 
     S.auraFloatBtn.MouseButton1Click:Connect(function()
-    if getWasMoved() then clearMoved(); return end
-    flashButton(S.auraFloatBtn)
-    runToolAura()
-end)
+        if getWasMoved() then clearMoved(); return end
+        flashButton(S.auraFloatBtn)
+        runToolAura()
+    end)
 end
 
 -- ─── DROP FLOAT ───────────────────────────────────────────────────────────────
@@ -1962,38 +1967,42 @@ local function destroyDropFloat()
         S.dropFloatBtn = nil
     end
 end
-
 local function createDropFloat()
     destroyDropFloat()
     S.dropFloatBtn = Instance.new("TextButton")
     S.dropFloatBtn.Size = UDim2.new(0, S.floatBtnSize, 0, S.floatBtnSize)
     S.dropFloatBtn.Position = UDim2.new(0.85, 0, 0.5, -(S.floatBtnSize + 6))
-    S.dropFloatBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
-    S.dropFloatBtn.BackgroundTransparency = 0.35
+    S.dropFloatBtn.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+    S.dropFloatBtn.BackgroundTransparency = 0.72
     S.dropFloatBtn.BorderSizePixel = 0
     S.dropFloatBtn.Text = "Drop\nTool"
-    S.dropFloatBtn.TextColor3 = Color3.fromRGB(210, 230, 255)
+    S.dropFloatBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
     S.dropFloatBtn.TextScaled = true
     S.dropFloatBtn.Font = Enum.Font.GothamBold
+    S.dropFloatBtn.TextStrokeTransparency = 0.7
+    S.dropFloatBtn.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
     S.dropFloatBtn.Active = true
     S.dropFloatBtn.ZIndex = 15
     S.dropFloatBtn.Parent = gui
+
     local c = Instance.new("UICorner", S.dropFloatBtn)
     c.CornerRadius = UDim.new(0, 8)
+
     local s = Instance.new("UIStroke", S.dropFloatBtn)
-   s.Color = Color3.fromRGB(60, 60, 60)
-    s.Thickness = 1.5
+    s.Color = Color3.fromRGB(125, 125, 125)
+    s.Thickness = 1.6
+    s.Transparency = 0.15
 
     local getWasMoved, clearMoved = makeDraggableFloat(S.dropFloatBtn)
 
     S.dropFloatBtn.MouseButton1Click:Connect(function()
-    if getWasMoved() then clearMoved(); return end
-    flashButton(S.dropFloatBtn)
-    local char = LocalPlayer.Character
-    if not char then return end
-    local tool = char:FindFirstChildOfClass("Tool")
-    if tool then tool.Parent = workspace end
-end)
+        if getWasMoved() then clearMoved(); return end
+        flashButton(S.dropFloatBtn)
+        local char = LocalPlayer.Character
+        if not char then return end
+        local tool = char:FindFirstChildOfClass("Tool")
+        if tool then tool.Parent = workspace end
+    end)
 end
 -- ─── EQUIP ALL FLOAT ──────────────────────────────────────────────────────────
 
@@ -2009,13 +2018,15 @@ local function createEquipAllFloat()
     S.equipAllFloatBtn = Instance.new("TextButton")
     S.equipAllFloatBtn.Size = UDim2.new(0, S.floatBtnSize, 0, S.floatBtnSize)
     S.equipAllFloatBtn.Position = UDim2.new(0.85, 0, 0.5, 6)
-    S.equipAllFloatBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
-    S.equipAllFloatBtn.BackgroundTransparency = 0.35
+    S.equipAllFloatBtn.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+    S.equipAllFloatBtn.BackgroundTransparency = 0.72
     S.equipAllFloatBtn.BorderSizePixel = 0
     S.equipAllFloatBtn.Text = "Equip\nAll"
-    S.equipAllFloatBtn.TextColor3 = Color3.fromRGB(255, 235, 180)
+    S.equipAllFloatBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
     S.equipAllFloatBtn.TextScaled = true
     S.equipAllFloatBtn.Font = Enum.Font.GothamBold
+    S.equipAllFloatBtn.TextStrokeTransparency = 0.7
+    S.equipAllFloatBtn.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
     S.equipAllFloatBtn.Active = true
     S.equipAllFloatBtn.ZIndex = 15
     S.equipAllFloatBtn.Parent = gui
@@ -2024,8 +2035,9 @@ local function createEquipAllFloat()
     c.CornerRadius = UDim.new(0, 8)
 
     local s = Instance.new("UIStroke", S.equipAllFloatBtn)
-    s.Color = Color3.fromRGB(60, 60, 60)
-    s.Thickness = 1.5
+    s.Color = Color3.fromRGB(125, 125, 125)
+    s.Thickness = 1.6
+    s.Transparency = 0.15
 
     local getWasMoved, clearMoved = makeDraggableFloat(S.equipAllFloatBtn)
 
@@ -2096,32 +2108,37 @@ local function doUseTool()
     if S.useFloatBtn then S.useFloatBtn.Text = "USE" end
     S.useCooling = false
 end
-
 local function createUseFloat()
     destroyUseFloat()
     S.useFloatBtn = Instance.new("TextButton")
     S.useFloatBtn.Size = UDim2.new(0, S.floatBtnSize, 0, S.floatBtnSize)
     S.useFloatBtn.Position = UDim2.new(0.85, 0, 0.5, S.floatBtnSize + 18)
-    S.useFloatBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
-    S.useFloatBtn.BackgroundTransparency = 0.35
+    S.useFloatBtn.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+    S.useFloatBtn.BackgroundTransparency = 0.72
     S.useFloatBtn.BorderSizePixel = 0
     S.useFloatBtn.Text = "USE"
-    S.useFloatBtn.TextColor3 = Color3.fromRGB(255, 200, 200)
+    S.useFloatBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
     S.useFloatBtn.TextScaled = true
     S.useFloatBtn.Font = Enum.Font.GothamBold
+    S.useFloatBtn.TextStrokeTransparency = 0.7
+    S.useFloatBtn.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
     S.useFloatBtn.Active = true
     S.useFloatBtn.ZIndex = 15
     S.useFloatBtn.Parent = gui
+
     local _c = Instance.new("UICorner", S.useFloatBtn)
     _c.CornerRadius = UDim.new(0, 8)
+
     local _s = Instance.new("UIStroke", S.useFloatBtn)
-    _s.Color = Color3.fromRGB(220, 60, 60)
-    _s.Thickness = 1.5
+    _s.Color = Color3.fromRGB(125, 125, 125)
+    _s.Thickness = 1.6
+    _s.Transparency = 0.15
 
     local getWasMoved, clearMoved = makeDraggableFloat(S.useFloatBtn)
 
     S.useFloatBtn.MouseButton1Click:Connect(function()
         if getWasMoved() then clearMoved(); return end
+        flashButton(S.useFloatBtn)
         doUseTool()
     end)
 end
