@@ -1930,25 +1930,28 @@ local function createAuraFloat()
     S.auraFloatBtn.Size = UDim2.new(0, S.floatBtnSize, 0, S.floatBtnSize)
     S.auraFloatBtn.Position = UDim2.new(0.85, 0, 0.5, -(S.floatBtnSize * 2 + 18))
     S.auraFloatBtn.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
-    S.auraFloatBtn.BackgroundTransparency = 0.72
+    S.auraFloatBtn.BackgroundTransparency = 0.88
     S.auraFloatBtn.BorderSizePixel = 0
     S.auraFloatBtn.Text = "Aura"
     S.auraFloatBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
     S.auraFloatBtn.TextScaled = true
     S.auraFloatBtn.Font = Enum.Font.GothamBold
-    S.auraFloatBtn.TextStrokeTransparency = 0.7
+    S.auraFloatBtn.TextStrokeTransparency = 1
     S.auraFloatBtn.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
     S.auraFloatBtn.Active = true
     S.auraFloatBtn.ZIndex = 15
     S.auraFloatBtn.Parent = gui
 
-    local c = Instance.new("UICorner", S.auraFloatBtn)
+    local c = Instance.new("UICorner")
     c.CornerRadius = UDim.new(0, 8)
+    c.Parent = S.auraFloatBtn
 
-    local s = Instance.new("UIStroke", S.auraFloatBtn)
-    s.Color = Color3.fromRGB(125, 125, 125)
-    s.Thickness = 1.6
-    s.Transparency = 0.15
+    local s = Instance.new("UIStroke")
+    s.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+    s.Color = Color3.fromRGB(62, 62, 62)
+    s.Thickness = 1.8
+    s.Transparency = 0
+    s.Parent = S.auraFloatBtn
 
     local getWasMoved, clearMoved = makeDraggableFloat(S.auraFloatBtn)
 
@@ -1958,6 +1961,7 @@ local function createAuraFloat()
         runToolAura()
     end)
 end
+
 
 -- ─── DROP FLOAT ───────────────────────────────────────────────────────────────
 
@@ -1973,25 +1977,28 @@ local function createDropFloat()
     S.dropFloatBtn.Size = UDim2.new(0, S.floatBtnSize, 0, S.floatBtnSize)
     S.dropFloatBtn.Position = UDim2.new(0.85, 0, 0.5, -(S.floatBtnSize + 6))
     S.dropFloatBtn.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
-    S.dropFloatBtn.BackgroundTransparency = 0.72
+    S.dropFloatBtn.BackgroundTransparency = 0.88
     S.dropFloatBtn.BorderSizePixel = 0
     S.dropFloatBtn.Text = "Drop\nTool"
     S.dropFloatBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
     S.dropFloatBtn.TextScaled = true
     S.dropFloatBtn.Font = Enum.Font.GothamBold
-    S.dropFloatBtn.TextStrokeTransparency = 0.7
+    S.dropFloatBtn.TextStrokeTransparency = 1
     S.dropFloatBtn.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
     S.dropFloatBtn.Active = true
     S.dropFloatBtn.ZIndex = 15
     S.dropFloatBtn.Parent = gui
 
-    local c = Instance.new("UICorner", S.dropFloatBtn)
+    local c = Instance.new("UICorner")
     c.CornerRadius = UDim.new(0, 8)
+    c.Parent = S.dropFloatBtn
 
-    local s = Instance.new("UIStroke", S.dropFloatBtn)
-    s.Color = Color3.fromRGB(125, 125, 125)
-    s.Thickness = 1.6
-    s.Transparency = 0.15
+    local s = Instance.new("UIStroke")
+    s.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+    s.Color = Color3.fromRGB(62, 62, 62)
+    s.Thickness = 1.8
+    s.Transparency = 0
+    s.Parent = S.dropFloatBtn
 
     local getWasMoved, clearMoved = makeDraggableFloat(S.dropFloatBtn)
 
@@ -2012,32 +2019,34 @@ local function destroyEquipAllFloat()
         S.equipAllFloatBtn = nil
     end
 end
-
 local function createEquipAllFloat()
     destroyEquipAllFloat()
     S.equipAllFloatBtn = Instance.new("TextButton")
     S.equipAllFloatBtn.Size = UDim2.new(0, S.floatBtnSize, 0, S.floatBtnSize)
     S.equipAllFloatBtn.Position = UDim2.new(0.85, 0, 0.5, 6)
     S.equipAllFloatBtn.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
-    S.equipAllFloatBtn.BackgroundTransparency = 0.72
+    S.equipAllFloatBtn.BackgroundTransparency = 0.88
     S.equipAllFloatBtn.BorderSizePixel = 0
     S.equipAllFloatBtn.Text = "Equip\nAll"
     S.equipAllFloatBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
     S.equipAllFloatBtn.TextScaled = true
     S.equipAllFloatBtn.Font = Enum.Font.GothamBold
-    S.equipAllFloatBtn.TextStrokeTransparency = 0.7
+    S.equipAllFloatBtn.TextStrokeTransparency = 1
     S.equipAllFloatBtn.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
     S.equipAllFloatBtn.Active = true
     S.equipAllFloatBtn.ZIndex = 15
     S.equipAllFloatBtn.Parent = gui
 
-    local c = Instance.new("UICorner", S.equipAllFloatBtn)
+    local c = Instance.new("UICorner")
     c.CornerRadius = UDim.new(0, 8)
+    c.Parent = S.equipAllFloatBtn
 
-    local s = Instance.new("UIStroke", S.equipAllFloatBtn)
-    s.Color = Color3.fromRGB(125, 125, 125)
-    s.Thickness = 1.6
-    s.Transparency = 0.15
+    local s = Instance.new("UIStroke")
+    s.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+    s.Color = Color3.fromRGB(62, 62, 62)
+    s.Thickness = 1.8
+    s.Transparency = 0
+    s.Parent = S.equipAllFloatBtn
 
     local getWasMoved, clearMoved = makeDraggableFloat(S.equipAllFloatBtn)
 
@@ -2114,25 +2123,28 @@ local function createUseFloat()
     S.useFloatBtn.Size = UDim2.new(0, S.floatBtnSize, 0, S.floatBtnSize)
     S.useFloatBtn.Position = UDim2.new(0.85, 0, 0.5, S.floatBtnSize + 18)
     S.useFloatBtn.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
-    S.useFloatBtn.BackgroundTransparency = 0.72
+    S.useFloatBtn.BackgroundTransparency = 0.88
     S.useFloatBtn.BorderSizePixel = 0
     S.useFloatBtn.Text = "USE"
     S.useFloatBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
     S.useFloatBtn.TextScaled = true
     S.useFloatBtn.Font = Enum.Font.GothamBold
-    S.useFloatBtn.TextStrokeTransparency = 0.7
+    S.useFloatBtn.TextStrokeTransparency = 1
     S.useFloatBtn.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
     S.useFloatBtn.Active = true
     S.useFloatBtn.ZIndex = 15
     S.useFloatBtn.Parent = gui
 
-    local _c = Instance.new("UICorner", S.useFloatBtn)
-    _c.CornerRadius = UDim.new(0, 8)
+    local c = Instance.new("UICorner")
+    c.CornerRadius = UDim.new(0, 8)
+    c.Parent = S.useFloatBtn
 
-    local _s = Instance.new("UIStroke", S.useFloatBtn)
-    _s.Color = Color3.fromRGB(125, 125, 125)
-    _s.Thickness = 1.6
-    _s.Transparency = 0.15
+    local s = Instance.new("UIStroke")
+    s.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+    s.Color = Color3.fromRGB(62, 62, 62)
+    s.Thickness = 1.8
+    s.Transparency = 0
+    s.Parent = S.useFloatBtn
 
     local getWasMoved, clearMoved = makeDraggableFloat(S.useFloatBtn)
 
