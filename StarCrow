@@ -3629,24 +3629,17 @@ do
         crosshairGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
         crosshairGui.Parent = playerGui
 
-        mobileCrosshair = Instance.new("Frame")
-        mobileCrosshair.Name = "MobileShiftLockCrosshair"
-        mobileCrosshair.Size = UDim2.new(0, 8, 0, 8)
-        mobileCrosshair.AnchorPoint = Vector2.new(0.5, 0.5)
-        mobileCrosshair.Position = UDim2.new(0.5, 0, 0.5, 0)
-        mobileCrosshair.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-        mobileCrosshair.BorderSizePixel = 0
-        mobileCrosshair.ZIndex = 999999
-        mobileCrosshair.Parent = crosshairGui
-
-        local corner = Instance.new("UICorner")
-        corner.CornerRadius = UDim.new(1, 0)
-        corner.Parent = mobileCrosshair
-
-        local stroke = Instance.new("UIStroke")
-        stroke.Color = Color3.fromRGB(0, 0, 0)
-        stroke.Thickness = 1
-        stroke.Parent = mobileCrosshair
+        mobileCrosshair = Instance.new("ImageLabel")
+mobileCrosshair.Name = "MobileShiftLockCrosshair"
+mobileCrosshair.Size = UDim2.new(0, 24, 0, 24) -- chỉnh to/nhỏ ở đây
+mobileCrosshair.AnchorPoint = Vector2.new(0.5, 0.5)
+mobileCrosshair.Position = UDim2.new(0.5, 0, 0.5, 0)
+mobileCrosshair.BackgroundTransparency = 1
+mobileCrosshair.BorderSizePixel = 0
+mobileCrosshair.ZIndex = 999999
+mobileCrosshair.Image = "rbxthumb://type=Asset&id=11719595129&w=420&h=420"
+mobileCrosshair.ScaleType = Enum.ScaleType.Fit
+mobileCrosshair.Parent = crosshairGui
     end
 
     local function destroyMobileShiftLockButton()
