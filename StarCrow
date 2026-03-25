@@ -1574,6 +1574,10 @@ instantBuyBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
 local unlockCameraBtn = createTransparentButton("Unlock Camera", Color3.fromRGB(38, 38, 38), panel6)
 unlockCameraBtn.BackgroundTransparency = 0.35
 unlockCameraBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
+local mobileShiftLockBtn = createTransparentButton("Mobile ShiftLock: OFF", Color3.fromRGB(38, 38, 38), panel6)
+mobileShiftLockBtn.BackgroundTransparency = 0.35
+mobileShiftLockBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
+
 local autoClickBtn = createTransparentButton("Auto Click: OFF", Color3.fromRGB(38, 38, 38), panel6)
 autoClickBtn.BackgroundTransparency = 0.35
 autoClickBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
@@ -3585,7 +3589,203 @@ unlockCameraBtn.MouseButton1Click:Connect(function()
 
     createNotification("Unlock Camera", "Camera Unlocked")
 end)
+do
+    local mobileShiftLockEnabled = false
+    local mobileShiftLockActive = false
+    local mobileShiftLockButtonUI = nil
+    local mobileCrosshair = nil
+    local mobileShiftLockConnection = nil
 
+    local function isMobileDevice()
+        return UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled
+    end
+
+    local function removeCrosshair()
+        if mobileCrosshair then
+            mobileCrosshair:Destroy()
+            mobileCrosshair = nil
+        end
+
+        local playerGui = LocalPlayer:FindFirstChildOfClass("PlayerGui")
+        if playerGui then
+            local crosshairGui = playerGui:FindFirstChild("MobileShiftLockCrosshairGui")
+            if crosshairGui then
+                crosshairGui:Destroy()
+            end
+        end
+    end
+
+    local function createCrosshair()
+        removeCrosshair()
+
+        local playerGui = LocalPlayer:FindFirstChildOfClass("PlayerGui")
+        if not playerGui then return end
+
+        local crosshairGui = Instance.new("ScreenGui")
+        crosshairGui.Name = "MobileShiftLockCrosshairGui"
+        crosshairGui.ResetOnSpawn = false
+        crosshairGui.IgnoreGuiInset = true
+        crosshairGui.DisplayOrder = 999999
+        crosshairGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+        crosshairGui.Parent = playerGui
+
+        mobileCrosshair = Instance.new("Frame")
+        mobileCrosshair.Name = "MobileShiftLockCrosshair"
+        mobileCrosshair.Size = UDim2.new(0, 8, 0, 8)
+        mobileCrosshair.AnchorPoint = Vector2.new(0.5, 0.5)
+        mobileCrosshair.Position = UDim2.new(0.5, 0, 0.5, 0)
+        mobileCrosshair.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+        mobileCrosshair.BorderSizePixel = 0
+        mobileCrosshair.ZIndex = 999999
+        mobileCrosshair.Parent = crosshairGui
+
+        local corner = Instance.new("UICorner")
+        corner.CornerRadius = UDim.new(1, 0)
+        corner.Parent = mobileCrosshair
+
+        local stroke = Instance.new("UIStroke")
+        stroke.Color = Color3.fromRGB(0, 0, 0)
+        stroke.Thickness = 1
+        stroke.Parent = mobileCrosshair
+    end
+
+    local function destroyMobileShiftLockButton()
+        if mobileShiftLockButtonUI then
+            mobileShiftLockButtonUI:Destroy()
+            mobileShiftLockButtonUI = nil
+        end
+    end
+
+    local function stopMobileShiftLock()
+        mobileShiftLockActive = false
+
+        if mobileShiftLockConnection then
+            mobileShiftLockConnection:Disconnect()
+            mobileShiftLockConnection = nil
+        end
+
+     local character = LocalPlayer.Character
+if character then
+    local humanoid = character:FindFirstChildOfClass("Humanoid")
+    if humanoid then
+        humanoid.AutoRotate = true
+        humanoid.CameraOffset = Vector3.new(0, 0, 0)
+    end
+end
+
+        removeCrosshair()
+
+        if mobileShiftLockButtonUI then
+            mobileShiftLockButtonUI.Image = "rbxassetid://105987953182009" -- OFF
+        end
+    end
+
+    local function startMobileShiftLock()
+    if not mobileShiftLockEnabled or not isMobileDevice() then return end
+    if mobileShiftLockActive then return end
+
+    mobileShiftLockActive = true
+
+    createCrosshair()
+
+    if mobileShiftLockButtonUI then
+        mobileShiftLockButtonUI.Image = "rbxassetid://139211296111194" -- ON
+    end
+
+    local character = LocalPlayer.Character
+    if not character then return end
+
+    local humanoid = character:FindFirstChildOfClass("Humanoid")
+    local rootPart = character:FindFirstChild("HumanoidRootPart")
+    local currentCamera = workspace.CurrentCamera
+
+    if not humanoid or not rootPart or not currentCamera then return end
+
+    humanoid.AutoRotate = false
+    humanoid.CameraOffset = Vector3.new(1.75, 0, 0)
+
+    mobileShiftLockConnection = RunService.RenderStepped:Connect(function()
+        local char = LocalPlayer.Character
+        if not char then return end
+
+        local hum = char:FindFirstChildOfClass("Humanoid")
+        local root = char:FindFirstChild("HumanoidRootPart")
+        local cam = workspace.CurrentCamera
+
+        if not hum or not root or not cam then return end
+
+        local lookVector = cam.CFrame.LookVector
+local flatLook = Vector3.new(lookVector.X, 0, lookVector.Z)
+
+if flatLook.Magnitude > 0.01 then
+    flatLook = flatLook.Unit
+    root.CFrame = CFrame.new(root.Position, root.Position + flatLook)
+end
+    end)
+end
+
+    local function toggleMobileShiftLockActive()
+        if not mobileShiftLockEnabled then return end
+
+        if mobileShiftLockActive then
+            stopMobileShiftLock()
+        else
+            startMobileShiftLock()
+        end
+    end
+
+    local function createMobileShiftLockButton()
+        if mobileShiftLockButtonUI or not isMobileDevice() then return end
+
+        mobileShiftLockButtonUI = Instance.new("ImageButton")
+        mobileShiftLockButtonUI.Name = "MobileShiftLockButton"
+        mobileShiftLockButtonUI.Size = UDim2.new(0, 34, 0, 34)
+        mobileShiftLockButtonUI.AnchorPoint = Vector2.new(1, 1)
+        mobileShiftLockButtonUI.Position = UDim2.new(1, -70, 1, -130)
+        mobileShiftLockButtonUI.BackgroundTransparency = 1
+        mobileShiftLockButtonUI.BorderSizePixel = 0
+        mobileShiftLockButtonUI.Image = "rbxassetid://105987953182009" -- OFF
+        mobileShiftLockButtonUI.ScaleType = Enum.ScaleType.Fit
+        mobileShiftLockButtonUI.ZIndex = 999999
+        mobileShiftLockButtonUI.Parent = gui
+
+        mobileShiftLockButtonUI.MouseButton1Click:Connect(function()
+            toggleMobileShiftLockActive()
+        end)
+    end
+
+    local function setMobileShiftLockEnabled(state)
+        mobileShiftLockEnabled = state
+
+        mobileShiftLockBtn.Text = "Mobile ShiftLock: " .. (mobileShiftLockEnabled and "ON" or "OFF")
+        mobileShiftLockBtn.BackgroundColor3 = mobileShiftLockEnabled and Color3.fromRGB(50, 200, 120) or Color3.fromRGB(38, 38, 38)
+        mobileShiftLockBtn.BackgroundTransparency = mobileShiftLockEnabled and 0 or 0.35
+
+        if mobileShiftLockEnabled and isMobileDevice() then
+            createMobileShiftLockButton()
+            stopMobileShiftLock()
+            createNotification("Mobile ShiftLock", "Enabled")
+        else
+            stopMobileShiftLock()
+            destroyMobileShiftLockButton()
+            createNotification("Mobile ShiftLock", "Disabled")
+        end
+    end
+
+    mobileShiftLockBtn.MouseButton1Click:Connect(function()
+        setMobileShiftLockEnabled(not mobileShiftLockEnabled)
+    end)
+
+    LocalPlayer.CharacterAdded:Connect(function()
+        task.wait(1)
+
+        if mobileShiftLockEnabled and isMobileDevice() then
+            destroyMobileShiftLockButton()
+            createMobileShiftLockButton()
+            stopMobileShiftLock()
+        end
+    end)
+end
 -- ─── LOOPSPEED ────────────────────────────────────────────────────────────────
 
 do
@@ -4413,3 +4613,4 @@ end)
 S.statusLabel.Text = "Processing: 0 Players"
 updatePlayerList()
 RefreshFlingPlayerList()
+ 
