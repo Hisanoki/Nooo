@@ -199,6 +199,7 @@ local function toggleInvisibility()
         seat.CFrame = savedCFrame
 
         setCharacterTransparency(LocalPlayer.Character, 0.5)
+        hrp.Transparency = 1
         if S.invisButton then
             S.invisButton.BackgroundColor3 = Color3.fromRGB(50, 200, 120)
             S.invisButton.BackgroundTransparency = 0
