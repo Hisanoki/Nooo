@@ -4592,8 +4592,7 @@ if S.invisButton then
     S.invisButton.BackgroundTransparency = 0.35
     S.invisButton.Text = "Invisible: OFF"
 end
-S.invisFloatEnabled = false
-destroyInvisFloat()
+
 if invisFloatToggleBtn then
     invisFloatToggleBtn.Text = "Invisible Float: OFF"
     invisFloatToggleBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
@@ -4742,4 +4741,11 @@ end)
 S.statusLabel.Text = "Processing: 0 Players"
 updatePlayerList()
 RefreshFlingPlayerList()
- 
+LocalPlayer.CharacterAdded:Connect(function()
+    task.wait(0.5)
+
+    if S.invisFloatEnabled then
+        task.wait(0.5)
+        createInvisFloat() -- BẮT BUỘC phải gọi lại
+    end
+end)
