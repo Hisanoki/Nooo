@@ -4741,11 +4741,3 @@ end)
 S.statusLabel.Text = "Processing: 0 Players"
 updatePlayerList()
 RefreshFlingPlayerList()
-LocalPlayer.CharacterAdded:Connect(function()
-    task.wait(0.5)
-
-    if S.invisFloatEnabled then
-        task.wait(0.5)
-        createInvisFloat() -- BẮT BUỘC phải gọi lại
-    end
-end)
