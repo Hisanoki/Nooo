@@ -107,7 +107,7 @@ local TEXT_ESP_COLOR = Color3.fromRGB(255, 255, 255)
 
 local INVIS_CONFIG = {
     TOGGLE_KEY = Enum.KeyCode.C,
-    SOUND_ID = "rbxassetid://1845556093",
+    SOUND_ID = "rbxassetid://139804904213958",
     INVISIBILITY_POSITION = Vector3.new(-25.95, 84, 3537.55),
     NOTIFICATION_DURATION = 3,
     BACKGROUND_COLOR = Color3.fromRGB(25, 25, 25),
