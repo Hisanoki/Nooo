@@ -628,20 +628,41 @@ local function createTransparentLabel(text, parent)
     label.Parent = parent
     return label
 end
+local flashTokens = setmetatable({}, {__mode = "k"})
+local flashDefaults = setmetatable({}, {__mode = "k"})
+
 local function flashButton(btn)
     if not btn then return end
 
-    local oldColor = btn.BackgroundColor3
-    local oldTransparency = btn.BackgroundTransparency
+    -- Lưu style gốc của nút 1 lần duy nhất
+    if not flashDefaults[btn] then
+        flashDefaults[btn] = {
+            color = btn.BackgroundColor3,
+            transparency = btn.BackgroundTransparency
+        }
+    end
+
+    -- Nếu nút đang không xanh (tức là đang ở trạng thái gốc), cập nhật lại style gốc
+    if btn.BackgroundColor3 ~= Color3.fromRGB(50, 200, 120) or btn.BackgroundTransparency ~= 0 then
+        flashDefaults[btn].color = btn.BackgroundColor3
+        flashDefaults[btn].transparency = btn.BackgroundTransparency
+    end
+
+    flashTokens[btn] = (flashTokens[btn] or 0) + 1
+    local myToken = flashTokens[btn]
 
     btn.BackgroundColor3 = Color3.fromRGB(50, 200, 120)
     btn.BackgroundTransparency = 0
 
     task.delay(0.15, function()
-        if btn and btn.Parent then
-            btn.BackgroundColor3 = oldColor
-            btn.BackgroundTransparency = oldTransparency
-        end
+        if not btn or not btn.Parent then return end
+        if flashTokens[btn] ~= myToken then return end
+
+        local original = flashDefaults[btn]
+        if not original then return end
+
+        btn.BackgroundColor3 = original.color
+        btn.BackgroundTransparency = original.transparency
     end)
 end
 -- ─── FLY SYSTEM ───────────────────────────────────────────────────────────────
@@ -2164,8 +2185,10 @@ S.feAuraBtn = createTransparentButton("Tool Aura", Color3.fromRGB(38, 38, 38), p
 S.feAuraBtn.BackgroundTransparency = 0.35
 S.feAuraBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
 
-S.feAuraBtn.MouseButton1Click:Connect(runToolAura)
-
+S.feAuraBtn.MouseButton1Click:Connect(function()
+    flashButton(S.feAuraBtn)
+    runToolAura()
+end)
 
 -- Aura Float toggle
 local feAuraFloatBtn = createTransparentButton("Aura Float: OFF", Color3.fromRGB(38, 38, 38), panel8)
