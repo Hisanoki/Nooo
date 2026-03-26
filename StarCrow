@@ -2419,12 +2419,20 @@ do
     _mkCorner(3, track)
 
     -- Slider value 1-100 → pixel size 30-130
-    local function valToSize(v) return v + 29 end  -- 1→30, 100→129
-    local function sizeToVal(s) return math.clamp(s - 29, 1, 100) end
+   local MIN_FLOAT_SIZE = 30
+local MAX_FLOAT_SIZE = 130
+
+local function valToSize(v)
+    return math.clamp(v, MIN_FLOAT_SIZE, MAX_FLOAT_SIZE)
+end
+
+local function sizeToVal(s)
+    return math.clamp(s, MIN_FLOAT_SIZE, MAX_FLOAT_SIZE)
+end
     local curVal = sizeToVal(S.floatBtnSize)
 
     local fill = Instance.new("Frame")
-    fill.Size = UDim2.new((curVal - 1) / 99, 0, 1, 0)
+   fill.Size = UDim2.new((curVal - MIN_FLOAT_SIZE) / (MAX_FLOAT_SIZE - MIN_FLOAT_SIZE), 0, 1, 0)
     fill.BackgroundColor3 = Color3.fromRGB(180, 40, 40)
     fill.BorderSizePixel = 0
     fill.Parent = track
@@ -2433,7 +2441,7 @@ do
     local thumb = Instance.new("Frame")
     thumb.Size = UDim2.new(0, 14, 0, 14)
     thumb.AnchorPoint = Vector2.new(0.5, 0.5)
-    thumb.Position = UDim2.new((curVal - 1) / 99, 0, 0.5, 0)
+    thumb.Position = UDim2.new((curVal - MIN_FLOAT_SIZE) / (MAX_FLOAT_SIZE - MIN_FLOAT_SIZE), 0, 0.5, 0)
     thumb.BackgroundColor3 = Color3.fromRGB(230, 230, 230)
     thumb.BorderSizePixel = 0
     thumb.ZIndex = 5
@@ -2456,10 +2464,13 @@ do
         local abs = track.AbsolutePosition
         local sz  = track.AbsoluteSize
         local rel = math.clamp((screenPos.X - abs.X) / sz.X, 0, 1)
-        curVal = math.floor(rel * 99) + 1
-        S.floatBtnSize = valToSize(curVal)
-        sizeValueLabel.Text = "Float Size: " .. tostring(curVal)
-        local fillRel = (curVal - 1) / 99
+        curVal = math.floor(MIN_FLOAT_SIZE + rel * (MAX_FLOAT_SIZE - MIN_FLOAT_SIZE) + 0.5)
+curVal = math.clamp(curVal, MIN_FLOAT_SIZE, MAX_FLOAT_SIZE)
+
+S.floatBtnSize = curVal
+sizeValueLabel.Text = "Float Size: " .. tostring(S.floatBtnSize)
+
+local fillRel = (curVal - MIN_FLOAT_SIZE) / (MAX_FLOAT_SIZE - MIN_FLOAT_SIZE)
         fill.Size  = UDim2.new(fillRel, 0, 1, 0)
         thumb.Position = UDim2.new(fillRel, 0, 0.5, 0)
         -- Cập nhật kích thước float button đang hiển thị
