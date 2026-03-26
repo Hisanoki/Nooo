@@ -41,6 +41,7 @@ local S = {
     walkFlingBtn=nil, flingStatusLabel=nil, flingPlayerList=nil,
     autoTPBtn=nil, tpPlayerList=nil, playerList=nil,
     feAuraBtn=nil, feKBBtn=nil,
+    invisFloatEnabled=false, invisFloatBtn=nil, invisFloatStroke=nil,
     flingStartBtn=nil, bangBtn=nil, loopBringBtn=nil,
     specContainer=nil,
 }
@@ -201,10 +202,15 @@ local function toggleInvisibility()
         setCharacterTransparency(LocalPlayer.Character, 0.5)
         hrp.Transparency = 1
         if S.invisButton then
-            S.invisButton.BackgroundColor3 = Color3.fromRGB(50, 200, 120)
-            S.invisButton.BackgroundTransparency = 0
-            S.invisButton.Text = "Invisible: ON"
-        end
+    S.invisButton.BackgroundColor3 = Color3.fromRGB(50, 200, 120)
+    S.invisButton.BackgroundTransparency = 0
+    S.invisButton.Text = "Invisible: ON"
+end
+
+if S.invisFloatStroke then
+    S.invisFloatStroke.Color = Color3.fromRGB(50, 200, 120)
+    S.invisFloatStroke.Thickness = 2.2
+end
         createNotification("Invisible ON", "You are now invisible")
     else
         local chair = workspace:FindFirstChild("invischair")
@@ -217,10 +223,15 @@ local function toggleInvisibility()
         end
 
         if S.invisButton then
-            S.invisButton.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
-            S.invisButton.BackgroundTransparency = 0.35
-            S.invisButton.Text = "Invisible: OFF"
-        end
+    S.invisButton.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
+    S.invisButton.BackgroundTransparency = 0.35
+    S.invisButton.Text = "Invisible: OFF"
+end
+
+if S.invisFloatStroke then
+    S.invisFloatStroke.Color = Color3.fromRGB(62, 62, 62)
+    S.invisFloatStroke.Thickness = 1.8
+end
         createNotification("Invisible OFF", "You are now visible")
     end
 end
@@ -1268,7 +1279,7 @@ autoToggle.BackgroundTransparency = 0.35
 local bodyToggle = createTransparentButton("Body Hit Box: OFF", Color3.fromRGB(38, 38, 38), panel2)
 bodyToggle.BackgroundColor3 = Color3.fromRGB(38,38,38)
 bodyToggle.BackgroundTransparency = 0.35
-local removeAllBtn = createTransparentButton("Remove All Hitboxes", Color3.fromRGB(180, 50, 50), panel2)
+local removeAllBtn = createTransparentButton("Remove All Hitboxes", Color3.fromRGB(38, 38, 38), panel2)
 removeAllBtn.BackgroundColor3 = Color3.fromRGB(38,38,38)
 removeAllBtn.BackgroundTransparency = 0.35
 S.statusLabel = createTransparentLabel("Processing: 0 Players", panel2)
@@ -1368,6 +1379,9 @@ S.loopspeedToggle.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
 S.invisButton = createTransparentButton("Invisible: OFF", Color3.fromRGB(38, 38, 38), panel2)
 S.invisButton.BackgroundTransparency = 0.35
 S.invisButton.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
+local invisFloatToggleBtn = createTransparentButton("Invisible Float: OFF", Color3.fromRGB(38, 38, 38), panel2)
+invisFloatToggleBtn.BackgroundTransparency = 0.35
+invisFloatToggleBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
 S.invisSound = Instance.new("Sound")
 S.invisSound.SoundId = INVIS_CONFIG.SOUND_ID
 S.invisSound.Volume = 0.5
@@ -1938,7 +1952,71 @@ local function makeDraggableFloat(btn)
 
     return function() return fMoved end, function() fMoved = false end
 end
+-- ─── INVISIBLE FLOAT ──────────────────────────────────────────────────────────
 
+local function updateInvisFloatVisual()
+    if not S.invisFloatBtn or not S.invisFloatStroke then return end
+
+    if S.isInvisible then
+        S.invisFloatStroke.Color = Color3.fromRGB(50, 200, 120)
+        S.invisFloatStroke.Thickness = 2.2
+        S.invisFloatBtn.Text = "Invisible"
+    else
+        S.invisFloatStroke.Color = Color3.fromRGB(62, 62, 62)
+        S.invisFloatStroke.Thickness = 1.8
+        S.invisFloatBtn.Text = "Invisible"
+    end
+end
+
+local function destroyInvisFloat()
+    if S.invisFloatBtn then
+        S.invisFloatBtn:Destroy()
+        S.invisFloatBtn = nil
+    end
+    S.invisFloatStroke = nil
+end
+
+local function createInvisFloat()
+    destroyInvisFloat()
+
+    S.invisFloatBtn = Instance.new("TextButton")
+    S.invisFloatBtn.Size = UDim2.new(0, S.floatBtnSize, 0, S.floatBtnSize)
+    S.invisFloatBtn.Position = UDim2.new(0.85, 0, 0.5, -(S.floatBtnSize * 3 + 30))
+    S.invisFloatBtn.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+    S.invisFloatBtn.BackgroundTransparency = 0.88
+    S.invisFloatBtn.BorderSizePixel = 0
+    S.invisFloatBtn.Text = "Invisible"
+    S.invisFloatBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    S.invisFloatBtn.TextScaled = true
+    S.invisFloatBtn.TextWrapped = true
+    S.invisFloatBtn.Font = Enum.Font.GothamBold
+    S.invisFloatBtn.TextStrokeTransparency = 1
+    S.invisFloatBtn.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
+    S.invisFloatBtn.Active = true
+    S.invisFloatBtn.ZIndex = 15
+    S.invisFloatBtn.Parent = gui
+
+    local c = Instance.new("UICorner")
+    c.CornerRadius = UDim.new(0, 8)
+    c.Parent = S.invisFloatBtn
+
+    local s = Instance.new("UIStroke")
+    s.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+    s.Color = Color3.fromRGB(62, 62, 62)
+    s.Thickness = 1.8
+    s.Transparency = 0
+    s.Parent = S.invisFloatBtn
+    S.invisFloatStroke = s
+
+    local getWasMoved, clearMoved = makeDraggableFloat(S.invisFloatBtn)
+
+    S.invisFloatBtn.MouseButton1Click:Connect(function()
+        if getWasMoved() then clearMoved(); return end
+        toggleInvisibility()
+    end)
+
+    updateInvisFloatVisual()
+end
 -- ─── AURA FLOAT ───────────────────────────────────────────────────────────────
 
 local function destroyAuraFloat()
@@ -2397,6 +2475,9 @@ end
         if S.useFloatBtn then
             S.useFloatBtn.Size = UDim2.new(0, S.floatBtnSize, 0, S.floatBtnSize)
         end
+        if S.invisFloatBtn then
+    S.invisFloatBtn.Size = UDim2.new(0, S.floatBtnSize, 0, S.floatBtnSize)
+end
     end
 
     sliderBtn.InputBegan:Connect(function(input)
@@ -3945,7 +4026,6 @@ removeAllBtn.MouseButton1Click:Connect(function()
     for char, _ in pairs(S.processedChars) do
         removeHeadHitbox(char)
     end
-
     S.statusLabel.Text = "Processing: 0 Players"
 
     task.delay(0.2, function()
@@ -4037,7 +4117,21 @@ boxESPBtn.MouseButton1Click:Connect(function()
 end)
 
 S.invisButton.MouseButton1Click:Connect(toggleInvisibility)
+invisFloatToggleBtn.MouseButton1Click:Connect(function()
+    S.invisFloatEnabled = not S.invisFloatEnabled
 
+    if S.invisFloatEnabled then
+        invisFloatToggleBtn.Text = "Invisible Float: ON"
+        invisFloatToggleBtn.BackgroundColor3 = Color3.fromRGB(50, 200, 120)
+        invisFloatToggleBtn.BackgroundTransparency = 0
+        createInvisFloat()
+    else
+        invisFloatToggleBtn.Text = "Invisible Float: OFF"
+        invisFloatToggleBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
+        invisFloatToggleBtn.BackgroundTransparency = 0.35
+        destroyInvisFloat()
+    end
+end)
 infJumpToggle.MouseButton1Click:Connect(function()
     S.infJumpEnabled = not S.infJumpEnabled
     infJumpToggle.Text = S.infJumpEnabled and "Inf Jump: ON" or "Inf Jump: OFF"
@@ -4486,6 +4580,13 @@ if S.invisButton then
     S.invisButton.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
     S.invisButton.BackgroundTransparency = 0.35
     S.invisButton.Text = "Invisible: OFF"
+end
+S.invisFloatEnabled = false
+destroyInvisFloat()
+if invisFloatToggleBtn then
+    invisFloatToggleBtn.Text = "Invisible Float: OFF"
+    invisFloatToggleBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
+    invisFloatToggleBtn.BackgroundTransparency = 0.35
 end
     local chair = workspace:FindFirstChild("invischair")
     if chair then chair:Destroy() end
