@@ -25,7 +25,7 @@ local S = {
     auraListening=false,
     auraFloatEnabled=false, dropFloatEnabled=false,
     auraFloatBtn=nil, dropFloatBtn=nil, equipAllFloatEnabled=false, equipAllFloatBtn=nil,
-    auraFloatDragConn=nil, dropFloatDragConn=nil, floatBtnSize=62,
+    auraFloatDragConn=nil, dropFloatDragConn=nil, floatBtnSize=46,
     FlingActive=false, BangActive=false,
     SelectedFlingTargets={}, FlingPlayerCheckboxes={},
     walkflinging=false, walkFlingHumanoidDiedConn=nil, speaker=nil,
