@@ -18,8 +18,8 @@ local S = {
     ctrlClickTPEnabled=false,
     noclipEnabled=false, noclipLoop=nil,
     autoHitboxEnabled=false, autoBodyHitboxEnabled=false,
-    nameESPEnabled=false, boxESPEnabled=false, espNameAllState=false,
-    selectedPlayers={}, selectedTPPlayers={}, boxESPObjects={}, nameESPObjects={},
+    nameESPEnabled=false, boxESPEnabled=false, espNameAllState=false, tracerESPEnabled=false,
+    selectedPlayers={}, selectedTPPlayers={}, boxESPObjects={}, nameESPObjects={}, tracerESPObjects={},
     processedChars={}, playerConnections={}, manualPositionCFrame=nil,
     isInvisible=false, invisButton=nil, invisSound=nil,
     auraListening=false,
@@ -101,7 +101,7 @@ end
 
 -- CONFIG
 local DEFAULT_HITBOX_SIZE = 4
-local ESP_COLOR = Color3.fromRGB(255, 150, 150)
+local ESP_COLOR = Color3.fromRGB(0, 255, 0)
 local ESP_TRANSPARENCY = 0.7
 local TEXT_ESP_COLOR = Color3.fromRGB(255, 255, 255)
 
@@ -278,38 +278,57 @@ local function removeChams(character)
     end
 end
 
-local function removeOutlineChams(character)
-    if not character then return end
-    local h = character:FindFirstChild("StarCrowOutline")
-    if h then h:Destroy() end
-end
-
-local function addOutlineChams(character)
-    if not character or not isAlive(character) then return end
-    removeOutlineChams(character)
-    local h = Instance.new("Highlight")
-    h.Name = "StarCrowOutline"
-    h.Adornee = character
-    h.FillTransparency = 1
-    h.OutlineColor = Color3.fromRGB(255, 80, 80)
-    h.OutlineTransparency = 0
-    h.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
-    h.Parent = character
-end
-
 local function addChams(character, color)
     if not character or not isAlive(character) then return end
     removeChams(character)
-    
+
+   local chamColor = color or Color3.fromRGB(50, 200, 120)
+
     local highlight = Instance.new("Highlight")
     highlight.Name = "StarCrowChams"
     highlight.Adornee = character
-    highlight.FillColor = color or Color3.fromRGB(255, 0, 255)
+    highlight.FillColor = chamColor
     highlight.FillTransparency = 0.3
-    highlight.OutlineColor = Color3.new(1, 1, 1)
+    highlight.OutlineColor = chamColor
     highlight.OutlineTransparency = 0
     highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
     highlight.Parent = character
+end
+-- ─── TRACER ESP ───────────────────────────────────────────────────────────────
+
+local function removeTracerESP(player)
+    local line = S.tracerESPObjects[player]
+    if line then
+        pcall(function()
+            line.Visible = false
+            line:Remove()
+        end)
+        S.tracerESPObjects[player] = nil
+    end
+end
+
+local function addTracerESP(player)
+    if not player or player == LocalPlayer then return end
+    removeTracerESP(player)
+
+    if not Drawing or not Drawing.new then
+        warn("Drawing API not supported for Tracer ESP")
+        return
+    end
+
+    local line = Drawing.new("Line")
+    line.Visible = false
+    line.Thickness = 1.8
+    line.Transparency = 1
+    line.Color = getTeamColor(player)
+
+    S.tracerESPObjects[player] = line
+end
+
+local function clearAllTracers()
+    for player, _ in pairs(S.tracerESPObjects) do
+        removeTracerESP(player)
+    end
 end
 -- ─── HEAD HITBOX ──────────────────────────────────────────────────────────────
 
@@ -526,29 +545,34 @@ local function onCharacterReady(player, character)
     if (S.espNameAllState or (S.nameESPEnabled and S.selectedPlayers[player])) and isAlive(character) then
         createNameESP(player, character)
     end
-    if S.chamsEnabled and isAlive(character) then
+        if S.chamsEnabled and isAlive(character) then
         addChams(character, getTeamColor(player))
+    end
+    if S.tracerESPEnabled then
+        addTracerESP(player)
     end
 end
 
     applyAll()
 
-    local diedConn = humanoid.Died:Connect(function()
+       local diedConn = humanoid.Died:Connect(function()
         removeHeadHitbox(character)
         removeOutlineChams(character)
         resetBodyHitbox(character)
         removeBoxESP(character)
         removeNameESP(player)
         removeChams(character)
+        removeTracerESP(player)
     end)
 
-    local ancestryConn = character.AncestryChanged:Connect(function(_, parent)
+        local ancestryConn = character.AncestryChanged:Connect(function(_, parent)
         if not parent then
             removeHeadHitbox(character)
             removeOutlineChams(character)
             resetBodyHitbox(character)
             removeBoxESP(character)
             removeChams(character)
+            removeTracerESP(player)
         end
     end)
 
@@ -587,6 +611,7 @@ local function unregisterPlayer(player)
         removeChams(player.Character)
     end
     removeNameESP(player)
+    removeTracerESP(player)
     S.selectedPlayers[player] = nil
 end
 
@@ -1430,7 +1455,9 @@ local chamsToggle = createTransparentButton("Esp Chams: OFF", Color3.fromRGB(38,
 -- THIẾT LẬP MÀU MẶC ĐỊNH KHI MỚI CHẠY SCRIPT (Để giống các nút khác)
 chamsToggle.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
 chamsToggle.BackgroundTransparency = 0.35
-
+local tracerToggle = createTransparentButton("Esp Tracer: OFF", Color3.fromRGB(38, 38, 38), panel3)
+tracerToggle.BackgroundTransparency = 0.35
+tracerToggle.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
 chamsToggle.MouseButton1Click:Connect(function()
     S.chamsEnabled = not S.chamsEnabled
     
@@ -1455,6 +1482,27 @@ chamsToggle.MouseButton1Click:Connect(function()
                 removeChams(p.Character)
             end
         end
+    end
+end)
+tracerToggle.MouseButton1Click:Connect(function()
+    S.tracerESPEnabled = not S.tracerESPEnabled
+
+    if S.tracerESPEnabled then
+        tracerToggle.Text = "Esp Tracer: ON"
+        tracerToggle.BackgroundColor3 = Color3.fromRGB(50, 200, 120)
+        tracerToggle.BackgroundTransparency = 0
+
+        for _, p in pairs(Players:GetPlayers()) do
+            if p ~= LocalPlayer then
+                addTracerESP(p)
+            end
+        end
+    else
+        tracerToggle.Text = "Esp Tracer: OFF"
+        tracerToggle.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
+        tracerToggle.BackgroundTransparency = 0.35
+
+        clearAllTracers()
     end
 end)
 createTransparentLabel("Fly", panel2)
@@ -3083,7 +3131,50 @@ for i, btn in ipairs(tabBtns) do
     btn.MouseButton1Click:Connect(function() switchTab(i) end)
 end
 switchTab(1)
+RunService.RenderStepped:Connect(function()
+    if not S.tracerESPEnabled then
+        for _, line in pairs(S.tracerESPObjects) do
+            if line then
+                line.Visible = false
+            end
+        end
+        return
+    end
 
+    local viewport = Camera.ViewportSize
+    local fromPos = Vector2.new(viewport.X / 2, viewport.Y - 6)
+
+    for _, player in pairs(Players:GetPlayers()) do
+        if player ~= LocalPlayer then
+            local line = S.tracerESPObjects[player]
+
+            if not line then
+                addTracerESP(player)
+                line = S.tracerESPObjects[player]
+            end
+
+            if line then
+                local char = player.Character
+                local hrp = char and char:FindFirstChild("HumanoidRootPart")
+
+                if char and hrp and isAlive(char) then
+                    local screenPos, onScreen = Camera:WorldToViewportPoint(hrp.Position)
+
+                    if onScreen and screenPos.Z > 0 then
+                        line.From = fromPos
+                        line.To = Vector2.new(screenPos.X, screenPos.Y)
+                        line.Color = getTeamColor(player)
+                        line.Visible = true
+                    else
+                        line.Visible = false
+                    end
+                else
+                    line.Visible = false
+                end
+            end
+        end
+    end
+end)
 -- ─── FLING HELPERS ────────────────────────────────────────────────────────────
 
 local function CountFlingTargets()
