@@ -100,7 +100,7 @@ end
 
 
 -- CONFIG
-local DEFAULT_HITBOX_SIZE = 4
+local DEFAULT_HITBOX_SIZE = 15
 local ESP_COLOR = Color3.fromRGB(255, 150, 150)
 local ESP_TRANSPARENCY = 0.7
 local TEXT_ESP_COLOR = Color3.fromRGB(255, 255, 255)
@@ -300,13 +300,15 @@ end
 local function addChams(character, color)
     if not character or not isAlive(character) then return end
     removeChams(character)
-    
+
+    local chamColor = color or Color3.fromRGB(50, 200, 120)
+
     local highlight = Instance.new("Highlight")
     highlight.Name = "StarCrowChams"
     highlight.Adornee = character
-    highlight.FillColor = color or Color3.fromRGB(255, 0, 255)
+    highlight.FillColor = chamColor
     highlight.FillTransparency = 0.3
-    highlight.OutlineColor = Color3.new(1, 1, 1)
+    highlight.OutlineColor = chamColor
     highlight.OutlineTransparency = 0
     highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
     highlight.Parent = character
@@ -1370,7 +1372,7 @@ end)
 
 createTransparentLabel("Loopspeed", panel2)
 
-S.loopspeedInput = createTransparentInput("Speed (e.g. 16)", "16", panel2)
+S.loopspeedInput = createTransparentInput("Speed (e.g. 23)", "23", panel2)
 
 S.loopspeedToggle = createTransparentButton("Loopspeed: OFF", Color3.fromRGB(38, 38, 38), panel2)
 S.loopspeedToggle.BackgroundTransparency = 0.35
@@ -1458,7 +1460,7 @@ chamsToggle.MouseButton1Click:Connect(function()
     end
 end)
 createTransparentLabel("Fly", panel2)
-local flySpeedInput = createTransparentInput("Fly Speed", "2", panel2)
+local flySpeedInput = createTransparentInput("Fly Speed", "5", panel2)
 S.flyToggle = createTransparentButton("Fly: OFF", Color3.fromRGB(38, 38, 38), panel2)
 S.flyToggle.BackgroundTransparency = 0.35
 S.flyToggle.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
@@ -3917,7 +3919,7 @@ do
                 local char = LocalPlayer.Character
                 if char then
                     local hum = char:FindFirstChildOfClass("Humanoid")
-                    if hum then hum.WalkSpeed = tonumber(S.loopspeedInput.Text) or 16 end
+                    if hum then hum.WalkSpeed = tonumber(S.loopspeedInput.Text) or 23 end
                 end
             end)
         else
@@ -4170,7 +4172,7 @@ noclipToggle.BackgroundTransparency = S.noclipEnabled and 0 or 0.35
 end)
 
 S.flyToggle.MouseButton1Click:Connect(function()
-   S.flySpeed = tonumber(flySpeedInput.Text) or S.flySpeed or 2
+   S.flySpeed = tonumber(flySpeedInput.Text) or S.flySpeed or 5
     S.flyEnabled = not S.flyEnabled
 
     S.flyToggle.Text = S.flyEnabled and "Fly: ON" or "Fly: OFF"
@@ -4187,7 +4189,7 @@ flySpeedInput.FocusLost:Connect(function()
     local newSpeed = tonumber(flySpeedInput.Text)
 
     if not newSpeed or newSpeed <= 0 then
-        flySpeedInput.Text = tostring(S.flySpeed or 2)
+        flySpeedInput.Text = tostring(S.flySpeed or 5)
         return
     end
 
