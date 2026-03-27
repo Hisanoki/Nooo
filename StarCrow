@@ -18,8 +18,8 @@ local S = {
     ctrlClickTPEnabled=false,
     noclipEnabled=false, noclipLoop=nil,
     autoHitboxEnabled=false, autoBodyHitboxEnabled=false,
-    nameESPEnabled=false, boxESPEnabled=false, espNameAllState=false, tracerESPEnabled=false,
-selectedPlayers={}, selectedTPPlayers={}, boxESPObjects={}, nameESPObjects={}, tracerESPObjects={},
+    nameESPEnabled=false, espNameAllState=false, tracerESPEnabled=false,
+selectedPlayers={}, selectedTPPlayers={}, nameESPObjects={}, tracerESPObjects={},
     processedChars={}, playerConnections={}, manualPositionCFrame=nil,
     isInvisible=false, invisButton=nil, invisSound=nil,
     auraListening=false,
@@ -235,40 +235,7 @@ end
         createNotification("Invisible OFF", "You are now visible")
     end
 end
--- ─── BOX ESP ──────────────────────────────────────────────────────────────────
 
-local function removeBoxESP(character)
-    if not character then return end
-    if S.boxESPObjects[character] then
-        pcall(function() S.boxESPObjects[character]:Destroy() end)
-        S.boxESPObjects[character] = nil
-    end
-    local head = character:FindFirstChild("Head")
-    if head then
-        for _, c in head:GetChildren() do
-            if c:IsA("BoxHandleAdornment") and c.Name == "BoxChamESP" then
-                c:Destroy()
-            end
-        end
-    end
-end
-
-local function addBoxESP(character, color, size)
-    if not character or not isAlive(character) then return end
-    removeBoxESP(character)
-    local head = character:FindFirstChild("Head")
-    if not head or not head:IsA("BasePart") then return end
-    local box = Instance.new("BoxHandleAdornment")
-    box.Name = "BoxChamESP"
-    box.Adornee = head
-    box.Size = Vector3.new(size, size, size)
-    box.Color3 = color or ESP_COLOR
-    box.Transparency = ESP_TRANSPARENCY
-    box.ZIndex = 10
-    box.AlwaysOnTop = true
-    box.Parent = head
-    S.boxESPObjects[character] = box
-end
 -- ─── CHAMS ESP (HIGHLIGHT) ────────────────────────────────────────────────────
 local function removeChams(character)
     if not character then return end
@@ -423,13 +390,12 @@ local function applyHeadHitbox(character, size)
     end
 
     head.Massless = true
-    head.Size = Vector3.new(size, size, size)
-    head.CanCollide = false
-    head.Transparency = 0.5
-    head.Material = Enum.Material.ForceField
-
-    addOutlineChams(character)
-    S.processedChars[character] = true
+head.Size = Vector3.new(size, size, size)
+head.CanCollide = false
+head.Transparency = 0.5
+head.Material = Enum.Material.ForceField
+addOutlineChams(character)
+S.processedChars[character] = true
 end
 
 -- ─── BODY HITBOX (HRP direct resize, loop approach) ──────────────────────────
@@ -439,10 +405,10 @@ local function applyBodyHitbox(character, size)
     local hrp = character:FindFirstChild("HumanoidRootPart")
     if not hrp then return end
     pcall(function()
-        hrp.Size = Vector3.new(size, size, size)
-        hrp.CanCollide = false
-        hrp.Transparency = 0.5
-        hrp.Material = Enum.Material.ForceField
+       hrp.Size = Vector3.new(size, size, size)
+hrp.CanCollide = false
+hrp.Transparency = 0.5
+hrp.Material = Enum.Material.ForceField
     end)
     addOutlineChams(character)
 end
@@ -453,9 +419,9 @@ local function resetBodyHitbox(character)
     if not hrp then return end
     pcall(function()
         hrp.Size = Vector3.new(2, 2, 1)
-        hrp.Transparency = 1
-        hrp.CanCollide = false
-        hrp.Material = Enum.Material.Plastic
+hrp.Transparency = 1
+hrp.CanCollide = false
+hrp.Material = Enum.Material.Plastic
     end)
     removeOutlineChams(character)
 end
@@ -578,9 +544,7 @@ local function onCharacterReady(player, character)
     if S.autoBodyHitboxEnabled and isAlive(character) then
         applyBodyHitbox(character, size)
     end
-    if S.boxESPEnabled and isAlive(character) then
-        addBoxESP(character, getTeamColor(player), size)
-    end
+    
     if (S.espNameAllState or (S.nameESPEnabled and S.selectedPlayers[player])) and isAlive(character) then
         createNameESP(player, character)
     end
@@ -595,25 +559,22 @@ end
     applyAll()
 
     local diedConn = humanoid.Died:Connect(function()
+    removeHeadHitbox(character)
+    removeOutlineChams(character)
+    resetBodyHitbox(character)
+    removeNameESP(player)
+    removeTracerESP(player)
+    removeChams(character)
+end)
+
+    local ancestryConn = character.AncestryChanged:Connect(function(_, parent)
+    if not parent then
         removeHeadHitbox(character)
         removeOutlineChams(character)
         resetBodyHitbox(character)
-         removeBoxESP(character)
-        removeNameESP(player)
-        removeTracerESP(player)
         removeChams(character)
-    end)
-
-    local ancestryConn = character.AncestryChanged:Connect(function(_, parent)
-        if not parent then
-            removeHeadHitbox(character)
-            removeOutlineChams(character)
-            resetBodyHitbox(character)
-            removeBoxESP(character)
-            removeChams(character)
-        end
-    end)
-
+    end
+end)
     if S.playerConnections[player] then
         table.insert(S.playerConnections[player], diedConn)
         table.insert(S.playerConnections[player], ancestryConn)
@@ -645,14 +606,12 @@ local function unregisterPlayer(player)
     cleanupPlayerConnections(player)
     if player.Character then
         removeHeadHitbox(player.Character)
-        removeBoxESP(player.Character)
         removeChams(player.Character)
     end
-        removeNameESP(player)
+    removeNameESP(player)
     removeTracerESP(player)
     S.selectedPlayers[player] = nil
 end
-
 -- ─── UI HELPERS ───────────────────────────────────────────────────────────────
 
 local function createTransparentButton(text, color, parent)
@@ -1484,10 +1443,7 @@ local espNameAllBtn = createTransparentButton("ESP Name All: OFF", Color3.fromRG
 espNameAllBtn.BackgroundTransparency = 0.35
 espNameAllBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
 
-local boxESPBtn = createTransparentButton("ESP Box Chams: OFF", Color3.fromRGB(38, 38, 38), panel3)
-boxESPBtn.BackgroundTransparency = 0.35
-boxESPBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
--- Tìm nút Box ESP trong panel3 và dán đoạn này ngay dưới nó
+
 local chamsToggle = createTransparentButton("Esp Chams: OFF", Color3.fromRGB(38, 38, 38), panel3)
 
 -- THIẾT LẬP MÀU MẶC ĐỊNH KHI MỚI CHẠY SCRIPT (Để giống các nút khác)
@@ -3546,7 +3502,7 @@ S.loopBringBtn.MouseButton1Click:Connect(function()
                             end
 
                             -- tất cả đứng cùng 1 chỗ, chồng 1 cục
-                            targetHRP.CFrame = hrp.CFrame * CFrame.new(3, 1, 0)
+                           targetHRP.CFrame = hrp.CFrame * CFrame.new(0, 0, -3)
                         end
                     end
                 end
@@ -4193,31 +4149,7 @@ espNameAllBtn.MouseButton1Click:Connect(function()
     updatePlayerList()
 end)
 
-boxESPBtn.MouseButton1Click:Connect(function()
-    S.boxESPEnabled = not S.boxESPEnabled
 
-    if S.boxESPEnabled then
-        boxESPBtn.Text = "ESP Box Chams: ON"
-        boxESPBtn.BackgroundColor3 = Color3.fromRGB(50, 200, 120)
-        boxESPBtn.BackgroundTransparency = 0
-    else
-        boxESPBtn.Text = "ESP Box Chams: OFF"
-        boxESPBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
-        boxESPBtn.BackgroundTransparency = 0.35
-    end
-
-    local size = tonumber(S.sizeInput.Text) or DEFAULT_HITBOX_SIZE
-
-    for _, player in pairs(Players:GetPlayers()) do
-        if player ~= LocalPlayer and player.Character and isAlive(player.Character) then
-            if S.boxESPEnabled then
-                addBoxESP(player.Character, getTeamColor(player), size)
-            else
-                removeBoxESP(player.Character)
-            end
-        end
-    end
-end)
 
 S.invisButton.MouseButton1Click:Connect(toggleInvisibility)
 invisFloatToggleBtn.MouseButton1Click:Connect(function()
