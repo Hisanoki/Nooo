@@ -1395,7 +1395,7 @@ end)
 
 createTransparentLabel("Loopspeed", panel2)
 
-S.loopspeedInput = createTransparentInput("Speed (e.g. 16)", "16", panel2)
+S.loopspeedInput = createTransparentInput("Speed (e.g. 23)", "23", panel2)
 
 S.loopspeedToggle = createTransparentButton("Loopspeed: OFF", Color3.fromRGB(38, 38, 38), panel2)
 S.loopspeedToggle.BackgroundTransparency = 0.35
@@ -1506,7 +1506,7 @@ tracerToggle.MouseButton1Click:Connect(function()
     end
 end)
 createTransparentLabel("Fly", panel2)
-local flySpeedInput = createTransparentInput("Fly Speed", "2", panel2)
+local flySpeedInput = createTransparentInput("Fly Speed", "5", panel2)
 S.flyToggle = createTransparentButton("Fly: OFF", Color3.fromRGB(38, 38, 38), panel2)
 S.flyToggle.BackgroundTransparency = 0.35
 S.flyToggle.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
@@ -1895,7 +1895,7 @@ tpPosBtn.BackgroundColor3 = Color3.fromRGB(38,38,38)
 local copyPosBtn = createTransparentButton("Copy Position", Color3.fromRGB(38,38,38), panel7)
 copyPosBtn.BackgroundTransparency = 0.35
 copyPosBtn.BackgroundColor3 = Color3.fromRGB(38,38,38)
--- ─── PANEL 8: FETOOL ─────────────────────────────────────────────────────────
+-- ─── PANEL 8: FETOOL ───────────────────────────────────────────────────────────
 
 do
     local _lbl = createTransparentLabel("FeTool", panel8)
@@ -2305,7 +2305,7 @@ local function createUseFloat()
     end)
 end
 
--- ─── FETOOL BUTTONS ───────────────────────────────────────────────────────────
+-- ─── FeTOOL BUTTONS ─────────────────────────────────────────────────────────────
 
 S.feAuraBtn = createTransparentButton("Tool Aura", Color3.fromRGB(38, 38, 38), panel8)
 S.feAuraBtn.BackgroundTransparency = 0.35
@@ -4008,7 +4008,7 @@ do
                 local char = LocalPlayer.Character
                 if char then
                     local hum = char:FindFirstChildOfClass("Humanoid")
-                    if hum then hum.WalkSpeed = tonumber(S.loopspeedInput.Text) or 16 end
+                   if hum then hum.WalkSpeed = tonumber(S.loopspeedInput.Text) or 23 end
                 end
             end)
         else
@@ -4261,7 +4261,7 @@ noclipToggle.BackgroundTransparency = S.noclipEnabled and 0 or 0.35
 end)
 
 S.flyToggle.MouseButton1Click:Connect(function()
-   S.flySpeed = tonumber(flySpeedInput.Text) or S.flySpeed or 2
+   S.flySpeed = tonumber(flySpeedInput.Text) or S.flySpeed or 5
     S.flyEnabled = not S.flyEnabled
 
     S.flyToggle.Text = S.flyEnabled and "Fly: ON" or "Fly: OFF"
@@ -4278,7 +4278,7 @@ flySpeedInput.FocusLost:Connect(function()
     local newSpeed = tonumber(flySpeedInput.Text)
 
     if not newSpeed or newSpeed <= 0 then
-        flySpeedInput.Text = tostring(S.flySpeed or 2)
+       flySpeedInput.Text = tostring(S.flySpeed or 5)
         return
     end
 
