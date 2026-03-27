@@ -3502,7 +3502,7 @@ S.loopBringBtn.MouseButton1Click:Connect(function()
                             end
 
                             -- tất cả đứng cùng 1 chỗ, chồng 1 cục
-                           targetHRP.CFrame = hrp.CFrame * CFrame.new(0, 0, -3)
+                           targetHRP.CFrame = hrp.CFrame * CFrame.new(0, 0, -2)
                         end
                     end
                 end
