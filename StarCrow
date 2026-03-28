@@ -5406,7 +5406,13 @@ LocalPlayer.CharacterAdded:Connect(function(character)
     S.flyToggle.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
     S.flyToggle.BackgroundTransparency = 0.35
 end
-
+if S.flyFloatEnabled then
+    if not S.flyFloatBtn then
+        createFlyFloat()
+    else
+        updateFlyFloatVisual()
+    end
+end
     S.isInvisible = false
 if S.invisButton then
     S.invisButton.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
