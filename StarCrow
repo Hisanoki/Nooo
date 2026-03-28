@@ -106,6 +106,7 @@ end
 -- CONFIG
 local DEFAULT_HITBOX_SIZE = 15
 local ESP_COLOR = Color3.fromRGB(0, 255, 0)
+local HEADBOX_COLOR = Color3.fromRGB(255, 150, 150)
 local ESP_TRANSPARENCY = 0.7
 local TEXT_ESP_COLOR = Color3.fromRGB(255, 255, 255)
 
@@ -374,18 +375,20 @@ local function createTracerESP(player)
     }
 end
 -- ─── HEAD HITBOX ──────────────────────────────────────────────────────────────
-
 local function removeHeadHitbox(character)
     if not character then return end
     S.processedChars[character] = nil
-    removeOutlineChams(character)
+    removeBoxESP(character)
+
     local head = character:FindFirstChild("Head")
     if not head then return end
+
     local origSize = head:FindFirstChild("OriginalSize")
     if origSize then
         head.Size = origSize.Value
         origSize:Destroy()
     end
+
     local meshBackup = head:FindFirstChild("__MeshBackup")
     if meshBackup then
         local realMesh = meshBackup:FindFirstChildOfClass("SpecialMesh") or meshBackup:FindFirstChildOfClass("BlockMesh")
@@ -394,23 +397,17 @@ local function removeHeadHitbox(character)
         end
         meshBackup:Destroy()
     end
+
     head.Transparency = 0
     head.CanCollide = true
     head.Material = Enum.Material.Plastic
     head.Massless = false
 end
-
 local function applyHeadHitbox(character, size)
     if not character then return end
     if not isAlive(character) then return end
 
-    -- Nếu đã processed: chỉ re-add outline nếu bị mất, không resize lại head
-    if S.processedChars[character] then
-        if not character:FindFirstChild("StarCrowOutline") then
-            addOutlineChams(character)
-        end
-        return
-    end
+    if S.processedChars[character] then return end
 
     local head = character:FindFirstChild("Head")
     if not head then return end
@@ -437,10 +434,10 @@ local function applyHeadHitbox(character, size)
     head.Transparency = 0.5
     head.Material = Enum.Material.ForceField
 
-    addOutlineChams(character)
+   addBoxESP(character, HEADBOX_COLOR, size)
+
     S.processedChars[character] = true
 end
-
 -- ─── BODY HITBOX (HRP direct resize, loop approach) ──────────────────────────
 
 local function applyBodyHitbox(character, size)
@@ -5471,7 +5468,7 @@ task.spawn(function()
                         if not S.processedChars[char] then
                             pcall(applyHeadHitbox, char, hSize)
                         elseif not char:FindFirstChild("StarCrowOutline") then
-                            pcall(addOutlineChams, char)
+                            -- pcall(addOutlineChams, char)
                         end
                     end
 
