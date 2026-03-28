@@ -1376,7 +1376,7 @@ do
     Color3.fromRGB(25,25,25), Color3.fromRGB(25,25,25),
     Color3.fromRGB(25,25,25)
 }
-    local tabNames = {"Player","ESP","Teleport","Troll","Misc","Server","FeTool","Aimbot","SaveSet"}
+    local tabNames = {"Player","ESP","Teleport","Troll","Misc","Server","FeTool","Aimbot","Save"}
     for i = 1, 9 do
     local btn = Instance.new("TextButton")
     btn.Size = UDim2.new(1, 0, 0, 30)
@@ -3376,6 +3376,7 @@ do
             nameESPEnabled      = S.nameESPEnabled,
             espNameAllState     = S.espNameAllState,
             chamsEnabled        = S.chamsEnabled,
+            tracerESPEnabled    = S.tracerESPEnabled,
             -- Misc tab
             antiFlingEnabled    = S.antiFlingEnabled,
             antiAfkEnabled      = S.antiAfkEnabled,
@@ -3543,7 +3544,19 @@ do
                 pcall(updatePlayerList)
             end
         end)
-
+        
+        -- ESP Tracer
+        pcall(function()
+            if cfg.tracerESPEnabled and not S.tracerESPEnabled then
+                S.tracerESPEnabled = true
+                for _, player in pairs(Players:GetPlayers()) do
+                    if player ~= LocalPlayer then
+                        createTracerESP(player)
+                    end
+                end
+                syncBtn(S.btnRefs.tracerToggle, true, "Esp Tracer: ON", "Esp Tracer: OFF")
+            end
+        end)
         -- Chams
         pcall(function()
             if cfg.chamsEnabled and not S.chamsEnabled then
@@ -3704,17 +3717,17 @@ do
             applyConfig(cfg)
             showCustomNotif("✓ Configuration has been applied!", 3)
         else
-            showCustomNotif("No config found or file read error!", 3)
+            showCustomNotif("No config found!", 3)
         end
     end)
 
     -- ── BUILD UI TAB SaveSettings ────────────────────────────────────────────
     do
-        local _lbl = createTransparentLabel("Save Settings", panel10)
-        _lbl.TextColor3 = Color3.fromRGB(255,255,255)
-        _lbl.Font = Enum.Font.GothamBold
-        _lbl.TextSize = 14
-    end
+    local _lbl = createTransparentLabel("Save", panel10)
+    _lbl.TextColor3 = Color3.fromRGB(255,255,255)
+    _lbl.Font = Enum.Font.GothamBold
+    _lbl.TextSize = 14
+end
 
 
     
