@@ -1,0 +1,225 @@
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+
+local player = Players.LocalPlayer
+local camera = workspace.CurrentCamera
+
+-- ==========================================
+-- 1. TẠO GIAO DIỆN (GUI)
+-- ==========================================
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "FreeCamMobileGui"
+screenGui.ResetOnSpawn = false
+screenGui.Parent = player:WaitForChild("PlayerGui")
+
+local toggleBtn = Instance.new("TextButton")
+toggleBtn.Size = UDim2.new(0, 120, 0, 40)
+toggleBtn.Position = UDim2.new(0, 10, 0, 10)
+toggleBtn.Text = "Free Cam: OFF"
+toggleBtn.Font = Enum.Font.GothamBold
+toggleBtn.TextSize = 14
+toggleBtn.BackgroundColor3 = Color3.fromRGB(255, 100, 100)
+toggleBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+toggleBtn.Parent = screenGui
+
+local controlFrame = Instance.new("Frame")
+controlFrame.Size = UDim2.new(0, 200, 0, 200)
+controlFrame.Position = UDim2.new(1, -220, 1, -220)
+controlFrame.BackgroundTransparency = 1
+controlFrame.Visible = false
+controlFrame.Parent = screenGui
+
+local speedBox = Instance.new("TextBox")
+speedBox.Size = UDim2.new(0, 100, 0, 30)
+speedBox.Position = UDim2.new(0.5, -50, 0, -40)
+speedBox.Text = "2"
+speedBox.PlaceholderText = "Speed"
+speedBox.Font = Enum.Font.GothamBold
+speedBox.TextSize = 14
+speedBox.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+speedBox.TextColor3 = Color3.fromRGB(255, 255, 255)
+speedBox.Parent = controlFrame
+
+local function createNavButton(name, text, pos)
+	local btn = Instance.new("TextButton")
+	btn.Name = name
+	btn.Size = UDim2.new(0, 50, 0, 50)
+	btn.Position = pos
+	btn.Text = text
+	btn.TextSize = 24
+	btn.Font = Enum.Font.GothamBold
+	btn.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+	btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+	btn.BackgroundTransparency = 0.4
+	btn.Parent = controlFrame
+	return btn
+end
+
+local btnUp    = createNavButton("BtnUp",    "↑", UDim2.new(0.5, -25, 0, 10))
+local btnDown  = createNavButton("BtnDown",  "↓", UDim2.new(0.5, -25, 0, 130))
+local btnLeft  = createNavButton("BtnLeft",  "←", UDim2.new(0, 10, 0, 70))
+local btnRight = createNavButton("BtnRight", "→", UDim2.new(0, 140, 0, 70))
+
+-- ==========================================
+-- 2. LOGIC ĐIỀU KHIỂN
+-- ==========================================
+local isFreeCam = false
+local currentSpeed = 2
+local moveState = { Up = false, Down = false, Left = false, Right = false }
+
+-- ---- Biến xoay Camera ----
+local sensitivity    = 0.39        -- +30% so với 0.3
+local rotX, rotY     = 0, 0
+local isDragging     = false
+local lastDragPos    = nil
+local dragStartPos   = nil
+local activeDragInput = nil        -- *** Lưu đúng object touch đang xoay ***
+local DRAG_THRESHOLD = 12
+
+local function initRotFromCamera()
+	local look = camera.CFrame.LookVector
+	rotY = math.deg(math.asin(math.clamp(look.Y, -1, 1)))
+	rotX = math.deg(math.atan2(-look.X, -look.Z))
+end
+
+local function buildRotatedCFrame(pos)
+	return CFrame.new(pos)
+		* CFrame.Angles(0, math.rad(rotX), 0)
+		* CFrame.Angles(math.rad(rotY), 0, 0)
+end
+
+-- ==========================================
+-- 3. BẮT SỰ KIỆN XOAY
+-- ==========================================
+UserInputService.InputBegan:Connect(function(input, gameProcessed)
+	-- Nếu GUI (nút bấm di chuyển) đã ăn input → bỏ qua, không xoay
+	if gameProcessed then return end
+	if not isFreeCam then return end
+
+	if input.UserInputType == Enum.UserInputType.MouseButton1
+		or input.UserInputType == Enum.UserInputType.Touch then
+
+		-- Chỉ nhận ngón xoay nếu chưa có ngón nào đang xoay
+		if activeDragInput == nil then
+			activeDragInput = input       -- *** Khóa đúng ngón này ***
+			dragStartPos    = input.Position
+			lastDragPos     = input.Position
+			isDragging      = false
+		end
+	end
+end)
+
+UserInputService.InputChanged:Connect(function(input)
+	if not isFreeCam then return end
+
+	-- *** Chỉ xử lý đúng ngón đang xoay, bỏ qua mọi ngón khác ***
+	if input ~= activeDragInput then return end
+
+	if input.UserInputType == Enum.UserInputType.MouseMovement
+		or input.UserInputType == Enum.UserInputType.Touch then
+
+		if not isDragging then
+			local dist = (input.Position - dragStartPos).Magnitude
+			if dist >= DRAG_THRESHOLD then
+				isDragging  = true
+				lastDragPos = input.Position
+			end
+			return
+		end
+
+		if lastDragPos then
+			local delta = input.Position - lastDragPos
+			rotX = rotX - delta.X * sensitivity
+			rotY = math.clamp(rotY - delta.Y * sensitivity, -80, 80)
+		end
+		lastDragPos = input.Position
+	end
+end)
+
+UserInputService.InputEnded:Connect(function(input)
+	-- *** Chỉ kết thúc khi đúng ngón xoay nhấc lên ***
+	if input == activeDragInput then
+		activeDragInput = nil
+		isDragging      = false
+		dragStartPos    = nil
+		lastDragPos     = nil
+	end
+end)
+
+-- ---- Bind nút di chuyển ----
+local function bindButtonEvents(button, direction)
+	button.InputBegan:Connect(function(input)
+		if input.UserInputType == Enum.UserInputType.MouseButton1
+			or input.UserInputType == Enum.UserInputType.Touch then
+			moveState[direction] = true
+		end
+	end)
+	button.InputEnded:Connect(function(input)
+		if input.UserInputType == Enum.UserInputType.MouseButton1
+			or input.UserInputType == Enum.UserInputType.Touch then
+			moveState[direction] = false
+		end
+	end)
+end
+
+bindButtonEvents(btnUp,    "Up")
+bindButtonEvents(btnDown,  "Down")
+bindButtonEvents(btnLeft,  "Left")
+bindButtonEvents(btnRight, "Right")
+
+speedBox.FocusLost:Connect(function()
+	local num = tonumber(speedBox.Text)
+	if num then
+		currentSpeed = math.clamp(num, 0.1, 200)
+	else
+		speedBox.Text = tostring(currentSpeed)
+	end
+end)
+
+toggleBtn.MouseButton1Click:Connect(function()
+	isFreeCam = not isFreeCam
+	controlFrame.Visible = isFreeCam
+
+	if isFreeCam then
+		toggleBtn.Text = "Free Cam: ON"
+		toggleBtn.BackgroundColor3 = Color3.fromRGB(100, 255, 100)
+		camera.CameraType = Enum.CameraType.Scriptable
+		initRotFromCamera()
+	else
+		toggleBtn.Text = "Free Cam: OFF"
+		toggleBtn.BackgroundColor3 = Color3.fromRGB(255, 100, 100)
+		camera.CameraType = Enum.CameraType.Custom
+		if player.Character and player.Character:FindFirstChild("Humanoid") then
+			camera.CameraSubject = player.Character.Humanoid
+		end
+		for k in pairs(moveState) do moveState[k] = false end
+		activeDragInput = nil
+		isDragging      = false
+		dragStartPos    = nil
+		lastDragPos     = nil
+	end
+end)
+
+-- ==========================================
+-- 4. VÒNG LẶP CHÍNH
+-- ==========================================
+RunService.RenderStepped:Connect(function()
+	if not isFreeCam then return end
+
+	local pos         = camera.CFrame.Position
+	local lookVector  = camera.CFrame.LookVector
+	local rightVector = camera.CFrame.RightVector
+	local moveDir     = Vector3.new(0, 0, 0)
+
+	if moveState.Up    then moveDir = moveDir + lookVector  end
+	if moveState.Down  then moveDir = moveDir - lookVector  end
+	if moveState.Right then moveDir = moveDir + rightVector end
+	if moveState.Left  then moveDir = moveDir - rightVector end
+
+	if moveDir.Magnitude > 0 then
+		pos = pos + (moveDir.Unit * currentSpeed)
+	end
+
+	camera.CFrame = buildRotatedCFrame(pos)
+end)
