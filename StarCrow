@@ -18,8 +18,8 @@ local S = {
     ctrlClickTPEnabled=false,
     noclipEnabled=false, noclipLoop=nil,
     autoHitboxEnabled=false, autoBodyHitboxEnabled=false,
-    nameESPEnabled=false, espNameAllState=false, tracerESPEnabled=false,
-selectedPlayers={}, selectedTPPlayers={}, nameESPObjects={}, tracerESPObjects={},
+    nameESPEnabled=false, boxESPEnabled=false, espNameAllState=false, tracerESPEnabled=false,
+selectedPlayers={}, selectedTPPlayers={}, boxESPObjects={}, nameESPObjects={}, tracerESPObjects={},
     processedChars={}, playerConnections={}, manualPositionCFrame=nil,
     isInvisible=false, invisButton=nil, invisSound=nil,
     auraListening=false,
@@ -42,8 +42,12 @@ selectedPlayers={}, selectedTPPlayers={}, nameESPObjects={}, tracerESPObjects={}
     autoTPBtn=nil, tpPlayerList=nil, playerList=nil,
     feAuraBtn=nil, feKBBtn=nil,
     invisFloatEnabled=false, invisFloatBtn=nil, invisFloatStroke=nil,
+    invisFloatPos=nil, auraFloatPos=nil, dropFloatPos=nil, equipAllFloatPos=nil, useFloatPos=nil,
     flingStartBtn=nil, bangBtn=nil, loopBringBtn=nil,
     specContainer=nil,
+    -- SaveSettings refs
+    aimSettings=nil,
+    btnRefs={},
 }
 S.speaker = LocalPlayer
 
@@ -235,7 +239,40 @@ end
         createNotification("Invisible OFF", "You are now visible")
     end
 end
+-- ─── BOX ESP ──────────────────────────────────────────────────────────────────
 
+local function removeBoxESP(character)
+    if not character then return end
+    if S.boxESPObjects[character] then
+        pcall(function() S.boxESPObjects[character]:Destroy() end)
+        S.boxESPObjects[character] = nil
+    end
+    local head = character:FindFirstChild("Head")
+    if head then
+        for _, c in head:GetChildren() do
+            if c:IsA("BoxHandleAdornment") and c.Name == "BoxChamESP" then
+                c:Destroy()
+            end
+        end
+    end
+end
+
+local function addBoxESP(character, color, size)
+    if not character or not isAlive(character) then return end
+    removeBoxESP(character)
+    local head = character:FindFirstChild("Head")
+    if not head or not head:IsA("BasePart") then return end
+    local box = Instance.new("BoxHandleAdornment")
+    box.Name = "BoxChamESP"
+    box.Adornee = head
+    box.Size = Vector3.new(size, size, size)
+    box.Color3 = color or ESP_COLOR
+    box.Transparency = ESP_TRANSPARENCY
+    box.ZIndex = 10
+    box.AlwaysOnTop = true
+    box.Parent = head
+    S.boxESPObjects[character] = box
+end
 -- ─── CHAMS ESP (HIGHLIGHT) ────────────────────────────────────────────────────
 local function removeChams(character)
     if not character then return end
@@ -366,7 +403,12 @@ end
 local function applyHeadHitbox(character, size)
     if not character then return end
     if not isAlive(character) then return end
+
+    -- Nếu đã processed: chỉ re-add outline nếu bị mất, không resize lại head
     if S.processedChars[character] then
+        if not character:FindFirstChild("StarCrowOutline") then
+            addOutlineChams(character)
+        end
         return
     end
 
@@ -390,12 +432,13 @@ local function applyHeadHitbox(character, size)
     end
 
     head.Massless = true
-head.Size = Vector3.new(size, size, size)
-head.CanCollide = false
-head.Transparency = 0.5
-head.Material = Enum.Material.ForceField
-addOutlineChams(character)
-S.processedChars[character] = true
+    head.Size = Vector3.new(size, size, size)
+    head.CanCollide = false
+    head.Transparency = 0.5
+    head.Material = Enum.Material.ForceField
+
+    addOutlineChams(character)
+    S.processedChars[character] = true
 end
 
 -- ─── BODY HITBOX (HRP direct resize, loop approach) ──────────────────────────
@@ -405,10 +448,10 @@ local function applyBodyHitbox(character, size)
     local hrp = character:FindFirstChild("HumanoidRootPart")
     if not hrp then return end
     pcall(function()
-       hrp.Size = Vector3.new(size, size, size)
-hrp.CanCollide = false
-hrp.Transparency = 0.5
-hrp.Material = Enum.Material.ForceField
+        hrp.Size = Vector3.new(size, size, size)
+        hrp.CanCollide = false
+        hrp.Transparency = 0.5
+        hrp.Material = Enum.Material.ForceField
     end)
     addOutlineChams(character)
 end
@@ -419,9 +462,9 @@ local function resetBodyHitbox(character)
     if not hrp then return end
     pcall(function()
         hrp.Size = Vector3.new(2, 2, 1)
-hrp.Transparency = 1
-hrp.CanCollide = false
-hrp.Material = Enum.Material.Plastic
+        hrp.Transparency = 1
+        hrp.CanCollide = false
+        hrp.Material = Enum.Material.Plastic
     end)
     removeOutlineChams(character)
 end
@@ -530,55 +573,47 @@ end
 
 
 local function onCharacterReady(player, character)
-    local humanoid = character:FindFirstChildOfClass("Humanoid")
-    if not humanoid then
-        humanoid = character:WaitForChild("Humanoid", 5)
-    end
-    if not humanoid then return end
+    if not character then return end
 
-     local function applyAll()
+    local humanoid = character:WaitForChild("Humanoid", 10)
+    local head     = character:WaitForChild("Head", 10)
+    local hrp      = character:WaitForChild("HumanoidRootPart", 10)
+    if not humanoid or not head or not hrp then return end
+
+    -- Poll đến khi thực sự có máu, không check isAlive() 1 lần rồi bỏ
+    repeat task.wait(0.1) until humanoid.Health > 0 or not character.Parent
+    if not character.Parent or humanoid.Health <= 0 then return end
+
     local size = tonumber(S.sizeInput and S.sizeInput.Text) or DEFAULT_HITBOX_SIZE
-    if S.autoHitboxEnabled and isAlive(character) then
-        applyHeadHitbox(character, size)
+    if S.autoHitboxEnabled    then pcall(applyHeadHitbox,  character, size)                  end
+    if S.autoBodyHitboxEnabled then pcall(applyBodyHitbox, character, size)                  end
+    if S.boxESPEnabled         then pcall(addBoxESP, character, getTeamColor(player), size)  end
+    if S.espNameAllState or (S.nameESPEnabled and S.selectedPlayers[player]) then
+        pcall(createNameESP, player, character)
     end
-    if S.autoBodyHitboxEnabled and isAlive(character) then
-        applyBodyHitbox(character, size)
-    end
-    
-    if (S.espNameAllState or (S.nameESPEnabled and S.selectedPlayers[player])) and isAlive(character) then
-        createNameESP(player, character)
-    end
-        if S.chamsEnabled and isAlive(character) then
-        addChams(character, getTeamColor(player))
-    end
-    if S.tracerESPEnabled and isAlive(character) then
-        createTracerESP(player)
-    end
-end
-
-    applyAll()
-
-    local diedConn = humanoid.Died:Connect(function()
-    removeHeadHitbox(character)
-    removeOutlineChams(character)
-    resetBodyHitbox(character)
-    removeNameESP(player)
-    removeTracerESP(player)
-    removeChams(character)
-end)
-
-    local ancestryConn = character.AncestryChanged:Connect(function(_, parent)
-    if not parent then
+    if S.chamsEnabled then pcall(addChams, character, getTeamColor(player)) end
+    if S.tracerESPEnabled then pcall(createTracerESP, player) end
+    -- Cleanup khi chết hoặc character bị xóa
+    humanoid.Died:Connect(function()
+        S.processedChars[character] = nil
         removeHeadHitbox(character)
         removeOutlineChams(character)
         resetBodyHitbox(character)
+        removeBoxESP(character)
+        removeNameESP(player)
         removeChams(character)
-    end
-end)
-    if S.playerConnections[player] then
-        table.insert(S.playerConnections[player], diedConn)
-        table.insert(S.playerConnections[player], ancestryConn)
-    end
+        removeTracerESP(player)
+    end)
+    character.AncestryChanged:Connect(function(_, parent)
+        if not parent then
+            S.processedChars[character] = nil
+            removeHeadHitbox(character)
+            removeOutlineChams(character)
+            resetBodyHitbox(character)
+            removeBoxESP(character)
+            removeChams(character)
+        end
+    end)
 end
 
 local function registerPlayer(player)
@@ -587,31 +622,34 @@ local function registerPlayer(player)
 
     S.playerConnections[player] = {}
 
-    local charAddedConn = player.CharacterAdded:Connect(function(character)
-        S.processedChars[character] = nil
-        task.wait(0.5)
-        onCharacterReady(player, character)
+    -- Polling loop: cứ 0.5s check player.Character có đổi không
+    -- Không dùng CharacterAdded event để tránh race condition
+    task.spawn(function()
+        local lastChar = nil
+        while player.Parent do
+            local char = player.Character
+            if char and char ~= lastChar then
+                lastChar = char
+                S.processedChars[char] = nil
+                task.spawn(onCharacterReady, player, char)
+            end
+            task.wait(0.5)
+        end
     end)
-    table.insert(S.playerConnections[player], charAddedConn)
-
-    if player.Character then
-        task.spawn(function()
-            task.wait(0.1)
-            onCharacterReady(player, player.Character)
-        end)
-    end
 end
 
 local function unregisterPlayer(player)
     cleanupPlayerConnections(player)
     if player.Character then
         removeHeadHitbox(player.Character)
+        removeBoxESP(player.Character)
         removeChams(player.Character)
     end
     removeNameESP(player)
     removeTracerESP(player)
     S.selectedPlayers[player] = nil
 end
+
 -- ─── UI HELPERS ───────────────────────────────────────────────────────────────
 
 local function createTransparentButton(text, color, parent)
@@ -1073,6 +1111,115 @@ if not gui.Parent then
     gui.Parent = LocalPlayer:WaitForChild("PlayerGui")
 end
 
+-- ─── CUSTOM NOTIFICATION (bottom-right, rounded, với icon) ──────────────────
+-- Hoàn toàn độc lập, tự tạo ScreenGui riêng, không phụ thuộc biến ngoài.
+local function showCustomNotif(text, duration)
+    duration = duration or 3.5
+    local TweenService = game:GetService("TweenService")
+
+    -- Tạo hoặc lấy lại ScreenGui dành riêng cho notif
+    local parent
+    pcall(function() parent = game:GetService("CoreGui") end)
+    if not parent then parent = LocalPlayer:FindFirstChildOfClass("PlayerGui") end
+    if not parent then return end
+
+    local notifGui = parent:FindFirstChild("SCNotifGui_StarCrow")
+    if not notifGui then
+        notifGui = Instance.new("ScreenGui")
+        notifGui.Name = "SCNotifGui_StarCrow"
+        notifGui.ResetOnSpawn = false
+        notifGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+        notifGui.DisplayOrder = 999998
+        notifGui.IgnoreGuiInset = true
+        local ok2 = pcall(function() notifGui.Parent = game:GetService("CoreGui") end)
+        if not ok2 or not notifGui.Parent then
+            notifGui.Parent = LocalPlayer:FindFirstChildOfClass("PlayerGui")
+        end
+    end
+    if not notifGui or not notifGui.Parent then return end
+
+    -- Container giữ các notif xếp chồng từ dưới lên
+    local container = notifGui:FindFirstChild("NotifContainer")
+    if not container then
+        container = Instance.new("Frame")
+        container.Name = "NotifContainer"
+        container.Size = UDim2.new(0, 260, 1, 0)
+        container.Position = UDim2.new(1, -270, 0, 0)
+        container.BackgroundTransparency = 1
+        container.BorderSizePixel = 0
+        container.Parent = notifGui
+        local layout = Instance.new("UIListLayout")
+        layout.VerticalAlignment = Enum.VerticalAlignment.Bottom
+        layout.SortOrder = Enum.SortOrder.LayoutOrder
+        layout.Padding = UDim.new(0, 8)
+        layout.Parent = container
+        local pad = Instance.new("UIPadding")
+        pad.PaddingBottom = UDim.new(0, 24)
+        pad.Parent = container
+    end
+
+    local notifFrame = Instance.new("Frame")
+    notifFrame.Name = "NotifCard"
+    notifFrame.Size = UDim2.new(1, 0, 0, 68)
+    notifFrame.BackgroundColor3 = Color3.fromRGB(18, 18, 24)
+    notifFrame.BackgroundTransparency = 0.08
+    notifFrame.BorderSizePixel = 0
+    notifFrame.ClipsDescendants = true
+    -- start off-screen to the right for slide-in
+    notifFrame.Position = UDim2.new(2, 0, 0, 0)
+    notifFrame.Parent = container
+
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0, 18)
+    corner.Parent = notifFrame
+
+    local stroke = Instance.new("UIStroke")
+    stroke.Color = Color3.fromRGB(70, 70, 100)
+    stroke.Thickness = 1.5
+    stroke.Transparency = 0.1
+    stroke.Parent = notifFrame
+
+    local icon = Instance.new("ImageLabel")
+    icon.Size = UDim2.new(0, 40, 0, 40)
+    icon.Position = UDim2.new(0, 14, 0.5, -20)
+    icon.BackgroundTransparency = 1
+    icon.Image = "rbxassetid://73309457774546"
+    icon.ZIndex = 2
+    icon.Parent = notifFrame
+
+    local label = Instance.new("TextLabel")
+    label.Size = UDim2.new(1, -64, 1, -12)
+    label.Position = UDim2.new(0, 60, 0, 6)
+    label.BackgroundTransparency = 1
+    label.Text = text
+    label.TextColor3 = Color3.fromRGB(255, 255, 255)
+    label.Font = Enum.Font.GothamBold
+    label.TextSize = 13
+    label.TextWrapped = true
+    label.TextXAlignment = Enum.TextXAlignment.Left
+    label.TextYAlignment = Enum.TextYAlignment.Center
+    label.ZIndex = 2
+    label.Parent = notifFrame
+
+    -- Slide in
+    notifFrame.Position = UDim2.new(2, 0, 0, 0)
+    TweenService:Create(notifFrame, TweenInfo.new(0.35, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+        Position = UDim2.new(0, 0, 0, 0)
+    }):Play()
+
+    -- Auto dismiss
+    task.delay(duration, function()
+        if not notifFrame or not notifFrame.Parent then return end
+        local tw = TweenService:Create(notifFrame, TweenInfo.new(0.28, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
+            Position = UDim2.new(2, 0, 0, 0)
+        })
+        tw:Play()
+        tw.Completed:Connect(function()
+            if notifFrame and notifFrame.Parent then notifFrame:Destroy() end
+        end)
+    end)
+end
+
 -- Toggle button (middle-left, image, square rounded, white border, draggable)
 local toggleBtn = Instance.new("ImageButton")
 toggleBtn.Size = UDim2.new(0, 58, 0, 58)
@@ -1226,10 +1373,11 @@ do
     Color3.fromRGB(25,25,25), Color3.fromRGB(25,25,25),
     Color3.fromRGB(25,25,25), Color3.fromRGB(25,25,25),
     Color3.fromRGB(25,25,25), Color3.fromRGB(25,25,25),
-    Color3.fromRGB(25,25,25), Color3.fromRGB(25,25,25)
+    Color3.fromRGB(25,25,25), Color3.fromRGB(25,25,25),
+    Color3.fromRGB(25,25,25)
 }
-    local tabNames = {"Player","ESP","Teleport","Troll","Misc","Server","FeTool","Aimbot"}
-    for i = 1, 8 do
+    local tabNames = {"Player","ESP","Teleport","Troll","Misc","Server","FeTool","Aimbot","SaveSet"}
+    for i = 1, 9 do
     local btn = Instance.new("TextButton")
     btn.Size = UDim2.new(1, 0, 0, 30)
     btn.BackgroundColor3 = tabColors[i]
@@ -1285,6 +1433,7 @@ local panel6 = makeScrollPanel() -- Misc
 local panel7 = makeScrollPanel() -- Server 
 local panel8 = makeScrollPanel() -- FeTool
 local panel9 = makeScrollPanel() -- Aimbot
+local panel10 = makeScrollPanel() -- SaveSettings
 -- ─── PANEL 1: HEAD HITBOX ─────────────────────────────────────────────────────
 
 do
@@ -1298,9 +1447,11 @@ S.sizeInput = createTransparentInput("Size (e.g. 15)", tostring(DEFAULT_HITBOX_S
 local autoToggle = createTransparentButton("Head Hit Box: OFF", Color3.fromRGB(38, 38, 38), panel2)
 autoToggle.BackgroundColor3 = Color3.fromRGB(38,38,38)
 autoToggle.BackgroundTransparency = 0.35
+S.btnRefs.autoToggle = autoToggle
 local bodyToggle = createTransparentButton("Body Hit Box: OFF", Color3.fromRGB(38, 38, 38), panel2)
 bodyToggle.BackgroundColor3 = Color3.fromRGB(38,38,38)
 bodyToggle.BackgroundTransparency = 0.35
+S.btnRefs.bodyToggle = bodyToggle
 local removeAllBtn = createTransparentButton("Remove All Hitboxes", Color3.fromRGB(38, 38, 38), panel2)
 removeAllBtn.BackgroundColor3 = Color3.fromRGB(38,38,38)
 removeAllBtn.BackgroundTransparency = 0.35
@@ -1392,11 +1543,12 @@ end)
 
 createTransparentLabel("Loopspeed", panel2)
 
-S.loopspeedInput = createTransparentInput("Speed (e.g. 23)", "23", panel2)
+S.loopspeedInput = createTransparentInput("Speed (e.g. 30)", "30", panel2)
 
 S.loopspeedToggle = createTransparentButton("Loopspeed: OFF", Color3.fromRGB(38, 38, 38), panel2)
 S.loopspeedToggle.BackgroundTransparency = 0.35
 S.loopspeedToggle.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
+S.btnRefs.loopspeedToggle = S.loopspeedToggle
 
 S.invisButton = createTransparentButton("Invisible: OFF", Color3.fromRGB(38, 38, 38), panel2)
 S.invisButton.BackgroundTransparency = 0.35
@@ -1404,6 +1556,7 @@ S.invisButton.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
 local invisFloatToggleBtn = createTransparentButton("Invisible Float: OFF", Color3.fromRGB(38, 38, 38), panel2)
 invisFloatToggleBtn.BackgroundTransparency = 0.35
 invisFloatToggleBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
+S.btnRefs.invisFloatToggleBtn = invisFloatToggleBtn
 S.invisSound = Instance.new("Sound")
 S.invisSound.SoundId = INVIS_CONFIG.SOUND_ID
 S.invisSound.Volume = 0.5
@@ -1438,17 +1591,20 @@ end
 local autoNameESP = createTransparentButton("ESP Name: OFF", Color3.fromRGB(38, 38, 38), panel3)
 autoNameESP.BackgroundTransparency = 0.35
 autoNameESP.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
+S.btnRefs.autoNameESP = autoNameESP
 
 local espNameAllBtn = createTransparentButton("ESP Name All: OFF", Color3.fromRGB(38, 38, 38), panel3)
 espNameAllBtn.BackgroundTransparency = 0.35
 espNameAllBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
+S.btnRefs.espNameAllBtn = espNameAllBtn
 
-
+-- boxESPBtn removed (bỏ theo yêu cầu)
 local chamsToggle = createTransparentButton("Esp Chams: OFF", Color3.fromRGB(38, 38, 38), panel3)
 
 -- THIẾT LẬP MÀU MẶC ĐỊNH KHI MỚI CHẠY SCRIPT (Để giống các nút khác)
 chamsToggle.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
 chamsToggle.BackgroundTransparency = 0.35
+S.btnRefs.chamsToggle = chamsToggle
 
 chamsToggle.MouseButton1Click:Connect(function()
     S.chamsEnabled = not S.chamsEnabled
@@ -1477,8 +1633,10 @@ chamsToggle.MouseButton1Click:Connect(function()
     end
 end)
 local tracerToggle = createTransparentButton("Esp Tracer: OFF", Color3.fromRGB(38, 38, 38), panel3)
+
 tracerToggle.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
 tracerToggle.BackgroundTransparency = 0.35
+S.btnRefs.tracerToggle = tracerToggle
 
 tracerToggle.MouseButton1Click:Connect(function()
     S.tracerESPEnabled = not S.tracerESPEnabled
@@ -1488,8 +1646,8 @@ tracerToggle.MouseButton1Click:Connect(function()
         tracerToggle.BackgroundColor3 = Color3.fromRGB(50, 200, 120)
         tracerToggle.BackgroundTransparency = 0
 
-        for _, p in pairs(Players:GetPlayers()) do
-            if p ~= LocalPlayer then
+        for _, p in pairs(game.Players:GetPlayers()) do
+            if p ~= game.Players.LocalPlayer then
                 createTracerESP(p)
             end
         end
@@ -1498,26 +1656,28 @@ tracerToggle.MouseButton1Click:Connect(function()
         tracerToggle.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
         tracerToggle.BackgroundTransparency = 0.35
 
-        for _, p in pairs(Players:GetPlayers()) do
-            if p ~= LocalPlayer then
-                removeTracerESP(p)
-            end
+        for _, p in pairs(game.Players:GetPlayers()) do
+            removeTracerESP(p)
         end
     end
 end)
 createTransparentLabel("Fly", panel2)
 local flySpeedInput = createTransparentInput("Fly Speed", "5", panel2)
+S.btnRefs.flySpeedInput = flySpeedInput
 S.flyToggle = createTransparentButton("Fly: OFF", Color3.fromRGB(38, 38, 38), panel2)
 S.flyToggle.BackgroundTransparency = 0.35
 S.flyToggle.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
+S.btnRefs.flyToggle = S.flyToggle
 
 local infJumpToggle = createTransparentButton("Inf Jump: OFF", Color3.fromRGB(38, 38, 38), panel2)
 infJumpToggle.BackgroundTransparency = 0.35
 infJumpToggle.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
+S.btnRefs.infJumpToggle = infJumpToggle
 
 local noclipToggle = createTransparentButton("Noclip: OFF", Color3.fromRGB(38, 38, 38), panel2)
 noclipToggle.BackgroundTransparency = 0.35
 noclipToggle.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
+S.btnRefs.noclipToggle = noclipToggle
 
 -- ─── PANEL 3: TELEPORT ────────────────────────────────────────────────────────
 
@@ -1559,6 +1719,7 @@ tpToolBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
 local ctrlClickTPBtn = createTransparentButton("Ctrl Click TP: OFF", Color3.fromRGB(38, 38, 38), panel4)
 ctrlClickTPBtn.BackgroundTransparency = 0.35
 ctrlClickTPBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
+S.btnRefs.ctrlClickTPBtn = ctrlClickTPBtn
 -- ─── PANEL 5: TROLL (FLING) ───────────────────────────────────────────────────
 
 do
@@ -1625,18 +1786,22 @@ end
 local antiFlingBtn = createTransparentButton("Anti Fling: OFF", Color3.fromRGB(38, 38, 38), panel6)
 antiFlingBtn.BackgroundTransparency = 0.35
 antiFlingBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
+S.btnRefs.antiFlingBtn = antiFlingBtn
 
 local antiVoidBtn = createTransparentButton("Anti Void: OFF", Color3.fromRGB(38, 38, 38), panel6)
 antiVoidBtn.BackgroundTransparency = 0.35
 antiVoidBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
+S.btnRefs.antiVoidBtn = antiVoidBtn
 
 local antiAfkBtn = createTransparentButton("Anti AFK: OFF", Color3.fromRGB(38, 38, 38), panel6)
 antiAfkBtn.BackgroundTransparency = 0.35
 antiAfkBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
+S.btnRefs.antiAfkBtn = antiAfkBtn
 
 local loopFBBtn = createTransparentButton("LoopFullBright: OFF", Color3.fromRGB(38, 38, 38), panel6)
 loopFBBtn.BackgroundTransparency = 0.35
 loopFBBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
+S.btnRefs.loopFBBtn = loopFBBtn
 
 local noFogBtn = createTransparentButton("No Fog", Color3.fromRGB(38, 38, 38), panel6)
 noFogBtn.BackgroundTransparency = 0.35
@@ -1654,6 +1819,7 @@ end
 local instantBuyBtn = createTransparentButton("Instant Interact: OFF", Color3.fromRGB(38, 38, 38), panel6)
 instantBuyBtn.BackgroundTransparency = 0.35
 instantBuyBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
+S.btnRefs.instantBuyBtn = instantBuyBtn
 
 local unlockCameraBtn = createTransparentButton("Unlock Camera", Color3.fromRGB(38, 38, 38), panel6)
 unlockCameraBtn.BackgroundTransparency = 0.35
@@ -1661,10 +1827,12 @@ unlockCameraBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
 local mobileShiftLockBtn = createTransparentButton("Mobile ShiftLock: OFF", Color3.fromRGB(38, 38, 38), panel6)
 mobileShiftLockBtn.BackgroundTransparency = 0.35
 mobileShiftLockBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
+S.btnRefs.mobileShiftLockBtn = mobileShiftLockBtn
 
 local autoClickBtn = createTransparentButton("Auto Click: OFF", Color3.fromRGB(38, 38, 38), panel6)
 autoClickBtn.BackgroundTransparency = 0.35
 autoClickBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
+S.btnRefs.autoClickBtn = autoClickBtn
 
 
 
@@ -1784,19 +1952,25 @@ do
     local antiVoidEnabled = false
     local lastSafePos = nil
 
-    antiVoidBtn.MouseButton1Click:Connect(function()
-        antiVoidEnabled = not antiVoidEnabled
+    local function setAntiVoid(state, silent)
+        antiVoidEnabled = state
         antiVoidBtn.Text = "Anti Void: "..(antiVoidEnabled and "ON" or "OFF")
-
         if antiVoidEnabled then
             antiVoidBtn.BackgroundColor3 = Color3.fromRGB(50, 200, 120)
             antiVoidBtn.BackgroundTransparency = 0
-            createNotification("Anti Void", "ON")
+            if not silent then createNotification("Anti Void", "ON") end
         else
             antiVoidBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
             antiVoidBtn.BackgroundTransparency = 0.35
-            createNotification("Anti Void", "OFF")
+            if not silent then createNotification("Anti Void", "OFF") end
         end
+    end
+
+    -- Expose để applyConfig gọi khi load save
+    S.setAntiVoid = setAntiVoid
+
+    antiVoidBtn.MouseButton1Click:Connect(function()
+        setAntiVoid(not antiVoidEnabled)
     end)
 
     RunService.Heartbeat:Connect(function()
@@ -2030,6 +2204,10 @@ local function createInvisFloat()
     S.invisFloatBtn = Instance.new("TextButton")
     S.invisFloatBtn.Size = UDim2.new(0, S.floatBtnSize, 0, S.floatBtnSize)
     S.invisFloatBtn.Position = UDim2.new(0.85, 0, 0.5, -(S.floatBtnSize * 3 + 30))
+    if S.invisFloatPos then
+        local p = S.invisFloatPos
+        S.invisFloatBtn.Position = UDim2.new(p[1], p[2], p[3], p[4])
+    end
     S.invisFloatBtn.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
     S.invisFloatBtn.BackgroundTransparency = 0.88
     S.invisFloatBtn.BorderSizePixel = 0
@@ -2079,6 +2257,10 @@ local function createAuraFloat()
     S.auraFloatBtn = Instance.new("TextButton")
     S.auraFloatBtn.Size = UDim2.new(0, S.floatBtnSize, 0, S.floatBtnSize)
     S.auraFloatBtn.Position = UDim2.new(0.85, 0, 0.5, -(S.floatBtnSize * 2 + 18))
+    if S.auraFloatPos then
+        local p = S.auraFloatPos
+        S.auraFloatBtn.Position = UDim2.new(p[1], p[2], p[3], p[4])
+    end
     S.auraFloatBtn.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
     S.auraFloatBtn.BackgroundTransparency = 0.88
     S.auraFloatBtn.BorderSizePixel = 0
@@ -2126,6 +2308,10 @@ local function createDropFloat()
     S.dropFloatBtn = Instance.new("TextButton")
     S.dropFloatBtn.Size = UDim2.new(0, S.floatBtnSize, 0, S.floatBtnSize)
     S.dropFloatBtn.Position = UDim2.new(0.85, 0, 0.5, -(S.floatBtnSize + 6))
+    if S.dropFloatPos then
+        local p = S.dropFloatPos
+        S.dropFloatBtn.Position = UDim2.new(p[1], p[2], p[3], p[4])
+    end
     S.dropFloatBtn.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
     S.dropFloatBtn.BackgroundTransparency = 0.88
     S.dropFloatBtn.BorderSizePixel = 0
@@ -2174,6 +2360,10 @@ local function createEquipAllFloat()
     S.equipAllFloatBtn = Instance.new("TextButton")
     S.equipAllFloatBtn.Size = UDim2.new(0, S.floatBtnSize, 0, S.floatBtnSize)
     S.equipAllFloatBtn.Position = UDim2.new(0.85, 0, 0.5, 6)
+    if S.equipAllFloatPos then
+        local p = S.equipAllFloatPos
+        S.equipAllFloatBtn.Position = UDim2.new(p[1], p[2], p[3], p[4])
+    end
     S.equipAllFloatBtn.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
     S.equipAllFloatBtn.BackgroundTransparency = 0.88
     S.equipAllFloatBtn.BorderSizePixel = 0
@@ -2272,6 +2462,10 @@ local function createUseFloat()
     S.useFloatBtn = Instance.new("TextButton")
     S.useFloatBtn.Size = UDim2.new(0, S.floatBtnSize, 0, S.floatBtnSize)
     S.useFloatBtn.Position = UDim2.new(0.85, 0, 0.5, S.floatBtnSize + 18)
+    if S.useFloatPos then
+        local p = S.useFloatPos
+        S.useFloatBtn.Position = UDim2.new(p[1], p[2], p[3], p[4])
+    end
     S.useFloatBtn.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
     S.useFloatBtn.BackgroundTransparency = 0.88
     S.useFloatBtn.BorderSizePixel = 0
@@ -2320,6 +2514,7 @@ end)
 local feAuraFloatBtn = createTransparentButton("Aura Float: OFF", Color3.fromRGB(38, 38, 38), panel8)
 feAuraFloatBtn.BackgroundTransparency = 0.35
 feAuraFloatBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
+S.btnRefs.feAuraFloatBtn = feAuraFloatBtn
 
 feAuraFloatBtn.MouseButton1Click:Connect(function()
     S.auraFloatEnabled = not S.auraFloatEnabled
@@ -2355,6 +2550,7 @@ end)
 local feDropFloatBtn = createTransparentButton("Drop Float: OFF", Color3.fromRGB(38, 38, 38), panel8)
 feDropFloatBtn.BackgroundTransparency = 0.35
 feDropFloatBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
+S.btnRefs.feDropFloatBtn = feDropFloatBtn
 
 feDropFloatBtn.MouseButton1Click:Connect(function()
     S.dropFloatEnabled = not S.dropFloatEnabled
@@ -2385,6 +2581,7 @@ end)
 local feEquipAllFloatToggleBtn = createTransparentButton("Equip All Float: OFF", Color3.fromRGB(38, 38, 38), panel8)
 feEquipAllFloatToggleBtn.BackgroundTransparency = 0.35
 feEquipAllFloatToggleBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
+S.btnRefs.feEquipAllFloatToggleBtn = feEquipAllFloatToggleBtn
 
 feEquipAllFloatToggleBtn.MouseButton1Click:Connect(function()
     S.equipAllFloatEnabled = not S.equipAllFloatEnabled
@@ -2421,6 +2618,7 @@ end)
 local feUseFloatToggleBtn = createTransparentButton("Use Float: OFF", Color3.fromRGB(38, 38, 38), panel8)
 feUseFloatToggleBtn.BackgroundTransparency = 0.35
 feUseFloatToggleBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
+S.btnRefs.feUseFloatToggleBtn = feUseFloatToggleBtn
 
 feUseFloatToggleBtn.MouseButton1Click:Connect(function()
     S.useFloatEnabled = not S.useFloatEnabled
@@ -2776,6 +2974,7 @@ do -- AIMBOT SCOPE: isolated do..end tránh vượt 200 local
     AirPrediction       = true,
     AirPredictionAmount = 0.16,
 }
+    S.aimSettings = AimSettings
 
     local AIM_ON  = Color3.fromRGB(50, 200, 120)
     local AIM_OFF = Color3.fromRGB(38, 38, 38)
@@ -2827,18 +3026,23 @@ end
     -- ── Toggle buttons ──────────────────────────────────────────────────────
     local aimToggleBtn = createTransparentButton("Aimbot: OFF", AIM_OFF, panel9)
     aimStyle(aimToggleBtn, false)
+    S.btnRefs.aimToggleBtn = aimToggleBtn
 
     local wallCheckBtn = createTransparentButton("Wall Check: OFF", AIM_OFF, panel9)
     aimStyle(wallCheckBtn, AimSettings.WallCheck)
+    S.btnRefs.wallCheckBtn = wallCheckBtn
 
     local teamCheckBtn = createTransparentButton("Team Check: OFF", AIM_OFF, panel9)
     aimStyle(teamCheckBtn, false)
+    S.btnRefs.teamCheckBtn = teamCheckBtn
 
    local friendCheckBtn = createTransparentButton("Friend Check: OFF", AIM_OFF, panel9)
     aimStyle(friendCheckBtn, AimSettings.FriendCheck)
+    S.btnRefs.friendCheckBtn = friendCheckBtn
 
     local predictionBtn = createTransparentButton("Prediction: ON", AIM_OFF, panel9)
     aimStyle(predictionBtn, AimSettings.Prediction)
+    S.btnRefs.predictionBtn = predictionBtn
 
     
 
@@ -3116,7 +3320,7 @@ end -- END AIMBOT SCOPE
 
 -- ─── TAB SWITCH ───────────────────────────────────────────────────────────────
 
-local panels = {panel2, panel3, panel4, panel5, panel6, panel7, panel8, panel9}
+local panels = {panel2, panel3, panel4, panel5, panel6, panel7, panel8, panel9, panel10}
 
 local function switchTab(idx)
     for i, p in ipairs(panels) do
@@ -3132,7 +3336,463 @@ for i, btn in ipairs(tabBtns) do
 end
 switchTab(1)
 
--- ─── FLING HELPERS ────────────────────────────────────────────────────────────
+-- ─── PANEL 10: SAVE SETTINGS ──────────────────────────────────────────────────
+do
+    local SAVE_FOLDER = "StarCrow"
+    local SAVE_FILE   = "StarCrow/StarSaveSetting"
+
+    local function ensureFolder()
+        if not isfolder(SAVE_FOLDER) then
+            makefolder(SAVE_FOLDER)
+        end
+    end
+
+    -- Đọc config từ file JSON, trả về table hoặc nil
+    local function loadConfig()
+        if not isfile(SAVE_FILE) then return nil end
+        local ok, data = pcall(function()
+            return game:GetService("HttpService"):JSONDecode(readfile(SAVE_FILE))
+        end)
+        if ok and type(data) == "table" then return data end
+        return nil
+    end
+
+    -- Ghi config hiện tại vào file (overwrite)
+    local function saveConfig()
+        ensureFolder()
+        local cfg = {
+            -- Player tab
+            hitboxSize          = S.sizeInput and S.sizeInput.Text or "4",
+            headHitbox          = S.autoHitboxEnabled,
+            bodyHitbox          = S.autoBodyHitboxEnabled,
+            loopspeedEnabled    = S.loopspeedToggle and S.loopspeedToggle.Text:find("ON") ~= nil,
+            loopspeedValue      = S.loopspeedInput and S.loopspeedInput.Text or "16",
+            invisFloatEnabled   = S.invisFloatEnabled,
+            flyEnabled          = S.flyEnabled,
+            flySpeed            = S.btnRefs.flySpeedInput and S.btnRefs.flySpeedInput.Text or "2",
+            infJumpEnabled      = S.infJumpEnabled,
+            noclipEnabled       = S.noclipEnabled,
+            -- ESP tab
+            nameESPEnabled      = S.nameESPEnabled,
+            espNameAllState     = S.espNameAllState,
+            chamsEnabled        = S.chamsEnabled,
+            -- Misc tab
+            antiFlingEnabled    = S.antiFlingEnabled,
+            antiAfkEnabled      = S.antiAfkEnabled,
+            instantBuyEnabled   = S.btnRefs.instantBuyBtn and S.btnRefs.instantBuyBtn.Text:find("ON") ~= nil,
+            loopFBEnabled       = S.btnRefs.loopFBBtn and S.btnRefs.loopFBBtn.Text:find("ON") ~= nil,
+            mobileShiftLock     = S.btnRefs.mobileShiftLockBtn and S.btnRefs.mobileShiftLockBtn.Text:find("ON") ~= nil,
+            autoClickEnabled    = S.autoClickEnabled,
+            antiVoidEnabled     = S.btnRefs.antiVoidBtn and S.btnRefs.antiVoidBtn.Text:find("ON") ~= nil,
+            ctrlClickTPEnabled  = S.ctrlClickTPEnabled,
+            -- FeTool tab
+            auraFloatEnabled    = S.auraFloatEnabled,
+            dropFloatEnabled    = S.dropFloatEnabled,
+            equipAllFloatEnabled= S.equipAllFloatEnabled,
+            useFloatEnabled     = S.useFloatEnabled,
+            feUseInputText      = S.feUseInput and S.feUseInput.Text or "",
+            floatBtnSize        = S.floatBtnSize,
+            -- Float button positions (lưu vị trí sau khi kéo)
+            invisFloatPos    = S.invisFloatBtn    and {S.invisFloatBtn.Position.X.Scale,    S.invisFloatBtn.Position.X.Offset,    S.invisFloatBtn.Position.Y.Scale,    S.invisFloatBtn.Position.Y.Offset}    or nil,
+            auraFloatPos     = S.auraFloatBtn     and {S.auraFloatBtn.Position.X.Scale,     S.auraFloatBtn.Position.X.Offset,     S.auraFloatBtn.Position.Y.Scale,     S.auraFloatBtn.Position.Y.Offset}     or nil,
+            dropFloatPos     = S.dropFloatBtn     and {S.dropFloatBtn.Position.X.Scale,     S.dropFloatBtn.Position.X.Offset,     S.dropFloatBtn.Position.Y.Scale,     S.dropFloatBtn.Position.Y.Offset}     or nil,
+            equipAllFloatPos = S.equipAllFloatBtn and {S.equipAllFloatBtn.Position.X.Scale, S.equipAllFloatBtn.Position.X.Offset, S.equipAllFloatBtn.Position.Y.Scale, S.equipAllFloatBtn.Position.Y.Offset} or nil,
+            useFloatPos      = S.useFloatBtn      and {S.useFloatBtn.Position.X.Scale,      S.useFloatBtn.Position.X.Offset,      S.useFloatBtn.Position.Y.Scale,      S.useFloatBtn.Position.Y.Offset}      or nil,
+        }
+        local ok2, err = pcall(function()
+            writefile(SAVE_FILE, game:GetService("HttpService"):JSONEncode(cfg))
+        end)
+        if ok2 then
+            createNotification("SaveSettings", "Config Saved!")
+        else
+            createNotification("SaveSettings", "Error Saving File!"..tostring(err))
+        end
+    end
+
+    -- Áp dụng config đã load lên UI + kích hoạt chức năng
+    local function safeClick(btn)
+        if not btn or not btn.Parent then return false end
+        local ok = pcall(function() btn:FireMouseButton1Click() end)
+        return ok
+    end
+
+    -- Helper: force-sync một toggle button (state + UI)
+    local function syncBtn(btn, isOn, textOn, textOff)
+        if not btn then return end
+        btn.Text = isOn and textOn or textOff
+        btn.BackgroundColor3 = isOn and Color3.fromRGB(50, 200, 120) or Color3.fromRGB(38, 38, 38)
+        btn.BackgroundTransparency = isOn and 0 or 0.35
+    end
+
+    local function applyConfig(cfg)
+        if not cfg then return end
+
+        -- HitBox size
+        pcall(function()
+            if S.sizeInput and cfg.hitboxSize then
+                S.sizeInput.Text = tostring(cfg.hitboxSize)
+            end
+        end)
+
+        -- Head Hitbox
+        pcall(function()
+            if cfg.headHitbox and not S.autoHitboxEnabled then
+                S.autoHitboxEnabled = true
+                local size = tonumber(S.sizeInput and S.sizeInput.Text) or DEFAULT_HITBOX_SIZE
+                for _, player in pairs(Players:GetPlayers()) do
+                    if player ~= LocalPlayer and player.Character and isAlive(player.Character) then
+                        applyHeadHitbox(player.Character, size)
+                    end
+                end
+                syncBtn(S.btnRefs.autoToggle, true, "Head Hit Box: ON", "Head Hit Box: OFF")
+            end
+        end)
+
+        -- Body Hitbox
+        pcall(function()
+            if cfg.bodyHitbox and not S.autoBodyHitboxEnabled then
+                S.autoBodyHitboxEnabled = true
+                local size = tonumber(S.sizeInput and S.sizeInput.Text) or DEFAULT_HITBOX_SIZE
+                for _, player in pairs(Players:GetPlayers()) do
+                    if player ~= LocalPlayer and player.Character and isAlive(player.Character) then
+                        applyBodyHitbox(player.Character, size)
+                    end
+                end
+                syncBtn(S.btnRefs.bodyToggle, true, "Body Hit Box: ON", "Body Hit Box: OFF")
+            end
+        end)
+
+        -- Loopspeed value
+        pcall(function()
+            if S.loopspeedInput and cfg.loopspeedValue then
+                S.loopspeedInput.Text = tostring(cfg.loopspeedValue)
+            end
+        end)
+        -- Loopspeed toggle
+        pcall(function()
+            if cfg.loopspeedEnabled and S.setLoopspeedEnabled then
+                S.setLoopspeedEnabled(true)
+            end
+        end)
+
+        -- Fly speed
+        pcall(function()
+            if S.btnRefs.flySpeedInput and cfg.flySpeed then
+                S.btnRefs.flySpeedInput.Text = tostring(cfg.flySpeed)
+                S.flySpeed = tonumber(cfg.flySpeed) or S.flySpeed
+            end
+        end)
+        -- Fly toggle
+        pcall(function()
+            if cfg.flyEnabled and not S.flyEnabled then
+                S.flyEnabled = true
+                startFly()
+                syncBtn(S.btnRefs.flyToggle, true, "Fly: ON", "Fly: OFF")
+            end
+        end)
+
+        -- Inf Jump
+        pcall(function()
+            if cfg.infJumpEnabled and not S.infJumpEnabled then
+                S.infJumpEnabled = true
+                startInfJump()
+                syncBtn(S.btnRefs.infJumpToggle, true, "Inf Jump: ON", "Inf Jump: OFF")
+            end
+        end)
+
+        -- Noclip
+        pcall(function()
+            if cfg.noclipEnabled and not S.noclipEnabled then
+                S.noclipEnabled = true
+                startNoclip()
+                syncBtn(S.btnRefs.noclipToggle, true, "Noclip: ON", "Noclip: OFF")
+            end
+        end)
+
+        -- ESP Name
+        pcall(function()
+            if cfg.nameESPEnabled and not S.nameESPEnabled then
+                S.nameESPEnabled = true
+                -- Populate selectedPlayers và tạo ESP cho tất cả player
+                for _, player in pairs(Players:GetPlayers()) do
+                    if player ~= LocalPlayer then
+                        S.selectedPlayers[player] = true
+                        if player.Character and isAlive(player.Character) then
+                            createNameESP(player, player.Character)
+                        end
+                    end
+                end
+                syncBtn(S.btnRefs.autoNameESP, true, "ESP Name: ON", "ESP Name: OFF")
+                pcall(updatePlayerList)
+            end
+        end)
+
+        -- ESP Name All
+        pcall(function()
+            if cfg.espNameAllState and not S.espNameAllState then
+                S.espNameAllState = true
+                for _, player in pairs(Players:GetPlayers()) do
+                    if player ~= LocalPlayer then
+                        S.selectedPlayers[player] = true
+                        if player.Character and isAlive(player.Character) then
+                            createNameESP(player, player.Character)
+                        end
+                    end
+                end
+                syncBtn(S.btnRefs.espNameAllBtn, true, "ESP Name All: ON", "ESP Name All: OFF")
+                pcall(updatePlayerList)
+            end
+        end)
+
+        -- Chams
+        pcall(function()
+            if cfg.chamsEnabled and not S.chamsEnabled then
+                S.chamsEnabled = true
+                for _, player in pairs(Players:GetPlayers()) do
+                    if player ~= LocalPlayer and player.Character and isAlive(player.Character) then
+                        addChams(player.Character, getTeamColor(player))
+                    end
+                end
+                syncBtn(S.btnRefs.chamsToggle, true, "Esp Chams: ON", "Esp Chams: OFF")
+            end
+        end)
+
+        -- Ctrl Click TP
+        pcall(function()
+            if cfg.ctrlClickTPEnabled and not S.ctrlClickTPEnabled then
+                S.ctrlClickTPEnabled = true
+                syncBtn(S.btnRefs.ctrlClickTPBtn, true, "Ctrl Click TP: ON", "Ctrl Click TP: OFF")
+            end
+        end)
+
+        -- Anti Fling → gọi enableAntiFling trực tiếp
+        pcall(function()
+            if cfg.antiFlingEnabled and not S.antiFlingEnabled then
+                S.antiFlingEnabled = true
+                enableAntiFling()
+                syncBtn(S.btnRefs.antiFlingBtn, true, "Anti Fling: ON", "Anti Fling: OFF")
+            end
+        end)
+
+        -- Anti AFK → set state trực tiếp
+        pcall(function()
+            if cfg.antiAfkEnabled and not S.antiAfkEnabled then
+                S.antiAfkEnabled = true
+                syncBtn(S.btnRefs.antiAfkBtn, true, "Anti AFK: ON", "Anti AFK: OFF")
+            end
+        end)
+
+        -- Anti Void → gọi setter trực tiếp
+        pcall(function()
+            if cfg.antiVoidEnabled and S.setAntiVoid then
+                S.setAntiVoid(true, true)
+            end
+        end)
+
+        -- Instant Interact → gọi setter trực tiếp
+        pcall(function()
+            if cfg.instantBuyEnabled and S.setInstantBuyEnabled then
+                S.setInstantBuyEnabled(true)
+            end
+        end)
+
+        -- LoopFullBright → gọi setter trực tiếp
+        pcall(function()
+            if cfg.loopFBEnabled and S.setLoopFB then
+                S.setLoopFB(true, true)
+            end
+        end)
+
+        -- Mobile ShiftLock → gọi setter trực tiếp
+        pcall(function()
+            if cfg.mobileShiftLock and S.setMobileShiftLockEnabled then
+                S.setMobileShiftLockEnabled(true)
+            end
+        end)
+
+        -- Auto Click → gọi startAutoClick trực tiếp
+        pcall(function()
+            if cfg.autoClickEnabled and not S.autoClickEnabled then
+                S.autoClickEnabled = true
+                startAutoClick()
+                syncBtn(S.btnRefs.autoClickBtn, true, "Auto Click: ON", "Auto Click: OFF")
+            end
+        end)
+
+        -- ─── FeTool Floats ────────────────────────────────────────────────────────
+        -- Set vị trí trước, sau đó gọi create function trực tiếp
+
+        pcall(function()
+            if cfg.invisFloatPos and type(cfg.invisFloatPos) == "table" and #cfg.invisFloatPos == 4 then
+                S.invisFloatPos = cfg.invisFloatPos
+            end
+            if cfg.invisFloatEnabled and not S.invisFloatEnabled then
+                S.invisFloatEnabled = true
+                createInvisFloat()
+                syncBtn(S.btnRefs.invisFloatToggleBtn, true, "Invisible Float: ON", "Invisible Float: OFF")
+            end
+        end)
+
+        pcall(function()
+            if cfg.auraFloatPos and type(cfg.auraFloatPos) == "table" and #cfg.auraFloatPos == 4 then
+                S.auraFloatPos = cfg.auraFloatPos
+            end
+            if cfg.auraFloatEnabled and not S.auraFloatEnabled then
+                S.auraFloatEnabled = true
+                createAuraFloat()
+                syncBtn(S.btnRefs.feAuraFloatBtn, true, "Aura Float: ON", "Aura Float: OFF")
+            end
+        end)
+
+        pcall(function()
+            if cfg.dropFloatPos and type(cfg.dropFloatPos) == "table" and #cfg.dropFloatPos == 4 then
+                S.dropFloatPos = cfg.dropFloatPos
+            end
+            if cfg.dropFloatEnabled and not S.dropFloatEnabled then
+                S.dropFloatEnabled = true
+                createDropFloat()
+                syncBtn(S.btnRefs.feDropFloatBtn, true, "Drop Float: ON", "Drop Float: OFF")
+            end
+        end)
+
+        pcall(function()
+            if cfg.equipAllFloatPos and type(cfg.equipAllFloatPos) == "table" and #cfg.equipAllFloatPos == 4 then
+                S.equipAllFloatPos = cfg.equipAllFloatPos
+            end
+            if cfg.equipAllFloatEnabled and not S.equipAllFloatEnabled then
+                S.equipAllFloatEnabled = true
+                createEquipAllFloat()
+                syncBtn(S.btnRefs.feEquipAllFloatToggleBtn, true, "Equip All Float: ON", "Equip All Float: OFF")
+            end
+        end)
+
+        pcall(function()
+            if cfg.useFloatPos and type(cfg.useFloatPos) == "table" and #cfg.useFloatPos == 4 then
+                S.useFloatPos = cfg.useFloatPos
+            end
+            if cfg.useFloatEnabled and not S.useFloatEnabled then
+                S.useFloatEnabled = true
+                createUseFloat()
+                syncBtn(S.btnRefs.feUseFloatToggleBtn, true, "Use Float: ON", "Use Float: OFF")
+            end
+        end)
+
+        pcall(function()
+            if S.feUseInput and cfg.feUseInputText then
+                S.feUseInput.Text = tostring(cfg.feUseInputText)
+            end
+        end)
+
+        -- Float btn size
+        pcall(function()
+            if cfg.floatBtnSize then
+                S.floatBtnSize = cfg.floatBtnSize
+            end
+        end)
+    end
+
+    -- ── Auto load khi script chạy ──
+    task.spawn(function()
+        task.wait(1) -- đợi UI khởi tạo xong
+        showCustomNotif("Loading config...\nPlease wait 2 seconds", 3)
+        task.wait(2)
+        local cfg = nil
+        local ok, err = pcall(function()
+            cfg = loadConfig()
+        end)
+        if ok and cfg then
+            applyConfig(cfg)
+            showCustomNotif("✓ Configuration has been applied!", 3)
+        else
+            showCustomNotif("No config found or file read error!", 3)
+        end
+    end)
+
+    -- ── BUILD UI TAB SaveSettings ────────────────────────────────────────────
+    do
+        local _lbl = createTransparentLabel("Save Settings", panel10)
+        _lbl.TextColor3 = Color3.fromRGB(255,255,255)
+        _lbl.Font = Enum.Font.GothamBold
+        _lbl.TextSize = 14
+    end
+
+
+    
+
+    -- Nút SAVE
+    local saveBtn = createTransparentButton("Save Config", Color3.fromRGB(38, 38, 38), panel10)
+    saveBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
+saveBtn.BackgroundTransparency = 0.35
+    saveBtn.TextSize = 13
+    saveBtn.Size = UDim2.new(1, 0, 0, 36)
+
+    saveBtn.MouseButton1Click:Connect(function()
+        saveBtn.BackgroundColor3 = Color3.fromRGB(50, 200, 120)
+        saveBtn.BackgroundTransparency = 0
+        saveConfig()
+        task.delay(0.8, function()
+    if saveBtn and saveBtn.Parent then
+        saveBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
+        saveBtn.BackgroundTransparency = 0.35
+    end
+end)
+    end)
+
+    
+
+    -- Nút DELETE config
+    local deleteBtn = createTransparentButton("Deleted Config", Color3.fromRGB(38, 38, 38), panel10)
+    deleteBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
+deleteBtn.BackgroundTransparency = 0.35
+    deleteBtn.TextSize = 13
+    deleteBtn.Size = UDim2.new(1, 0, 0, 36)
+
+    deleteBtn.MouseButton1Click:Connect(function()
+        if isfile(SAVE_FILE) then
+            pcall(function() delfile(SAVE_FILE) end)
+            createNotification("SaveSettings", "Config Deleted!")
+        else
+            createNotification("SaveSettings", "No config file found!")
+        end
+        deleteBtn.BackgroundColor3 = Color3.fromRGB(50, 200, 120)
+        deleteBtn.BackgroundTransparency = 0
+        task.delay(0.6, function()
+    if deleteBtn and deleteBtn.Parent then
+        deleteBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
+        deleteBtn.BackgroundTransparency = 0.35
+    end
+end)
+    end)
+
+    -- Trạng thái file
+    local fileStatusLabel = Instance.new("TextLabel")
+    fileStatusLabel.Size = UDim2.new(1, 0, 0, 24)
+    fileStatusLabel.BackgroundTransparency = 1
+    fileStatusLabel.TextColor3 = Color3.fromRGB(140, 200, 140)
+    fileStatusLabel.Font = Enum.Font.Gotham
+    fileStatusLabel.TextSize = 11
+    fileStatusLabel.TextXAlignment = Enum.TextXAlignment.Left
+    fileStatusLabel.Parent = panel10
+
+    local function updateFileStatus()
+        if isfile(SAVE_FILE) then
+            fileStatusLabel.Text = ""
+            fileStatusLabel.TextColor3 = Color3.fromRGB(80, 220, 120)
+        else
+            fileStatusLabel.Text = ""
+            fileStatusLabel.TextColor3 = Color3.fromRGB(220, 100, 80)
+        end
+    end
+
+    updateFileStatus()
+    -- Cập nhật trạng thái mỗi lần mở tab
+    task.spawn(function()
+        while true do
+            task.wait(2)
+            pcall(updateFileStatus)
+        end
+    end)
+end
 
 local function CountFlingTargets()
     local n = 0
@@ -3502,7 +4162,7 @@ S.loopBringBtn.MouseButton1Click:Connect(function()
                             end
 
                             -- tất cả đứng cùng 1 chỗ, chồng 1 cục
-                           targetHRP.CFrame = hrp.CFrame * CFrame.new(0, 0, -2)
+                            targetHRP.CFrame = hrp.CFrame * CFrame.new(0, 0, -2)
                         end
                     end
                 end
@@ -3594,19 +4254,15 @@ end)
 do
     local loopFullBright = false
     local fbConnection = nil
-    loopFBBtn.MouseButton1Click:Connect(function()
 
-        loopFullBright = not loopFullBright
-
+    local function setLoopFB(state, silent)
+        loopFullBright = state
         if loopFullBright then
             loopFBBtn.Text = "LoopFullBright: ON"
             loopFBBtn.BackgroundColor3 = Color3.fromRGB(50, 200, 120)
             loopFBBtn.BackgroundTransparency = 0
-            createNotification("LoopFullBright", "ON")
-            if fbConnection then
-                fbConnection:Disconnect()
-            end
-
+            if not silent then createNotification("LoopFullBright", "ON") end
+            if fbConnection then fbConnection:Disconnect() end
             fbConnection = RunService.RenderStepped:Connect(function()
                 local lighting = game:GetService("Lighting")
                 lighting.Brightness = 2
@@ -3615,18 +4271,20 @@ do
                 lighting.GlobalShadows = false
                 lighting.OutdoorAmbient = Color3.fromRGB(128,128,128)
             end)
-
         else
             loopFBBtn.Text = "LoopFullBright: OFF"
             loopFBBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
             loopFBBtn.BackgroundTransparency = 0.35
-            createNotification("LoopFullBright", "OFF")
-            if fbConnection then
-                fbConnection:Disconnect()
-                fbConnection = nil
-            end
+            if not silent then createNotification("LoopFullBright", "OFF") end
+            if fbConnection then fbConnection:Disconnect(); fbConnection = nil end
         end
+    end
 
+    -- Expose để applyConfig gọi khi load save
+    S.setLoopFB = setLoopFB
+
+    loopFBBtn.MouseButton1Click:Connect(function()
+        setLoopFB(not loopFullBright)
     end)
 end
 noFogBtn.MouseButton1Click:Connect(function()
@@ -3727,6 +4385,9 @@ do
             createNotification("Instant Interact", "OFF")
         end
     end
+
+    -- Expose để applyConfig gọi khi load save
+    S.setInstantBuyEnabled = setInstantBuyEnabled
 
     instantBuyBtn.MouseButton1Click:Connect(function()
         setInstantBuyEnabled(not instantBuyEnabled)
@@ -3929,6 +4590,9 @@ end
         end
     end
 
+    -- Expose để applyConfig gọi khi load save
+    S.setMobileShiftLockEnabled = setMobileShiftLockEnabled
+
     mobileShiftLockBtn.MouseButton1Click:Connect(function()
         setMobileShiftLockEnabled(not mobileShiftLockEnabled)
     end)
@@ -3965,7 +4629,7 @@ do
                 local char = LocalPlayer.Character
                 if char then
                     local hum = char:FindFirstChildOfClass("Humanoid")
-                    if hum then hum.WalkSpeed = tonumber(S.loopspeedInput.Text) or 23 end
+                    if hum then hum.WalkSpeed = tonumber(S.loopspeedInput.Text) or 16 end
                 end
             end)
         else
@@ -3976,6 +4640,9 @@ do
             end
         end
     end
+
+    -- Expose để applyConfig gọi khi load save
+    S.setLoopspeedEnabled = setLoopspeedEnabled
 
     S.loopspeedToggle.MouseButton1Click:Connect(function() setLoopspeedEnabled(not loopspeedEnabled) end)
 end
@@ -4113,11 +4780,14 @@ autoNameESP.MouseButton1Click:Connect(function()
             removeNameESP(player)
         end
     else
-        for player, selected in pairs(S.selectedPlayers) do
-            if selected and player.Character and isAlive(player.Character) then
+        -- Tạo ESP cho tất cả player (không chỉ selectedPlayers)
+        for _, player in pairs(Players:GetPlayers()) do
+            if player ~= LocalPlayer and player.Character and isAlive(player.Character) then
+                S.selectedPlayers[player] = true
                 createNameESP(player, player.Character)
             end
         end
+        updatePlayerList()
     end
 end)
 
@@ -4149,7 +4819,7 @@ espNameAllBtn.MouseButton1Click:Connect(function()
     updatePlayerList()
 end)
 
-
+-- boxESPBtn handler removed (bỏ theo yêu cầu)
 
 S.invisButton.MouseButton1Click:Connect(toggleInvisibility)
 invisFloatToggleBtn.MouseButton1Click:Connect(function()
@@ -4194,7 +4864,7 @@ noclipToggle.BackgroundTransparency = S.noclipEnabled and 0 or 0.35
 end)
 
 S.flyToggle.MouseButton1Click:Connect(function()
-   S.flySpeed = tonumber(flySpeedInput.Text) or S.flySpeed or 5
+   S.flySpeed = tonumber(flySpeedInput.Text) or S.flySpeed or 2
     S.flyEnabled = not S.flyEnabled
 
     S.flyToggle.Text = S.flyEnabled and "Fly: ON" or "Fly: OFF"
@@ -4211,7 +4881,7 @@ flySpeedInput.FocusLost:Connect(function()
     local newSpeed = tonumber(flySpeedInput.Text)
 
     if not newSpeed or newSpeed <= 0 then
-        flySpeedInput.Text = tostring(S.flySpeed or 5)
+        flySpeedInput.Text = tostring(S.flySpeed or 2)
         return
     end
 
@@ -4761,6 +5431,50 @@ task.spawn(function()
         updateTPList()
     end
 end)
+
+-- ─── ESP / CHAMS / OUTLINE REPAIR WATCHDOG ────────────────────────────────────
+-- Safety net: cứ 1.5s scan tất cả player đang alive, ai thiếu effect thì tự vá lại
+-- Giải quyết trường hợp chết liên tục / respawn nhanh bị miss
+task.spawn(function()
+    while true do
+        task.wait(1.5)
+        for _, player in pairs(Players:GetPlayers()) do
+            if player ~= LocalPlayer then
+                local char = player.Character
+                if char and isAlive(char) then
+                    -- Đảm bảo player đã được register
+                    if not S.playerConnections[player] then
+                        registerPlayer(player)
+                    end
+
+                    -- Repair Chams nếu bị mất
+                    if S.chamsEnabled and not char:FindFirstChild("StarCrowChams") then
+                        pcall(addChams, char, getTeamColor(player))
+                    end
+
+                    -- Repair hitbox: char mới chưa processed → apply; đã processed nhưng mất outline → repair
+                    if S.autoHitboxEnabled then
+                        local hSize = tonumber(S.sizeInput and S.sizeInput.Text) or DEFAULT_HITBOX_SIZE
+                        if not S.processedChars[char] then
+                            pcall(applyHeadHitbox, char, hSize)
+                        elseif not char:FindFirstChild("StarCrowOutline") then
+                            pcall(addOutlineChams, char)
+                        end
+                    end
+
+                    -- Repair Name ESP nếu bị mất
+                    if S.espNameAllState or (S.nameESPEnabled and S.selectedPlayers[player]) then
+                        local head = char:FindFirstChild("Head")
+                        if head and not head:FindFirstChild("NameESP") then
+                            pcall(createNameESP, player, char)
+                        end
+                    end
+                end
+            end
+        end
+    end
+end)
+
 -- ─── INIT ─────────────────────────────────────────────────────────────────────
 S.statusLabel.Text = "Processing: 0 Players"
 updatePlayerList()
