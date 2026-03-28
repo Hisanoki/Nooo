@@ -5414,10 +5414,8 @@ if S.invisButton then
     S.invisButton.Text = "Invisible: OFF"
 end
 
-if invisFloatToggleBtn then
-    invisFloatToggleBtn.Text = "Invisible Float: OFF"
-    invisFloatToggleBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
-    invisFloatToggleBtn.BackgroundTransparency = 0.35
+if S.invisFloatEnabled then
+    updateInvisFloatVisual()
 end
     local chair = workspace:FindFirstChild("invischair")
     if chair then chair:Destroy() end
