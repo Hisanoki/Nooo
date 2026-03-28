@@ -4890,14 +4890,12 @@ autoNameESP.MouseButton1Click:Connect(function()
             removeNameESP(player)
         end
     else
-        -- Tạo ESP cho tất cả player (không chỉ selectedPlayers)
+        -- Chỉ tạo ESP cho các player đã được chọn trong danh sách
         for _, player in pairs(Players:GetPlayers()) do
-            if player ~= LocalPlayer and player.Character and isAlive(player.Character) then
-                S.selectedPlayers[player] = true
+            if player ~= LocalPlayer and S.selectedPlayers[player] and player.Character and isAlive(player.Character) then
                 createNameESP(player, player.Character)
             end
         end
-        updatePlayerList()
     end
 end)
 
