@@ -4412,7 +4412,7 @@ unlockCameraBtn.MouseButton1Click:Connect(function()
 
     pcall(function()
         LocalPlayer.CameraMinZoomDistance = 0.5
-        LocalPlayer.CameraMaxZoomDistance = 128
+        LocalPlayer.CameraMaxZoomDistance = 100000
     end)
 
     local cam = workspace.CurrentCamera
