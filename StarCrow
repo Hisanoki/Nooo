@@ -152,9 +152,28 @@ end
 
 local function setCharacterTransparency(character, transparency)
     if not character then return end
+
     for _, d in character:GetDescendants() do
-        if d:IsA("BasePart") or d:IsA("Decal") then
-            d.Transparency = transparency
+        -- Bỏ qua toàn bộ accessory / layered clothing / tóc / nón / tai...
+        if d:FindFirstAncestorOfClass("Accessory") then
+            continue
+        end
+
+        if d:IsA("BasePart") then
+            -- Giữ đầu + giữ HRP
+            if d.Name == "Head" or d.Name == "HumanoidRootPart" then
+                d.Transparency = 0
+            else
+                d.Transparency = transparency
+            end
+
+        elseif d:IsA("Decal") then
+            -- Giữ mặt
+            if d.Name == "face" and d.Parent and d.Parent.Name == "Head" then
+                d.Transparency = 0
+            else
+                d.Transparency = transparency
+            end
         end
     end
 end
