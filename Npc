@@ -1,26 +1,36 @@
 --===== SERVICES =====--
 local Players      = game:GetService("Players")
 local TweenService = game:GetService("TweenService")
+local RunService   = game:GetService("RunService")
 local LocalPlayer  = Players.LocalPlayer
 
 --===== CONFIG =====--
-local CFG = { SIZE = 4, W = 280, PAD = 15, BATCH = 5, DEBOUNCE = 0.8 }
+local CFG = { SIZE = 4, W = 230, PAD = 10, BATCH = 5, DEBOUNCE = 0.3 }
 
+--===== PALETTE — dark tactical / amber =====--
 local C = {
-    PRI  = Color3.fromRGB(140, 185, 255), PRI_D = Color3.fromRGB(100, 150, 255),
-    ACC  = Color3.fromRGB(180, 220, 255), FRAME = Color3.fromRGB(40,  60,  100),
-    TITL = Color3.fromRGB(30,  50,  90),  INP   = Color3.fromRGB(60,  90,  140),
-    TXT  = Color3.fromRGB(255, 255, 255), DNG   = Color3.fromRGB(200, 80,  80),
-    GOOD = Color3.fromRGB(80,  180, 120), BLUE  = Color3.fromRGB(80,  140, 200),
-    STA  = Color3.fromRGB(180, 255, 200),
+    BG      = Color3.fromRGB(11,  12,  17),   -- near-black panel bg
+    BG2     = Color3.fromRGB(16,  18,  26),   -- title bar
+    BG3     = Color3.fromRGB(24,  26,  38),   -- row hover
+    ROW     = Color3.fromRGB(18,  20,  30),   -- row normal
+    INP     = Color3.fromRGB(14,  16,  24),   -- input bg
+    ACC     = Color3.fromRGB(255, 185,  60),  -- amber accent
+    TXT     = Color3.fromRGB(145, 150, 168),  -- muted body text
+    TXT_B   = Color3.fromRGB(205, 210, 222),  -- bright text
+    OFF_BG  = Color3.fromRGB(28,  30,  43),   -- pill OFF bg
+    OFF_TXT = Color3.fromRGB(75,  80,  98),   -- pill OFF text
+    GOOD    = Color3.fromRGB(70,  200, 120),  -- mint green
+    DNG     = Color3.fromRGB(210,  58,  58),  -- red
+    DNG_BG  = Color3.fromRGB(40,  12,  12),   -- danger button bg
+    DNG_HV  = Color3.fromRGB(58,  16,  16),   -- danger hover
+    WHITE   = Color3.fromRGB(255, 255, 255),
 }
 
 --===== STATE =====--
--- [Model] = { conns, esp, hitboxSize, targetPart, synthetic }
-local npcs      = {}
-local workConns = {}
-local lastProc  = {}
-local origSizes = {}   -- [BasePart] = Vector3  (Lua-side, anticheat-safe)
+local npcs       = {}
+local workConns  = {}
+local lastProc   = {}
+local origSizes  = {}
 local autoHitbox = false
 local npcCheck   = false
 
@@ -30,9 +40,9 @@ gui.Name         = "NPC_HB"
 gui.ResetOnSpawn = false
 gui.Parent       = game.CoreGui
 
-local statusLabel, flashStatus  -- forward declare
+local statusLabel, flashStatus   -- forward declare
 
---===== HELPERS =====--
+--===== CORE HELPERS =====--
 local function discAll(list)
     for _, c in ipairs(list) do pcall(c.Disconnect, c) end
 end
@@ -41,154 +51,343 @@ local function safeDes(obj)
     if obj and obj.Parent then pcall(obj.Destroy, obj) end
 end
 
-local function mkCorner(p, r)
-    Instance.new("UICorner", p).CornerRadius = UDim.new(0, r or 8)
+local function corner(p, r)
+    Instance.new("UICorner", p).CornerRadius = UDim.new(0, r or 4)
 end
 
-local function mkStroke(p, col, th)
+local function stroke(p, col, th, trans)
     local s = Instance.new("UIStroke", p)
-    s.Color = col or C.ACC; s.Thickness = th or 1
+    s.Color       = col   or C.ACC
+    s.Thickness   = th    or 1
+    s.Transparency = trans or 0
 end
 
 -- Drag: mouse + touch, clamped to viewport
 local function makeDraggable(obj)
-    local drag, start, orig = false
+    local dragging, dragStart, startPos = false
     local cam = workspace.CurrentCamera
     obj.InputBegan:Connect(function(i)
         if i.UserInputType == Enum.UserInputType.Touch
         or i.UserInputType == Enum.UserInputType.MouseButton1 then
-            drag = true; start = i.Position; orig = obj.Position
+            dragging  = true
+            dragStart = i.Position
+            startPos  = obj.Position
             i.Changed:Connect(function()
-                if i.UserInputState == Enum.UserInputState.End then drag = false end
+                if i.UserInputState == Enum.UserInputState.End then
+                    dragging = false
+                end
             end)
         end
     end)
     obj.InputChanged:Connect(function(i)
-        if not drag then return end
+        if not dragging then return end
         if i.UserInputType ~= Enum.UserInputType.Touch
         and i.UserInputType ~= Enum.UserInputType.MouseMovement then return end
-        local d   = i.Position - start
-        local vp  = cam.ViewportSize
-        local abs = obj.AbsoluteSize
+        local delta = i.Position - dragStart
+        local vp    = cam.ViewportSize
+        local abs   = obj.AbsoluteSize
         obj.Position = UDim2.fromOffset(
-            math.clamp(orig.X.Offset + d.X, 0, vp.X - abs.X),
-            math.clamp(orig.Y.Offset + d.Y, 0, vp.Y - abs.Y)
+            math.clamp(startPos.X.Offset + delta.X, 0, vp.X - abs.X),
+            math.clamp(startPos.Y.Offset + delta.Y, 0, vp.Y - abs.Y)
         )
     end)
 end
 
-local function mkBtn(parent, text, pos, size, color)
-    local btn = Instance.new("TextButton")
-    btn.Position         = pos
-    btn.Size             = size or UDim2.fromOffset(CFG.W - CFG.PAD * 2, 32)
-    btn.BackgroundColor3 = color or C.PRI
-    btn.Text             = text
-    btn.TextColor3       = C.TXT
-    btn.Font             = Enum.Font.GothamBold
-    btn.TextSize         = 14
+--===== GUI COMPONENT BUILDERS =====--
+
+-- Thin separator line
+local function mkSep(parent, y)
+    local s = Instance.new("Frame", parent)
+    s.Position               = UDim2.fromOffset(CFG.PAD, y)
+    s.Size                   = UDim2.fromOffset(CFG.W - CFG.PAD * 2, 1)
+    s.BackgroundColor3       = C.ACC
+    s.BackgroundTransparency = 0.72
+    s.BorderSizePixel        = 0
+end
+
+-- Toggle row: label on left, animated pill on right
+-- Returns btn, pillBg, pillTxt so caller can update state
+local function mkToggleRow(parent, label, y)
+    local W = CFG.W - CFG.PAD * 2
+
+    local btn = Instance.new("TextButton", parent)
+    btn.Position         = UDim2.fromOffset(CFG.PAD, y)
+    btn.Size             = UDim2.fromOffset(W, 30)
+    btn.BackgroundColor3 = C.ROW
     btn.AutoButtonColor  = false
-    btn.Parent           = parent
-    mkCorner(btn, 8); mkStroke(btn, C.ACC, 1)
+    btn.Text             = ""
+    btn.BorderSizePixel  = 0
+    corner(btn, 4)
+
+    local lbl = Instance.new("TextLabel", btn)
+    lbl.Position               = UDim2.fromOffset(9, 0)
+    lbl.Size                   = UDim2.new(0, W - 60, 1, 0)
+    lbl.BackgroundTransparency = 1
+    lbl.Text                   = label
+    lbl.TextColor3             = C.TXT
+    lbl.Font                   = Enum.Font.GothamBold
+    lbl.TextSize               = 11
+    lbl.TextXAlignment         = Enum.TextXAlignment.Left
+
+    local pill = Instance.new("Frame", btn)
+    pill.AnchorPoint     = Vector2.new(1, 0.5)
+    pill.Position        = UDim2.new(1, -8, 0.5, 0)
+    pill.Size            = UDim2.fromOffset(36, 18)
+    pill.BackgroundColor3 = C.OFF_BG
+    pill.BorderSizePixel = 0
+    corner(pill, 9)
+
+    local pillTxt = Instance.new("TextLabel", pill)
+    pillTxt.Size               = UDim2.fromScale(1, 1)
+    pillTxt.BackgroundTransparency = 1
+    pillTxt.Text               = "OFF"
+    pillTxt.TextColor3         = C.OFF_TXT
+    pillTxt.Font               = Enum.Font.GothamBold
+    pillTxt.TextSize           = 9
+
     btn.MouseEnter:Connect(function()
-        TweenService:Create(btn, TweenInfo.new(0.12), {
-            BackgroundColor3 = color:Lerp(C.ACC, 0.25)
-        }):Play()
+        TweenService:Create(btn,  TweenInfo.new(0.1), {BackgroundColor3 = C.BG3}):Play()
     end)
     btn.MouseLeave:Connect(function()
-        TweenService:Create(btn, TweenInfo.new(0.12), {
-            BackgroundColor3 = color
-        }):Play()
+        TweenService:Create(btn,  TweenInfo.new(0.1), {BackgroundColor3 = C.ROW}):Play()
     end)
-    return btn
+
+    return btn, pill, pillTxt
+end
+
+-- Set pill state
+local function setPill(pill, pillTxt, on)
+    TweenService:Create(pill, TweenInfo.new(0.15), {
+        BackgroundColor3 = on and C.ACC or C.OFF_BG
+    }):Play()
+    pillTxt.Text       = on and "ON" or "OFF"
+    pillTxt.TextColor3 = on and C.BG  or C.OFF_TXT
 end
 
 --===== BUILD PANEL =====--
+
+local INNER = CFG.W - CFG.PAD * 2   -- usable width inside padding
+
 local frame = Instance.new("Frame")
 frame.Name             = "Panel"
-frame.Position         = UDim2.fromOffset(10, 100)
+frame.Position         = UDim2.fromOffset(10, 42)
 frame.Size             = UDim2.fromOffset(CFG.W, 0)
-frame.BackgroundColor3 = C.FRAME
+frame.BackgroundColor3 = C.BG
 frame.ClipsDescendants = true
 frame.Visible          = false
 frame.Active           = true
+frame.BorderSizePixel  = 0
 frame.Parent           = gui
-mkCorner(frame, 12); mkStroke(frame, C.ACC, 2)
+corner(frame, 6)
+stroke(frame, C.ACC, 1, 0.55)
 makeDraggable(frame)
 
-do -- title bar
-    local t = Instance.new("TextLabel", frame)
-    t.Size             = UDim2.fromOffset(CFG.W, 36)
-    t.BackgroundColor3 = C.TITL
-    t.Text             = "🌌 NPC Hitbox"
-    t.TextColor3       = Color3.fromRGB(220, 240, 255)
-    t.Font             = Enum.Font.GothamBold
-    t.TextSize         = 16
-    mkCorner(t, 12)
-end
+-- ── Title bar ──────────────────────────────────
+local titleBar = Instance.new("Frame", frame)
+titleBar.Size             = UDim2.fromOffset(CFG.W, 28)
+titleBar.BackgroundColor3 = C.BG2
+titleBar.BorderSizePixel  = 0
+corner(titleBar, 6)
+
+-- Accent left stripe on title
+local stripe = Instance.new("Frame", titleBar)
+stripe.Position         = UDim2.fromOffset(0, 4)
+stripe.Size             = UDim2.fromOffset(2, 20)
+stripe.BackgroundColor3 = C.ACC
+stripe.BorderSizePixel  = 0
+corner(stripe, 1)
+
+local titleLbl = Instance.new("TextLabel", titleBar)
+titleLbl.Position               = UDim2.fromOffset(12, 0)
+titleLbl.Size                   = UDim2.new(1, -40, 1, 0)
+titleLbl.BackgroundTransparency = 1
+titleLbl.Text                   = "HITBOX"
+titleLbl.TextColor3             = C.ACC
+titleLbl.Font                   = Enum.Font.GothamBlack
+titleLbl.TextSize               = 12
+titleLbl.TextXAlignment         = Enum.TextXAlignment.Left
+
+-- Small version tag right of title
+local verLbl = Instance.new("TextLabel", titleBar)
+verLbl.Position               = UDim2.fromOffset(76, 0)
+verLbl.Size                   = UDim2.fromOffset(40, 28)
+verLbl.BackgroundTransparency = 1
+verLbl.Text                   = "v2"
+verLbl.TextColor3             = Color3.fromRGB(80, 84, 100)
+verLbl.Font                   = Enum.Font.GothamBold
+verLbl.TextSize               = 9
+verLbl.TextXAlignment         = Enum.TextXAlignment.Left
+verLbl.TextYAlignment         = Enum.TextYAlignment.Bottom
+-- offset so it sits at the baseline of "HITBOX"
+verLbl.Position               = UDim2.fromOffset(74, -1)
+
+-- × close button
+local closeBtn = Instance.new("TextButton", titleBar)
+closeBtn.AnchorPoint        = Vector2.new(1, 0.5)
+closeBtn.Position           = UDim2.new(1, -6, 0.5, 0)
+closeBtn.Size               = UDim2.fromOffset(18, 18)
+closeBtn.BackgroundColor3   = C.OFF_BG
+closeBtn.AutoButtonColor    = false
+closeBtn.Text               = "×"
+closeBtn.TextColor3         = C.TXT
+closeBtn.Font               = Enum.Font.GothamBold
+closeBtn.TextSize           = 14
+closeBtn.BorderSizePixel    = 0
+corner(closeBtn, 9)
+closeBtn.MouseEnter:Connect(function()
+    TweenService:Create(closeBtn, TweenInfo.new(0.1), {BackgroundColor3 = C.DNG_BG, TextColor3 = C.DNG}):Play()
+end)
+closeBtn.MouseLeave:Connect(function()
+    TweenService:Create(closeBtn, TweenInfo.new(0.1), {BackgroundColor3 = C.OFF_BG, TextColor3 = C.TXT}):Play()
+end)
+
+-- ── Separator ──────────────────────────────────
+mkSep(frame, 28)
+
+-- ── SIZE row ───────────────────────────────────
+local sizeY = 37
+
+local sizeLbl = Instance.new("TextLabel", frame)
+sizeLbl.Position               = UDim2.fromOffset(CFG.PAD, sizeY)
+sizeLbl.Size                   = UDim2.fromOffset(80, 26)
+sizeLbl.BackgroundTransparency = 1
+sizeLbl.Text                   = "SIZE"
+sizeLbl.TextColor3             = C.TXT
+sizeLbl.Font                   = Enum.Font.GothamBold
+sizeLbl.TextSize               = 11
+sizeLbl.TextXAlignment         = Enum.TextXAlignment.Left
 
 local sizeInput = Instance.new("TextBox", frame)
-sizeInput.Position         = UDim2.fromOffset(CFG.PAD, 46)
-sizeInput.Size             = UDim2.fromOffset(CFG.W - CFG.PAD * 2, 32)
-sizeInput.PlaceholderText  = "Hitbox Size (default 4)"
-sizeInput.Text             = tostring(CFG.SIZE)
-sizeInput.BackgroundColor3 = C.INP
-sizeInput.TextColor3       = C.TXT
-sizeInput.Font             = Enum.Font.Gotham
-sizeInput.TextSize         = 14
-sizeInput.ClearTextOnFocus = false
-mkCorner(sizeInput, 8)
+sizeInput.AnchorPoint        = Vector2.new(1, 0)
+sizeInput.Position           = UDim2.fromOffset(CFG.W - CFG.PAD, sizeY)
+sizeInput.Size               = UDim2.fromOffset(60, 26)
+sizeInput.BackgroundColor3   = C.INP
+sizeInput.Text               = tostring(CFG.SIZE)
+sizeInput.TextColor3         = C.ACC
+sizeInput.PlaceholderText    = "4"
+sizeInput.PlaceholderColor3  = C.OFF_TXT
+sizeInput.Font               = Enum.Font.GothamBold
+sizeInput.TextSize           = 12
+sizeInput.ClearTextOnFocus   = false
+sizeInput.BorderSizePixel    = 0
+corner(sizeInput, 4)
+stroke(sizeInput, C.ACC, 1, 0.72)
 
-local Y, SP = 86, 38
+-- ── Separator ──────────────────────────────────
+mkSep(frame, 72)
 
-local autoToggle   = mkBtn(frame, "Auto Hitbox: OFF",    UDim2.fromOffset(CFG.PAD, Y)); Y += SP
-local npcCheckBtn  = mkBtn(frame, "NPC Check: OFF",      UDim2.fromOffset(CFG.PAD, Y), nil, C.BLUE); Y += SP
-local removeAllBtn = mkBtn(frame, "Remove All Hitboxes", UDim2.fromOffset(CFG.PAD, Y), nil, C.DNG); Y += SP
+-- ── Toggle rows ────────────────────────────────
+local autoToggle,  autoPill,  autoPillTxt  = mkToggleRow(frame, "AUTO HITBOX",  80)
+local npcCheckBtn, npcPill,   npcPillTxt   = mkToggleRow(frame, "NPC FILTER",  118)
 
+-- ── Separator ──────────────────────────────────
+mkSep(frame, 156)
+
+-- ── CLEAR button ───────────────────────────────
+local clearY = 165
+
+local removeAllBtn = Instance.new("TextButton", frame)
+removeAllBtn.Position         = UDim2.fromOffset(CFG.PAD, clearY)
+removeAllBtn.Size             = UDim2.fromOffset(INNER, 26)
+removeAllBtn.BackgroundColor3 = C.DNG_BG
+removeAllBtn.AutoButtonColor  = false
+removeAllBtn.Text             = "CLEAR ALL"
+removeAllBtn.TextColor3       = C.DNG
+removeAllBtn.Font             = Enum.Font.GothamBold
+removeAllBtn.TextSize         = 11
+removeAllBtn.BorderSizePixel  = 0
+corner(removeAllBtn, 4)
+stroke(removeAllBtn, C.DNG, 1, 0.72)
+
+removeAllBtn.MouseEnter:Connect(function()
+    TweenService:Create(removeAllBtn, TweenInfo.new(0.1), {BackgroundColor3 = C.DNG_HV}):Play()
+end)
+removeAllBtn.MouseLeave:Connect(function()
+    TweenService:Create(removeAllBtn, TweenInfo.new(0.1), {BackgroundColor3 = C.DNG_BG}):Play()
+end)
+
+-- ── Separator ──────────────────────────────────
+mkSep(frame, 199)
+
+-- ── Status bar ─────────────────────────────────
 statusLabel = Instance.new("TextLabel", frame)
-statusLabel.Position               = UDim2.fromOffset(CFG.PAD, Y)
-statusLabel.Size                   = UDim2.fromOffset(CFG.W - CFG.PAD * 2, 24)
+statusLabel.Position               = UDim2.fromOffset(CFG.PAD, 207)
+statusLabel.Size                   = UDim2.fromOffset(INNER, 18)
 statusLabel.BackgroundTransparency = 1
-statusLabel.Text                   = "Ready"
-statusLabel.TextColor3             = C.STA
-statusLabel.Font                   = Enum.Font.Gotham
-statusLabel.TextSize               = 13
+statusLabel.Text                   = "ready"
+statusLabel.TextColor3             = C.TXT
+statusLabel.Font                   = Enum.Font.Code
+statusLabel.TextSize               = 11
 statusLabel.TextXAlignment         = Enum.TextXAlignment.Left
 
-local PANEL_H = Y + 30
+local PANEL_H = 232
 
--- Floating toggle button
-local toggleBtn = mkBtn(gui, "Menu", UDim2.fromOffset(10, 10), UDim2.fromOffset(90, 34), C.PRI)
-toggleBtn.ZIndex = 10
+-- ── Floating toggle button ─────────────────────
+local toggleBtn = Instance.new("TextButton", gui)
+toggleBtn.Position         = UDim2.fromOffset(10, 10)
+toggleBtn.Size             = UDim2.fromOffset(62, 24)
+toggleBtn.BackgroundColor3 = C.BG
+toggleBtn.AutoButtonColor  = false
+toggleBtn.Text             = "HB"
+toggleBtn.TextColor3       = C.ACC
+toggleBtn.Font             = Enum.Font.GothamBlack
+toggleBtn.TextSize         = 12
+toggleBtn.BorderSizePixel  = 0
+toggleBtn.ZIndex           = 10
+corner(toggleBtn, 4)
+stroke(toggleBtn, C.ACC, 1, 0.45)
 makeDraggable(toggleBtn)
 
+toggleBtn.MouseEnter:Connect(function()
+    TweenService:Create(toggleBtn, TweenInfo.new(0.1), {BackgroundColor3 = C.ROW}):Play()
+end)
+toggleBtn.MouseLeave:Connect(function()
+    TweenService:Create(toggleBtn, TweenInfo.new(0.1), {BackgroundColor3 = C.BG}):Play()
+end)
+
+--===== FLASH STATUS =====--
 flashStatus = function(ok, msg)
     statusLabel.Text = msg
-    TweenService:Create(statusLabel, TweenInfo.new(0.1), {
-        TextColor3 = ok and Color3.fromRGB(190, 255, 210) or Color3.fromRGB(255, 200, 200)
+    TweenService:Create(statusLabel, TweenInfo.new(0.08), {
+        TextColor3 = ok and C.GOOD or C.DNG
     }):Play()
     task.delay(2.5, function()
-        TweenService:Create(statusLabel, TweenInfo.new(0.3), {TextColor3 = C.STA}):Play()
+        TweenService:Create(statusLabel, TweenInfo.new(0.3), {TextColor3 = C.TXT}):Play()
     end)
 end
 
-do -- open/close animation
-    local anim = false
-    toggleBtn.MouseButton1Click:Connect(function()
-        if anim then return end
-        anim = true
-        if frame.Visible then
-            TweenService:Create(frame, TweenInfo.new(0.22), {Size = UDim2.fromOffset(CFG.W, 0)}):Play()
-            task.wait(0.23)
-            frame.Visible  = false
-            toggleBtn.Text = "Menu"
-        else
-            frame.Size    = UDim2.fromOffset(CFG.W, 0)
-            frame.Visible = true
-            TweenService:Create(frame, TweenInfo.new(0.22), {Size = UDim2.fromOffset(CFG.W, PANEL_H)}):Play()
-            task.wait(0.23)
-            toggleBtn.Text = "Close"
+--===== OPEN / CLOSE ANIMATION =====--
+do
+    local animating = false
+
+    local function doClose()
+        TweenService:Create(frame, TweenInfo.new(0.18, Enum.EasingStyle.Quart, Enum.EasingDirection.In),
+            {Size = UDim2.fromOffset(CFG.W, 0)}):Play()
+        task.wait(0.19)
+        frame.Visible = false
+    end
+
+    local function doOpen()
+        frame.Size    = UDim2.fromOffset(CFG.W, 0)
+        frame.Visible = true
+        TweenService:Create(frame, TweenInfo.new(0.2, Enum.EasingStyle.Quart, Enum.EasingDirection.Out),
+            {Size = UDim2.fromOffset(CFG.W, PANEL_H)}):Play()
+    end
+
+    local function toggle()
+        if animating then return end
+        animating = true
+        if frame.Visible then doClose() else doOpen() end
+        animating = false
+    end
+
+    toggleBtn.MouseButton1Click:Connect(toggle)
+    closeBtn.MouseButton1Click:Connect(function()
+        if frame.Visible and not animating then
+            animating = true
+            doClose()
+            animating = false
         end
-        anim = false
     end)
 end
 
@@ -203,40 +402,46 @@ local function isFiltered(model)
     if not npcCheck then return false end
     local hum = model:FindFirstChildOfClass("Humanoid")
     if not hum then return false end
-    -- Immortal check
     if isImmortal(hum) then return true end
-    -- Dialog check (FindFirstChildWhichIsA searches descendants)
     return model:FindFirstChildWhichIsA("Dialog", true) ~= nil
 end
 
 local function isValidNPC(model)
-    if not model or not model.Parent    then return false end
-    if not model:IsA("Model")           then return false end
-    if model == LocalPlayer.Character   then return false end
+    if not model or not model.Parent         then return false end
+    if not model:IsA("Model")               then return false end
+    if model == LocalPlayer.Character        then return false end
     if Players:GetPlayerFromCharacter(model) then return false end
     local hum  = model:FindFirstChildOfClass("Humanoid")
     local root = model:FindFirstChild("HumanoidRootPart")
     return hum ~= nil and root ~= nil
 end
 
+--===== FIND NPC ROOT MODEL =====--
+local function findNPCRoot(instance)
+    local result = nil
+    local cur    = instance
+    while cur and cur ~= workspace do
+        if cur:IsA("Model") and cur:FindFirstChildOfClass("Humanoid") then
+            result = cur
+        end
+        cur = cur.Parent
+    end
+    return result
+end
+
 --===== TOP-PART FINDER =====--
--- Returns highest non-massless, non-structural BasePart.
--- Uses top-edge Y (Position.Y + Size.Y/2) so tall parts don't win unfairly.
-local SKIP = { HumanoidRootPart = true, Torso = true, UpperTorso = true,
-               LowerTorso = true, LeftFoot = true, RightFoot = true,
-               LeftLowerArm = true, RightLowerArm = true }
+local SKIP = {
+    HumanoidRootPart = true, Torso = true, UpperTorso = true,
+    LowerTorso = true, LeftFoot = true, RightFoot = true,
+    LeftLowerArm = true, RightLowerArm = true,
+}
 
 local function findTopPart(model)
     local best, bestY = nil, -math.huge
     for _, v in ipairs(model:GetDescendants()) do
-        if v:IsA("BasePart")
-        and not v.Massless          -- skip accessory handles
-        and not SKIP[v.Name] then
+        if v:IsA("BasePart") and not v.Massless and not SKIP[v.Name] then
             local topEdge = v.Position.Y + v.Size.Y * 0.5
-            if topEdge > bestY then
-                bestY = topEdge
-                best  = v
-            end
+            if topEdge > bestY then bestY = topEdge; best = v end
         end
     end
     return best
@@ -246,26 +451,36 @@ end
 local function updateStatus()
     local n = 0
     for _ in pairs(npcs) do n += 1 end
-    statusLabel.Text = ("Active: %d NPCs"):format(n)
+    statusLabel.Text = ("active  %d npc"):format(n)
 end
 
 --===== NPC CORE =====--
-local cleanupNPC  -- forward declare
+local cleanupNPC
 
-local function addESP(npc)
-    if npc:FindFirstChild("_ESP") then return npc:FindFirstChild("_ESP") end
-    local root = npc:FindFirstChild("HumanoidRootPart")
-    if not root then return nil end
-    local box = Instance.new("BoxHandleAdornment")
-    box.Name        = "_ESP"
-    box.Adornee     = root
-    box.Size        = root.Size + Vector3.new(4, 4, 4)
-    box.Color3      = Color3.fromRGB(255, 120, 120)
-    box.Transparency = 0.5
-    box.ZIndex      = 5
-    box.AlwaysOnTop = true
-    box.Parent      = npc
-    return box
+-- [FIX] ESP dùng SelectionBox bám vào target (hitbox part) thay vì HumanoidRootPart
+-- → hiện đúng vị trí & tự scale theo size hitbox, không bị lệch hay xoay sai
+local function addESP(npc, target)
+    -- Xoá ESP cũ nếu có
+    local old = npc:FindFirstChild("_ESP")
+    if old then old:Destroy() end
+
+    if not target or not target.Parent then return nil end
+
+    local sel = Instance.new("SelectionBox")
+    sel.Name            = "_ESP"
+    sel.Adornee         = target          -- bám đúng vào hitbox part
+    sel.Color3          = C.ACC           -- amber outline
+    sel.LineThickness   = 0.04
+    sel.SurfaceTransparency = 0.82
+    sel.SurfaceColor3   = C.ACC
+    sel.Parent          = npc
+    return sel
+end
+
+local function enforceSize(target, want)
+    if target and target.Parent and target.Size ~= want then
+        pcall(function() target.Size = want end)
+    end
 end
 
 local function applyHitbox(npc, size)
@@ -280,11 +495,9 @@ local function applyHitbox(npc, size)
     local target    = npc:FindFirstChild("Head")
 
     if not target then
-        -- No named Head — find highest visible part (real head position)
         local topPart = findTopPart(npc)
         if not topPart then return end
 
-        -- Synthesise a fake Head welded on top of that part
         local fake        = Instance.new("Part")
         fake.Name         = "Head"
         fake.Size         = Vector3.new(2, 1, 1)
@@ -296,14 +509,11 @@ local function applyHitbox(npc, size)
         fake.Parent       = npc
         local w = Instance.new("WeldConstraint")
         w.Part0 = topPart; w.Part1 = fake; w.Parent = fake
-
         target    = fake
         synthetic = true
     end
 
-    -- Store original size in Lua table — no workspace instance, anticheat-safe
     origSizes[target] = target.Size
-
     target.Massless     = true
     target.Size         = Vector3.new(size, size, size)
     target.CanCollide   = false
@@ -312,13 +522,29 @@ local function applyHitbox(npc, size)
 
     local conns = {}
 
-    -- Size guard reads live data.hitboxSize — no stale closure bug
+    -- Size guard: re-enforce immediately + next frame
     table.insert(conns, target:GetPropertyChangedSignal("Size"):Connect(function()
         local data = npcs[npc]
         if not data then return end
-        local want = Vector3.new(data.hitboxSize, data.hitboxSize, data.hitboxSize)
-        if target.Size ~= want then target.Size = want end
+        local w2 = Vector3.new(data.hitboxSize, data.hitboxSize, data.hitboxSize)
+        enforceSize(target, w2)
+        task.defer(function()
+            if npcs[npc] then enforceSize(target, w2) end
+        end)
     end))
+
+    -- Periodic re-enforcement every 0.5 s
+    table.insert(conns, RunService.Heartbeat:Connect((function()
+        local t0 = tick()
+        return function()
+            if tick() - t0 < 0.5 then return end
+            t0 = tick()
+            local data = npcs[npc]
+            if not data then return end
+            local w2 = Vector3.new(data.hitboxSize, data.hitboxSize, data.hitboxSize)
+            enforceSize(target, w2)
+        end
+    end)()))
 
     if hum then
         table.insert(conns, hum.Died:Connect(function() cleanupNPC(npc) end))
@@ -330,7 +556,7 @@ local function applyHitbox(npc, size)
 
     npcs[npc] = {
         conns      = conns,
-        esp        = addESP(npc),
+        esp        = addESP(npc, target),   -- [FIX] truyền target để ESP bám đúng hitbox
         hitboxSize = size,
         targetPart = target,
         synthetic  = synthetic,
@@ -346,14 +572,13 @@ cleanupNPC = function(npc)
 
     local target = data.targetPart
     if data.synthetic then
-        safeDes(target)                          -- fake head: just destroy
+        safeDes(target)
     elseif target and target.Parent then
-        -- Real head: restore from Lua-side table
-        target.Size        = origSizes[target] or Vector3.new(2, 1, 1)
-        target.Massless    = false
-        target.CanCollide  = true
+        target.Size         = origSizes[target] or Vector3.new(2, 1, 1)
+        target.Massless     = false
+        target.CanCollide   = true
         target.Transparency = 0
-        target.Material    = Enum.Material.Plastic
+        target.Material     = Enum.Material.Plastic
     end
 
     origSizes[target] = nil
@@ -363,7 +588,6 @@ cleanupNPC = function(npc)
     updateStatus()
 end
 
--- Batch workspace scan
 local function scanAll()
     local size = tonumber(sizeInput.Text) or CFG.SIZE
     local count, batch = 0, 0
@@ -377,14 +601,23 @@ local function scanAll()
     return count
 end
 
--- Debounced apply for newly added descendants
 local function tryApply(model)
+    if not model or not model.Parent then return end
     local now = tick()
     if lastProc[model] and now - lastProc[model] < CFG.DEBOUNCE then return end
     lastProc[model] = now
-    task.delay(0.15, function()
-        if isValidNPC(model) and not npcs[model] then
+
+    task.delay(0.3, function()
+        if npcs[model] then return end
+        if isValidNPC(model) then
             applyHitbox(model, tonumber(sizeInput.Text) or CFG.SIZE)
+        else
+            task.delay(0.7, function()
+                if npcs[model] then return end
+                if isValidNPC(model) then
+                    applyHitbox(model, tonumber(sizeInput.Text) or CFG.SIZE)
+                end
+            end)
         end
     end)
 end
@@ -392,48 +625,46 @@ end
 local function clearAll()
     for npc in pairs(npcs) do cleanupNPC(npc) end
     discAll(workConns); table.clear(workConns)
-    flashStatus(true, "All hitboxes removed")
+    flashStatus(true, "cleared")
 end
 
 --===== BUTTON EVENTS =====--
 
 autoToggle.MouseButton1Click:Connect(function()
     autoHitbox = not autoHitbox
-    autoToggle.Text             = "Auto Hitbox: " .. (autoHitbox and "ON" or "OFF")
-    autoToggle.BackgroundColor3 = autoHitbox and C.GOOD or C.PRI_D
-
-    discAll(workConns); table.clear(workConns)  -- clear old listeners first
+    setPill(autoPill, autoPillTxt, autoHitbox)
+    discAll(workConns); table.clear(workConns)
 
     if autoHitbox then
-        flashStatus(true, "Scanning...")
+        flashStatus(true, "scanning...")
         task.spawn(function()
-            flashStatus(true, ("Auto ON → %d NPCs"):format(scanAll()))
+            flashStatus(true, ("auto on  +%d npc"):format(scanAll()))
         end)
         table.insert(workConns, workspace.DescendantAdded:Connect(function(d)
-            local m = d:FindFirstAncestorOfClass("Model") or (d:IsA("Model") and d)
+            local m = findNPCRoot(d)
+                   or (d:IsA("Model") and d:FindFirstChildOfClass("Humanoid") and d)
             if m then tryApply(m) end
         end))
         table.insert(workConns, workspace.ChildAdded:Connect(function(c)
             if c:IsA("Model") then tryApply(c) end
         end))
     else
-        flashStatus(false, "Auto Hitbox OFF")
+        flashStatus(false, "auto off")
     end
 end)
 
 npcCheckBtn.MouseButton1Click:Connect(function()
     npcCheck = not npcCheck
-    npcCheckBtn.Text             = "NPC Check: " .. (npcCheck and "ON" or "OFF")
-    npcCheckBtn.BackgroundColor3 = npcCheck and C.GOOD or C.BLUE
+    setPill(npcPill, npcPillTxt, npcCheck)
 
     if npcCheck then
         local removed = 0
         for npc in pairs(npcs) do
             if isFiltered(npc) then cleanupNPC(npc); removed += 1 end
         end
-        flashStatus(true, ("NPC Check ON — removed %d dialog/immortal"):format(removed))
+        flashStatus(true, ("filter on  -%d removed"):format(removed))
     else
-        flashStatus(false, "NPC Check OFF")
+        flashStatus(false, "filter off")
     end
 end)
 
@@ -444,14 +675,14 @@ sizeInput.FocusLost:Connect(function()
     if v and v > 0 and v <= 50 then
         local n = 0
         for npc, data in pairs(npcs) do
-            data.hitboxSize = v   -- update BEFORE writing Size (guard reads this)
+            data.hitboxSize = v
             local t = data.targetPart
             if t and t.Parent then t.Size = Vector3.new(v, v, v); n += 1 end
         end
-        flashStatus(true, ("Updated %d hitboxes → size %g"):format(n, v))
+        flashStatus(true, ("size %g  on %d"):format(v, n))
     else
         sizeInput.Text = tostring(CFG.SIZE)
-        flashStatus(false, "Invalid size — reset to default")
+        flashStatus(false, "invalid size")
     end
 end)
 
@@ -460,11 +691,11 @@ LocalPlayer.CharacterAdded:Connect(function()
     task.wait(2)
     if autoHitbox then
         task.spawn(function()
-            flashStatus(true, ("Rescanned: %d NPCs"):format(scanAll()))
+            flashStatus(true, ("rescan  +%d npc"):format(scanAll()))
         end)
     end
 end)
 
 gui.Destroying:Connect(clearAll)
 
-flashStatus(true, "NPC Hitbox Ready!")
+flashStatus(true, "ready")
