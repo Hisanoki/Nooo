@@ -36,7 +36,7 @@ local npcCheck   = false
 
 --===== GUI ROOT =====--
 local gui = Instance.new("ScreenGui")
-gui.Name         = "NPC_HB"
+gui.Name         = "HB"
 gui.ResetOnSpawn = false
 gui.Parent       = game.CoreGui
 
@@ -212,7 +212,7 @@ local verLbl = Instance.new("TextLabel", titleBar)
 verLbl.Position               = UDim2.fromOffset(76, 0)
 verLbl.Size                   = UDim2.fromOffset(40, 28)
 verLbl.BackgroundTransparency = 1
-verLbl.Text                   = "v2"
+verLbl.Text                   = "////"
 verLbl.TextColor3             = Color3.fromRGB(80, 84, 100)
 verLbl.Font                   = Enum.Font.GothamBold
 verLbl.TextSize               = 9
@@ -228,7 +228,7 @@ closeBtn.Position           = UDim2.new(1, -6, 0.5, 0)
 closeBtn.Size               = UDim2.fromOffset(18, 18)
 closeBtn.BackgroundColor3   = C.OFF_BG
 closeBtn.AutoButtonColor    = false
-closeBtn.Text               = "×"
+closeBtn.Text               = "X"
 closeBtn.TextColor3         = C.TXT
 closeBtn.Font               = Enum.Font.GothamBold
 closeBtn.TextSize           = 14
@@ -325,7 +325,7 @@ local PANEL_H = 232
 -- ── Floating toggle button ─────────────────────
 local toggleBtn = Instance.new("TextButton", gui)
 toggleBtn.Position         = UDim2.fromOffset(10, 10)
-toggleBtn.Size             = UDim2.fromOffset(62, 24)
+toggleBtn.Size             = UDim2.fromOffset(62, 30)
 toggleBtn.BackgroundColor3 = C.BG
 toggleBtn.AutoButtonColor  = false
 toggleBtn.Text             = "HB"
