@@ -4871,6 +4871,7 @@ bodyToggle.MouseButton1Click:Connect(function()
                 resetBodyHitbox(player.Character)
             end
         end
+        S.statusLabel.Text = "Processing: 0 Players"
     end
 end)
 
