@@ -47,8 +47,12 @@ selectedPlayers={}, selectedTPPlayers={}, boxESPObjects={}, nameESPObjects={}, t
     flingStartBtn=nil, bangBtn=nil, loopBringBtn=nil,
     specContainer=nil,
     -- SaveSettings refs
-    aimSettings=nil,
-    btnRefs={},
+aimSettings=nil,
+keybindsEnabled=true,
+invisKeyCode=Enum.KeyCode.C,
+flyKeyCode=Enum.KeyCode.F,
+waitingForKeybind=nil,
+btnRefs={},
 }
 S.speaker = LocalPlayer
 
@@ -3497,8 +3501,11 @@ do
             equipAllFloatEnabled= S.equipAllFloatEnabled,
             useFloatEnabled     = S.useFloatEnabled,
             flyFloatEnabled     = S.flyFloatEnabled,
-            feUseInputText      = S.feUseInput and S.feUseInput.Text or "",
-            floatBtnSize        = S.floatBtnSize,
+feUseInputText      = S.feUseInput and S.feUseInput.Text or "",
+floatBtnSize        = S.floatBtnSize,
+keybindsEnabled     = S.keybindsEnabled,
+invisKeyName        = tostring(S.invisKeyCode):gsub("Enum.KeyCode.", ""),
+flyKeyName          = tostring(S.flyKeyCode):gsub("Enum.KeyCode.", ""),
             -- Float button positions (lưu vị trí sau khi kéo)
             invisFloatPos    = S.invisFloatBtn    and {S.invisFloatBtn.Position.X.Scale,    S.invisFloatBtn.Position.X.Offset,    S.invisFloatBtn.Position.Y.Scale,    S.invisFloatBtn.Position.Y.Offset}    or nil,
             flyFloatPos      = S.flyFloatBtn      and {S.flyFloatBtn.Position.X.Scale,      S.flyFloatBtn.Position.X.Offset,      S.flyFloatBtn.Position.Y.Scale,      S.flyFloatBtn.Position.Y.Offset}      or nil,
@@ -3818,6 +3825,47 @@ end)
                 S.floatBtnSize = cfg.floatBtnSize
             end
         end)
+        pcall(function()
+    if cfg.keybindsEnabled ~= nil then
+        S.keybindsEnabled = cfg.keybindsEnabled
+
+        if S.btnRefs.keybindsBtn then
+            if S.keybindsEnabled then
+                S.btnRefs.keybindsBtn.Text = "Keybinds: ON"
+                S.btnRefs.keybindsBtn.BackgroundColor3 = Color3.fromRGB(50, 200, 120)
+                S.btnRefs.keybindsBtn.BackgroundTransparency = 0
+            else
+                S.btnRefs.keybindsBtn.Text = "Keybinds: OFF"
+                S.btnRefs.keybindsBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
+                S.btnRefs.keybindsBtn.BackgroundTransparency = 0.35
+            end
+        end
+    end
+end)
+pcall(function()
+    if cfg.invisKeyName and Enum.KeyCode[cfg.invisKeyName] then
+        S.invisKeyCode = Enum.KeyCode[cfg.invisKeyName]
+        INVIS_CONFIG.TOGGLE_KEY = S.invisKeyCode
+
+        if S.btnRefs.invisBindBtn then
+            S.btnRefs.invisBindBtn.Text = cfg.invisKeyName
+            S.btnRefs.invisBindBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
+            S.btnRefs.invisBindBtn.BackgroundTransparency = 0.35
+        end
+    end
+end)
+
+pcall(function()
+    if cfg.flyKeyName and Enum.KeyCode[cfg.flyKeyName] then
+        S.flyKeyCode = Enum.KeyCode[cfg.flyKeyName]
+
+        if S.btnRefs.flyBindBtn then
+            S.btnRefs.flyBindBtn.Text = cfg.flyKeyName
+            S.btnRefs.flyBindBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
+            S.btnRefs.flyBindBtn.BackgroundTransparency = 0.35
+        end
+    end
+end)
     end
 
     -- ── Auto load khi script chạy ──
@@ -3839,7 +3887,7 @@ end)
 
     -- ── BUILD UI TAB SaveSettings ────────────────────────────────────────────
     do
-    local _lbl = createTransparentLabel("Save", panel10)
+    local _lbl = createTransparentLabel("Save Config", panel10)
     _lbl.TextColor3 = Color3.fromRGB(255,255,255)
     _lbl.Font = Enum.Font.GothamBold
     _lbl.TextSize = 14
@@ -3892,7 +3940,149 @@ deleteBtn.BackgroundTransparency = 0.35
     end
 end)
     end)
+    do
+    local deleteDivider = Instance.new("Frame")
+    deleteDivider.Parent = panel10
+    deleteDivider.Size = UDim2.new(1, 0, 0, 2)
+    deleteDivider.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
+    deleteDivider.BackgroundTransparency = 0.2
+    deleteDivider.BorderSizePixel = 0
+end
+do
+    local _lbl = createTransparentLabel("Keybind", panel10)
+    _lbl.TextColor3 = Color3.fromRGB(255,255,255)
+    _lbl.Font = Enum.Font.GothamBold
+    _lbl.TextSize = 14
+end
+-- Nút bật/tắt toàn bộ keybind keyboard (trừ menu)
+local keybindsBtn = createTransparentButton("Keybinds: ON", Color3.fromRGB(50, 200, 120), panel10)
+keybindsBtn.BackgroundColor3 = Color3.fromRGB(50, 200, 120)
+keybindsBtn.BackgroundTransparency = 0
+keybindsBtn.TextSize = 13
+keybindsBtn.Size = UDim2.new(1, 0, 0, 36)
 
+S.btnRefs.keybindsBtn = keybindsBtn
+
+local function updateKeybindsBtn()
+    if not keybindsBtn then return end
+
+    if S.keybindsEnabled then
+        keybindsBtn.Text = "Keybinds: ON"
+        keybindsBtn.BackgroundColor3 = Color3.fromRGB(50, 200, 120)
+        keybindsBtn.BackgroundTransparency = 0
+    else
+        keybindsBtn.Text = "Keybinds: OFF"
+        keybindsBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
+        keybindsBtn.BackgroundTransparency = 0.35
+    end
+end
+
+keybindsBtn.MouseButton1Click:Connect(function()
+    S.keybindsEnabled = not S.keybindsEnabled
+    updateKeybindsBtn()
+
+    if S.keybindsEnabled then
+        createNotification("Keybinds", "All keybinds enabled")
+    else
+        createNotification("Keybinds", "All keybinds disabled")
+    end
+end)
+local function keyCodeToText(keyCode)
+    if not keyCode then
+        return "?"
+    end
+
+    local s = tostring(keyCode)
+    return s:gsub("Enum.KeyCode.", "")
+end
+
+local function setBindButtonWaiting(btn)
+    btn.Text = "..."
+    btn.BackgroundColor3 = Color3.fromRGB(50, 200, 120)
+    btn.BackgroundTransparency = 0
+end
+
+local function setBindButtonNormal(btn, keyCode)
+    btn.Text = keyCodeToText(keyCode)
+    btn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
+    btn.BackgroundTransparency = 0.35
+end
+
+-- Invisible row
+local invisBindRow = Instance.new("Frame")
+invisBindRow.Size = UDim2.new(1, 0, 0, 36)
+invisBindRow.BackgroundTransparency = 1
+invisBindRow.Parent = panel10
+
+local invisBindLabel = Instance.new("TextLabel")
+invisBindLabel.Size = UDim2.new(0.6, -4, 1, 0)
+invisBindLabel.Position = UDim2.new(0, 0, 0, 0)
+invisBindLabel.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
+invisBindLabel.BackgroundTransparency = 0.35
+invisBindLabel.BorderSizePixel = 0
+invisBindLabel.Text = "Invisible"
+invisBindLabel.TextColor3 = Color3.new(1,1,1)
+invisBindLabel.Font = Enum.Font.Gotham
+invisBindLabel.TextSize = 13
+invisBindLabel.Parent = invisBindRow
+
+local invisBindBtn = Instance.new("TextButton")
+invisBindBtn.Size = UDim2.new(0.4, 0, 1, 0)
+invisBindBtn.Position = UDim2.new(0.6, 0, 0, 0)
+invisBindBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
+invisBindBtn.BackgroundTransparency = 0.35
+invisBindBtn.BorderSizePixel = 0
+invisBindBtn.Text = keyCodeToText(S.invisKeyCode)
+invisBindBtn.TextColor3 = Color3.new(1,1,1)
+invisBindBtn.Font = Enum.Font.Gotham
+invisBindBtn.TextSize = 13
+invisBindBtn.Parent = invisBindRow
+
+S.btnRefs.invisBindBtn = invisBindBtn
+
+invisBindBtn.MouseButton1Click:Connect(function()
+    S.waitingForKeybind = "Invisible"
+    setBindButtonWaiting(invisBindBtn)
+    createNotification("Keybind", "Press a key for Invisible")
+end)
+
+-- Fly row
+local flyBindRow = Instance.new("Frame")
+flyBindRow.Size = UDim2.new(1, 0, 0, 36)
+flyBindRow.BackgroundTransparency = 1
+flyBindRow.Parent = panel10
+
+local flyBindLabel = Instance.new("TextLabel")
+flyBindLabel.Size = UDim2.new(0.6, -4, 1, 0)
+flyBindLabel.Position = UDim2.new(0, 0, 0, 0)
+flyBindLabel.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
+flyBindLabel.BackgroundTransparency = 0.35
+flyBindLabel.BorderSizePixel = 0
+flyBindLabel.Text = "Fly"
+flyBindLabel.TextColor3 = Color3.new(1,1,1)
+flyBindLabel.Font = Enum.Font.Gotham
+flyBindLabel.TextSize = 13
+flyBindLabel.Parent = flyBindRow
+
+local flyBindBtn = Instance.new("TextButton")
+flyBindBtn.Size = UDim2.new(0.4, 0, 1, 0)
+flyBindBtn.Position = UDim2.new(0.6, 0, 0, 0)
+flyBindBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
+flyBindBtn.BackgroundTransparency = 0.35
+flyBindBtn.BorderSizePixel = 0
+flyBindBtn.Text = keyCodeToText(S.flyKeyCode)
+flyBindBtn.TextColor3 = Color3.new(1,1,1)
+flyBindBtn.Font = Enum.Font.Gotham
+flyBindBtn.TextSize = 13
+flyBindBtn.Parent = flyBindRow
+
+S.btnRefs.flyBindBtn = flyBindBtn
+
+flyBindBtn.MouseButton1Click:Connect(function()
+    S.waitingForKeybind = "Fly"
+    setBindButtonWaiting(flyBindBtn)
+    createNotification("Keybind", "Press a key for Fly")
+end)
     -- Trạng thái file
     local fileStatusLabel = Instance.new("TextLabel")
     fileStatusLabel.Size = UDim2.new(1, 0, 0, 24)
@@ -5384,24 +5574,89 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
         return
     end
 
-    
-    if input.KeyCode == Enum.KeyCode.RightControl then
-        -- nếu đang gõ chat / textbox thì không mở menu
-        if UserInputService:GetFocusedTextBox() then
-            return
-        end
+    -- đang gõ chat / textbox thì bỏ qua hết
+    if UserInputService:GetFocusedTextBox() then
+        return
+    end
 
+    -- RightControl luôn hoạt động (không bị Keybinds OFF chặn)
+    if input.KeyCode == Enum.KeyCode.RightControl then
         toggleMenu()
         return
     end
 
-    -- Các phím khác mới bị chặn nếu UI/game đang ăn input
+    -- Nếu đang chờ đổi keybind thì bắt phím ở đây
+    if S.waitingForKeybind then
+        local newKey = input.KeyCode
+
+        if newKey ~= Enum.KeyCode.Unknown then
+            if newKey == Enum.KeyCode.RightControl then
+                createNotification("Keybind", "RightControl is reserved for menu")
+            else
+                if S.waitingForKeybind == "Invisible" then
+                    S.invisKeyCode = newKey
+                    INVIS_CONFIG.TOGGLE_KEY = newKey
+
+                    if S.btnRefs.invisBindBtn then
+                        S.btnRefs.invisBindBtn.Text = tostring(newKey):gsub("Enum.KeyCode.", "")
+                        S.btnRefs.invisBindBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
+                        S.btnRefs.invisBindBtn.BackgroundTransparency = 0.35
+                    end
+
+                    createNotification("Keybind", "Invisible = " .. tostring(newKey):gsub("Enum.KeyCode.", ""))
+                elseif S.waitingForKeybind == "Fly" then
+                    S.flyKeyCode = newKey
+
+                    if S.btnRefs.flyBindBtn then
+                        S.btnRefs.flyBindBtn.Text = tostring(newKey):gsub("Enum.KeyCode.", "")
+                        S.btnRefs.flyBindBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
+                        S.btnRefs.flyBindBtn.BackgroundTransparency = 0.35
+                    end
+
+                    createNotification("Keybind", "Fly = " .. tostring(newKey):gsub("Enum.KeyCode.", ""))
+                end
+            end
+        end
+
+        S.waitingForKeybind = nil
+        return
+    end
+
+    -- Tắt toàn bộ keybind keyboard khác
+    if not S.keybindsEnabled then
+        return
+    end
+
+    -- Các phím khác mới bị chặn nếu game/UI đang ăn input
     if gameProcessed then
         return
     end
 
-    if input.KeyCode == INVIS_CONFIG.TOGGLE_KEY then
+    -- Invisible keybind
+    if input.KeyCode == (S.invisKeyCode or INVIS_CONFIG.TOGGLE_KEY) then
         toggleInvisibility()
+        return
+    end
+
+    -- Fly keybind
+    if input.KeyCode == (S.flyKeyCode or Enum.KeyCode.F) then
+        S.flySpeed = tonumber(S.btnRefs.flySpeedInput and S.btnRefs.flySpeedInput.Text) or S.flySpeed or 2
+        S.flyEnabled = not S.flyEnabled
+
+        if S.flyToggle then
+            S.flyToggle.Text = S.flyEnabled and "Fly: ON" or "Fly: OFF"
+            S.flyToggle.BackgroundColor3 = S.flyEnabled and Color3.fromRGB(50, 200, 120) or Color3.fromRGB(38, 38, 38)
+            S.flyToggle.BackgroundTransparency = S.flyEnabled and 0 or 0.35
+        end
+
+        if S.flyEnabled then
+            startFly()
+        else
+            stopFly()
+        end
+
+        updateFlyFloatVisual()
+        return
     end
 end)
 
