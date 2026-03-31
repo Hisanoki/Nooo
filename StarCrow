@@ -52,6 +52,8 @@ keybindsEnabled=true,
 invisKeyCode=Enum.KeyCode.C,
 flyKeyCode=Enum.KeyCode.F,
 waitingForKeybind=nil,
+menuKeybind = Enum.KeyCode.RightControl, 
+isChangingMenuKey = false,
 btnRefs={},
 }
 S.speaker = LocalPlayer
@@ -3506,6 +3508,7 @@ floatBtnSize        = S.floatBtnSize,
 keybindsEnabled     = S.keybindsEnabled,
 invisKeyName        = tostring(S.invisKeyCode):gsub("Enum.KeyCode.", ""),
 flyKeyName          = tostring(S.flyKeyCode):gsub("Enum.KeyCode.", ""),
+menuKeyName         = tostring(S.menuKeyCode or S.menuKeybind):gsub("Enum.KeyCode.", ""),
             -- Float button positions (lưu vị trí sau khi kéo)
             invisFloatPos    = S.invisFloatBtn    and {S.invisFloatBtn.Position.X.Scale,    S.invisFloatBtn.Position.X.Offset,    S.invisFloatBtn.Position.Y.Scale,    S.invisFloatBtn.Position.Y.Offset}    or nil,
             flyFloatPos      = S.flyFloatBtn      and {S.flyFloatBtn.Position.X.Scale,      S.flyFloatBtn.Position.X.Offset,      S.flyFloatBtn.Position.Y.Scale,      S.flyFloatBtn.Position.Y.Offset}      or nil,
@@ -3858,7 +3861,17 @@ end)
 pcall(function()
     if cfg.flyKeyName and Enum.KeyCode[cfg.flyKeyName] then
         S.flyKeyCode = Enum.KeyCode[cfg.flyKeyName]
+ pcall(function()
+    if cfg.menuKeyName and Enum.KeyCode[cfg.menuKeyName] then
+        S.menuKeyCode = Enum.KeyCode[cfg.menuKeyName]
 
+        if S.btnRefs.menuBindBtn then
+            S.btnRefs.menuBindBtn.Text = cfg.menuKeyName
+            S.btnRefs.menuBindBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
+            S.btnRefs.menuBindBtn.BackgroundTransparency = 0.35
+        end
+    end
+end)
         if S.btnRefs.flyBindBtn then
             S.btnRefs.flyBindBtn.Text = cfg.flyKeyName
             S.btnRefs.flyBindBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
@@ -4082,6 +4095,43 @@ flyBindBtn.MouseButton1Click:Connect(function()
     S.waitingForKeybind = "Fly"
     setBindButtonWaiting(flyBindBtn)
     createNotification("Keybind", "Press a key for Fly")
+end)
+-- Menu Bind row (Dưới nút Fly)
+local menuBindRow = Instance.new("Frame")
+menuBindRow.Size = UDim2.new(1, 0, 0, 36)
+menuBindRow.BackgroundTransparency = 1
+menuBindRow.Parent = panel10 -- Gắn vào panel10 (Setting)
+
+local menuBindLabel = Instance.new("TextLabel")
+menuBindLabel.Size = UDim2.new(0.6, -4, 1, 0)
+menuBindLabel.Position = UDim2.new(0, 0, 0, 0)
+menuBindLabel.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
+menuBindLabel.BackgroundTransparency = 0.35
+menuBindLabel.BorderSizePixel = 0
+menuBindLabel.Text = "Menu"
+menuBindLabel.TextColor3 = Color3.new(1,1,1)
+menuBindLabel.Font = Enum.Font.Gotham
+menuBindLabel.TextSize = 13
+menuBindLabel.Parent = menuBindRow
+
+local menuBindBtn = Instance.new("TextButton")
+menuBindBtn.Size = UDim2.new(0.4, 0, 1, 0)
+menuBindBtn.Position = UDim2.new(0.6, 0, 0, 0)
+menuBindBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
+menuBindBtn.BackgroundTransparency = 0.35
+menuBindBtn.BorderSizePixel = 0
+menuBindBtn.Text = keyCodeToText(S.menuKeybind) -- Lấy phím từ bảng S bạn đã tạo
+menuBindBtn.TextColor3 = Color3.new(1,1,1)
+menuBindBtn.Font = Enum.Font.Gotham
+menuBindBtn.TextSize = 13
+menuBindBtn.Parent = menuBindRow
+
+S.btnRefs.menuBindBtn = menuBindBtn
+
+menuBindBtn.MouseButton1Click:Connect(function()
+    S.waitingForKeybind = "Menu" -- Đặt trạng thái chờ phím cho Menu
+    setBindButtonWaiting(menuBindBtn)
+    createNotification("Keybind", "Press a key for Open/Close Menu")
 end)
     -- Trạng thái file
     local fileStatusLabel = Instance.new("TextLabel")
@@ -5579,8 +5629,8 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
         return
     end
 
-    -- RightControl luôn hoạt động (không bị Keybinds OFF chặn)
-    if input.KeyCode == Enum.KeyCode.RightControl then
+    -- Nút Menu luôn hoạt động (không bị Keybinds OFF chặn)
+    if input.KeyCode == (S.menuKeyCode or Enum.KeyCode.RightControl) then
         toggleMenu()
         return
     end
@@ -5590,8 +5640,9 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
         local newKey = input.KeyCode
 
         if newKey ~= Enum.KeyCode.Unknown then
-            if newKey == Enum.KeyCode.RightControl then
-                createNotification("Keybind", "RightControl is reserved for menu")
+            -- Chặn không cho Fly và Invis xài trùng phím Menu đang cài
+            if S.waitingForKeybind ~= "Menu" and newKey == (S.menuKeyCode or Enum.KeyCode.RightControl) then
+                createNotification("Keybind", keyCodeToText(newKey) .. " is reserved for menu")
             else
                 if S.waitingForKeybind == "Invisible" then
                     S.invisKeyCode = newKey
@@ -5602,8 +5653,8 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
                         S.btnRefs.invisBindBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
                         S.btnRefs.invisBindBtn.BackgroundTransparency = 0.35
                     end
-
                     createNotification("Keybind", "Invisible = " .. tostring(newKey):gsub("Enum.KeyCode.", ""))
+
                 elseif S.waitingForKeybind == "Fly" then
                     S.flyKeyCode = newKey
 
@@ -5612,8 +5663,18 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
                         S.btnRefs.flyBindBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
                         S.btnRefs.flyBindBtn.BackgroundTransparency = 0.35
                     end
-
                     createNotification("Keybind", "Fly = " .. tostring(newKey):gsub("Enum.KeyCode.", ""))
+
+                -- XỬ LÝ ĐỔI PHÍM MENU Ở ĐÂY
+                elseif S.waitingForKeybind == "Menu" then
+                    S.menuKeyCode = newKey
+
+                    if S.btnRefs.menuBindBtn then
+                        S.btnRefs.menuBindBtn.Text = tostring(newKey):gsub("Enum.KeyCode.", "")
+                        S.btnRefs.menuBindBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
+                        S.btnRefs.menuBindBtn.BackgroundTransparency = 0.35
+                    end
+                    createNotification("Keybind", "Menu = " .. tostring(newKey):gsub("Enum.KeyCode.", ""))
                 end
             end
         end
