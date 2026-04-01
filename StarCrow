@@ -1343,7 +1343,7 @@ titleBar.Parent = mainFrame
 _mkCorner(8, titleBar)
 
 local titleLabel = Instance.new("TextLabel")
-titleLabel.Size = UDim2.new(1, -36, 1, 0)
+titleLabel.Size = UDim2.new(0, 76, 1, 0)
 titleLabel.Position = UDim2.new(0, 8, 0, 0)
 titleLabel.BackgroundTransparency = 1
 titleLabel.Text = "StarCrow"
@@ -1352,6 +1352,74 @@ titleLabel.Font = Enum.Font.GothamBold
 titleLabel.TextSize = 13
 titleLabel.TextXAlignment = Enum.TextXAlignment.Left
 titleLabel.Parent = titleBar
+
+local pingLabel = Instance.new("TextLabel")
+pingLabel.Size = UDim2.new(0, 78, 1, 0)
+pingLabel.Position = UDim2.new(0, 82, 0, 0)
+pingLabel.BackgroundTransparency = 1
+pingLabel.Text = "| --ms"
+pingLabel.TextColor3 = Color3.fromRGB(170, 170, 170)
+pingLabel.Font = Enum.Font.GothamMedium
+pingLabel.TextSize = 12
+pingLabel.TextXAlignment = Enum.TextXAlignment.Left
+pingLabel.Parent = titleBar
+
+local function getBestPingValue()
+    local ping = nil
+
+    pcall(function()
+        local stats = game:GetService("Stats")
+        local network = stats:FindFirstChild("Network")
+        if not network then return end
+
+        local serverStatsItem = network:FindFirstChild("ServerStatsItem")
+        if not serverStatsItem then return end
+
+        local dataPing = serverStatsItem:FindFirstChild("Data Ping")
+        if not dataPing then return end
+
+        if typeof(dataPing.GetValue) == "function" then
+            local raw = dataPing:GetValue()
+            if typeof(raw) == "number" then
+                ping = math.floor(raw + 0.5)
+                return
+            end
+        end
+
+        if typeof(dataPing.GetValueString) == "function" then
+            local txt = dataPing:GetValueString()
+            local n = tonumber(string.match(txt, "%d+"))
+            if n then
+                ping = n
+            end
+        end
+    end)
+
+    return ping
+end
+
+task.spawn(function()
+    while pingLabel and pingLabel.Parent do
+        local ping = getBestPingValue()
+
+        if ping then
+            pingLabel.Text = "| Ping " .. tostring(ping) .. "ms"
+
+            if ping <= 200 then
+                pingLabel.TextColor3 = Color3.fromRGB(70, 255, 120) -- xanh
+            elseif ping <= 500 then
+                pingLabel.TextColor3 = Color3.fromRGB(255, 210, 90) -- vàng
+            else
+                pingLabel.TextColor3 = Color3.fromRGB(255, 95, 95) -- đỏ
+            end
+        else
+            pingLabel.Text = "| Ping --ms"
+            pingLabel.TextColor3 = Color3.fromRGB(170, 170, 170)
+        end
+
+        task.wait(0.35)
+    end
+end)
 
 local closeButton = Instance.new("TextButton")
 closeButton.Size = UDim2.new(0, 28, 0, 24)
