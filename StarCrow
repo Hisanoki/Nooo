@@ -17,6 +17,7 @@ local S = {
     autoTPEnabled=false, autoTPConnection=nil,
     ctrlClickTPEnabled=false,
     noclipEnabled=false, noclipLoop=nil,
+    noclipFloatEnabled=false, noclipFloatBtn=nil, noclipFloatStroke=nil, noclipFloatPos=nil,
     autoHitboxEnabled=false, autoBodyHitboxEnabled=false,
     nameESPEnabled=false, boxESPEnabled=false, espNameAllState=false, tracerESPEnabled=false,
 selectedPlayers={}, selectedTPPlayers={}, boxESPObjects={}, nameESPObjects={}, tracerESPObjects={},
@@ -1399,7 +1400,7 @@ do
     Color3.fromRGB(25,25,25), Color3.fromRGB(25,25,25),
     Color3.fromRGB(25,25,25)
 }
-    local tabNames = {"Player","ESP","Teleport","Troll","Misc","Server","FeTool","Aimbot","Setting"}
+    local tabNames = {"Player", "ESP", "Teleport", "Troll", "Misc", "Server", "Tools", "Aimbot", "Setting"}
     for i = 1, 9 do
     local btn = Instance.new("TextButton")
     btn.Size = UDim2.new(1, 0, 0, 30)
@@ -1454,7 +1455,7 @@ local panel4 = makeScrollPanel() -- Teleport
 local panel5 = makeScrollPanel() -- Troll
 local panel6 = makeScrollPanel() -- Misc   
 local panel7 = makeScrollPanel() -- Server 
-local panel8 = makeScrollPanel() -- FeTool
+local panel8 = makeScrollPanel() -- Tools
 local panel9 = makeScrollPanel() -- Aimbot
 local panel10 = makeScrollPanel() -- SaveSettings
 -- ─── PANEL 1: HEAD HITBOX ─────────────────────────────────────────────────────
@@ -1704,7 +1705,10 @@ local noclipToggle = createTransparentButton("Noclip: OFF", Color3.fromRGB(38, 3
 noclipToggle.BackgroundTransparency = 0.35
 noclipToggle.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
 S.btnRefs.noclipToggle = noclipToggle
-
+local noclipFloatToggleBtn = createTransparentButton("Noclip Float: OFF", Color3.fromRGB(38, 38, 38), panel2)
+noclipFloatToggleBtn.BackgroundTransparency = 0.35
+noclipFloatToggleBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
+S.btnRefs.noclipFloatToggleBtn = noclipFloatToggleBtn
 -- ─── PANEL 3: TELEPORT ────────────────────────────────────────────────────────
 
 do
@@ -2098,7 +2102,7 @@ copyPosBtn.BackgroundColor3 = Color3.fromRGB(38,38,38)
 -- ─── PANEL 8: FETOOL ─────────────────────────────────────────────────────────
 
 do
-    local _lbl = createTransparentLabel("FeTool", panel8)
+    local _lbl = createTransparentLabel("Tools", panel8)
     _lbl.TextColor3 = Color3.fromRGB(255, 255, 255)
     _lbl.Font = Enum.Font.GothamBold
     _lbl.TextSize = 14
@@ -2199,6 +2203,94 @@ local function makeDraggableFloat(btn)
     end)
 
     return function() return fMoved end, function() fMoved = false end
+end
+-- ─── NOCLIP FLOAT ───────────────────────────────────────────────────────────
+
+local function updateNoclipFloatVisual()
+    if not S.noclipFloatBtn or not S.noclipFloatStroke then return end
+
+    if S.noclipEnabled then
+        S.noclipFloatStroke.Color = Color3.fromRGB(50, 200, 120)
+        S.noclipFloatStroke.Thickness = 2.2
+        S.noclipFloatBtn.Text = "Noclip"
+    else
+        S.noclipFloatStroke.Color = Color3.fromRGB(62, 62, 62)
+        S.noclipFloatStroke.Thickness = 1.8
+        S.noclipFloatBtn.Text = "Noclip"
+    end
+end
+
+local function destroyNoclipFloat()
+    if S.noclipFloatBtn then
+        S.noclipFloatBtn:Destroy()
+        S.noclipFloatBtn = nil
+    end
+    S.noclipFloatStroke = nil
+end
+
+local function createNoclipFloat()
+    destroyNoclipFloat()
+
+    S.noclipFloatBtn = Instance.new("TextButton")
+    S.noclipFloatBtn.Size = UDim2.new(0, S.floatBtnSize, 0, S.floatBtnSize)
+    -- Vị trí mặc định (tính toán tránh đè lên nút Fly/Invis)
+    S.noclipFloatBtn.Position = UDim2.new(0.85, S.floatBtnSize + 14, 0.5, -(S.floatBtnSize * 2 + 18))
+    if S.noclipFloatPos then
+        local p = S.noclipFloatPos
+        S.noclipFloatBtn.Position = UDim2.new(p[1], p[2], p[3], p[4])
+    end
+    
+    S.noclipFloatBtn.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+    S.noclipFloatBtn.BackgroundTransparency = 0.88
+    S.noclipFloatBtn.BorderSizePixel = 0
+    S.noclipFloatBtn.Text = "Noclip"
+    S.noclipFloatBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    S.noclipFloatBtn.TextScaled = false
+    S.noclipFloatBtn.TextSize = math.max(14, math.floor(S.floatBtnSize * 0.25))
+    S.noclipFloatBtn.TextWrapped = true
+    S.noclipFloatBtn.Font = Enum.Font.GothamBold
+    S.noclipFloatBtn.TextStrokeTransparency = 1
+    S.noclipFloatBtn.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
+    S.noclipFloatBtn.Active = true
+    S.noclipFloatBtn.ZIndex = 15
+    S.noclipFloatBtn.Parent = gui
+
+    local c = Instance.new("UICorner")
+    c.CornerRadius = UDim.new(0, 8)
+    c.Parent = S.noclipFloatBtn
+
+    local s = Instance.new("UIStroke")
+    s.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+    s.Color = Color3.fromRGB(62, 62, 62)
+    s.Thickness = 1.8
+    s.Transparency = 0
+    s.Parent = S.noclipFloatBtn
+    S.noclipFloatStroke = s
+
+    local getWasMoved, clearMoved = makeDraggableFloat(S.noclipFloatBtn)
+
+    S.noclipFloatBtn.MouseButton1Click:Connect(function()
+        if getWasMoved() then clearMoved(); return end
+
+        S.noclipEnabled = not S.noclipEnabled
+
+        -- Cập nhật nút chính trong Menu
+        if S.btnRefs.noclipToggle then
+            S.btnRefs.noclipToggle.Text = S.noclipEnabled and "Noclip: ON" or "Noclip: OFF"
+            S.btnRefs.noclipToggle.BackgroundColor3 = S.noclipEnabled and Color3.fromRGB(50, 200, 120) or Color3.fromRGB(38, 38, 38)
+            S.btnRefs.noclipToggle.BackgroundTransparency = S.noclipEnabled and 0 or 0.35
+        end
+
+        if S.noclipEnabled then
+            startNoclip()
+        else
+            stopNoclip()
+        end
+
+        updateNoclipFloatVisual()
+    end)
+
+    updateNoclipFloatVisual()
 end
 -- ─── INVISIBLE FLOAT ──────────────────────────────────────────────────────────
 
@@ -2846,6 +2938,9 @@ end
 if S.flyFloatBtn then
     S.flyFloatBtn.Size = UDim2.new(0, S.floatBtnSize, 0, S.floatBtnSize)
 end
+if S.noclipFloatBtn then
+            S.noclipFloatBtn.Size = UDim2.new(0, S.floatBtnSize, 0, S.floatBtnSize)
+        end
     end
 
     sliderBtn.InputBegan:Connect(function(input)
@@ -3499,10 +3594,11 @@ do
             ctrlClickTPEnabled  = S.ctrlClickTPEnabled,
             -- FeTool tab
             auraFloatEnabled    = S.auraFloatEnabled,
-            dropFloatEnabled    = S.dropFloatEnabled,
-            equipAllFloatEnabled= S.equipAllFloatEnabled,
-            useFloatEnabled     = S.useFloatEnabled,
-            flyFloatEnabled     = S.flyFloatEnabled,
+dropFloatEnabled    = S.dropFloatEnabled,
+equipAllFloatEnabled= S.equipAllFloatEnabled,
+useFloatEnabled     = S.useFloatEnabled,
+flyFloatEnabled     = S.flyFloatEnabled,
+noclipFloatEnabled  = S.noclipFloatEnabled,
 feUseInputText      = S.feUseInput and S.feUseInput.Text or "",
 floatBtnSize        = S.floatBtnSize,
 keybindsEnabled     = S.keybindsEnabled,
@@ -3512,6 +3608,7 @@ menuKeyName         = tostring(S.menuKeyCode or S.menuKeybind):gsub("Enum.KeyCod
             -- Float button positions (lưu vị trí sau khi kéo)
             invisFloatPos    = S.invisFloatBtn    and {S.invisFloatBtn.Position.X.Scale,    S.invisFloatBtn.Position.X.Offset,    S.invisFloatBtn.Position.Y.Scale,    S.invisFloatBtn.Position.Y.Offset}    or nil,
             flyFloatPos      = S.flyFloatBtn      and {S.flyFloatBtn.Position.X.Scale,      S.flyFloatBtn.Position.X.Offset,      S.flyFloatBtn.Position.Y.Scale,      S.flyFloatBtn.Position.Y.Offset}      or nil,
+            noclipFloatPos   = S.noclipFloatBtn   and {S.noclipFloatBtn.Position.X.Scale,   S.noclipFloatBtn.Position.X.Offset,   S.noclipFloatBtn.Position.Y.Scale,   S.noclipFloatBtn.Position.Y.Offset}   or nil,
             auraFloatPos     = S.auraFloatBtn     and {S.auraFloatBtn.Position.X.Scale,     S.auraFloatBtn.Position.X.Offset,     S.auraFloatBtn.Position.Y.Scale,     S.auraFloatBtn.Position.Y.Offset}     or nil,
             dropFloatPos     = S.dropFloatBtn     and {S.dropFloatBtn.Position.X.Scale,     S.dropFloatBtn.Position.X.Offset,     S.dropFloatBtn.Position.Y.Scale,     S.dropFloatBtn.Position.Y.Offset}     or nil,
             equipAllFloatPos = S.equipAllFloatBtn and {S.equipAllFloatBtn.Position.X.Scale, S.equipAllFloatBtn.Position.X.Offset, S.equipAllFloatBtn.Position.Y.Scale, S.equipAllFloatBtn.Position.Y.Offset} or nil,
@@ -3770,6 +3867,16 @@ menuKeyName         = tostring(S.menuKeyCode or S.menuKeybind):gsub("Enum.KeyCod
         S.flyFloatEnabled = true
         createFlyFloat()
         syncBtn(S.btnRefs.flyFloatToggleBtn, true, "Fly Float: ON", "Fly Float: OFF")
+    end
+end)
+pcall(function()
+    if cfg.noclipFloatPos and type(cfg.noclipFloatPos) == "table" and #cfg.noclipFloatPos == 4 then
+        S.noclipFloatPos = cfg.noclipFloatPos
+    end
+    if cfg.noclipFloatEnabled and not S.noclipFloatEnabled then
+        S.noclipFloatEnabled = true
+        createNoclipFloat()
+        syncBtn(S.btnRefs.noclipFloatToggleBtn, true, "Noclip Float: ON", "Noclip Float: OFF")
     end
 end)
         pcall(function()
@@ -5240,16 +5347,35 @@ end)
 noclipToggle.MouseButton1Click:Connect(function()
     S.noclipEnabled = not S.noclipEnabled
     noclipToggle.Text = S.noclipEnabled and "Noclip: ON" or "Noclip: OFF"
-   noclipToggle.BackgroundColor3 = S.noclipEnabled and Color3.fromRGB(50, 200, 120) or Color3.fromRGB(38, 38, 38)
-noclipToggle.BackgroundTransparency = S.noclipEnabled and 0 or 0.35
+    noclipToggle.BackgroundColor3 = S.noclipEnabled and Color3.fromRGB(50, 200, 120) or Color3.fromRGB(38, 38, 38)
+    noclipToggle.BackgroundTransparency = S.noclipEnabled and 0 or 0.35
 
     if S.noclipEnabled then
         startNoclip()
     else
         stopNoclip()
     end
+    
+    -- Thêm dòng này để nút Float đồng bộ màu sắc khi bấm nút trong Menu
+    updateNoclipFloatVisual()
 end)
 
+-- Thêm Event cho nút Noclip Float
+noclipFloatToggleBtn.MouseButton1Click:Connect(function()
+    S.noclipFloatEnabled = not S.noclipFloatEnabled
+
+    if S.noclipFloatEnabled then
+        noclipFloatToggleBtn.Text = "Noclip Float: ON"
+        noclipFloatToggleBtn.BackgroundColor3 = Color3.fromRGB(50, 200, 120)
+        noclipFloatToggleBtn.BackgroundTransparency = 0
+        createNoclipFloat()
+    else
+        noclipFloatToggleBtn.Text = "Noclip Float: OFF"
+        noclipFloatToggleBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
+        noclipFloatToggleBtn.BackgroundTransparency = 0.35
+        destroyNoclipFloat()
+    end
+end)
 S.flyToggle.MouseButton1Click:Connect(function()
    S.flySpeed = tonumber(flySpeedInput.Text) or S.flySpeed or 2
     S.flyEnabled = not S.flyEnabled
