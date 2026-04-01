@@ -52,6 +52,7 @@ aimSettings=nil,
 keybindsEnabled=true,
 invisKeyCode=Enum.KeyCode.C,
 flyKeyCode=Enum.KeyCode.F,
+noclipKeyCode=Enum.KeyCode.J,
 waitingForKeybind=nil,
 menuKeybind = Enum.KeyCode.RightControl, 
 isChangingMenuKey = false,
@@ -3604,6 +3605,7 @@ floatBtnSize        = S.floatBtnSize,
 keybindsEnabled     = S.keybindsEnabled,
 invisKeyName        = tostring(S.invisKeyCode):gsub("Enum.KeyCode.", ""),
 flyKeyName          = tostring(S.flyKeyCode):gsub("Enum.KeyCode.", ""),
+noclipKeyName       = tostring(S.noclipKeyCode or Enum.KeyCode.J):gsub("Enum.KeyCode.", ""),
 menuKeyName         = tostring(S.menuKeyCode or S.menuKeybind):gsub("Enum.KeyCode.", ""),
             -- Float button positions (lưu vị trí sau khi kéo)
             invisFloatPos    = S.invisFloatBtn    and {S.invisFloatBtn.Position.X.Scale,    S.invisFloatBtn.Position.X.Offset,    S.invisFloatBtn.Position.Y.Scale,    S.invisFloatBtn.Position.Y.Offset}    or nil,
@@ -3968,7 +3970,28 @@ end)
 pcall(function()
     if cfg.flyKeyName and Enum.KeyCode[cfg.flyKeyName] then
         S.flyKeyCode = Enum.KeyCode[cfg.flyKeyName]
- pcall(function()
+
+        if S.btnRefs.flyBindBtn then
+            S.btnRefs.flyBindBtn.Text = cfg.flyKeyName
+            S.btnRefs.flyBindBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
+            S.btnRefs.flyBindBtn.BackgroundTransparency = 0.35
+        end
+    end
+end)
+
+pcall(function()
+    if cfg.noclipKeyName and Enum.KeyCode[cfg.noclipKeyName] then
+        S.noclipKeyCode = Enum.KeyCode[cfg.noclipKeyName]
+
+        if S.btnRefs.noclipBindBtn then
+            S.btnRefs.noclipBindBtn.Text = cfg.noclipKeyName
+            S.btnRefs.noclipBindBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
+            S.btnRefs.noclipBindBtn.BackgroundTransparency = 0.35
+        end
+    end
+end)
+
+pcall(function()
     if cfg.menuKeyName and Enum.KeyCode[cfg.menuKeyName] then
         S.menuKeyCode = Enum.KeyCode[cfg.menuKeyName]
 
@@ -3979,15 +4002,7 @@ pcall(function()
         end
     end
 end)
-        if S.btnRefs.flyBindBtn then
-            S.btnRefs.flyBindBtn.Text = cfg.flyKeyName
-            S.btnRefs.flyBindBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
-            S.btnRefs.flyBindBtn.BackgroundTransparency = 0.35
-        end
-    end
-end)
-    end
-
+end 
     -- ── Auto load khi script chạy ──
     task.spawn(function()
         task.wait(1) -- đợi UI khởi tạo xong
@@ -4203,7 +4218,46 @@ flyBindBtn.MouseButton1Click:Connect(function()
     setBindButtonWaiting(flyBindBtn)
     createNotification("Keybind", "Press a key for Fly")
 end)
--- Menu Bind row (Dưới nút Fly)
+
+-- Noclip Bind row (Dưới nút Fly)
+local noclipBindRow = Instance.new("Frame")
+noclipBindRow.Size = UDim2.new(1, 0, 0, 36)
+noclipBindRow.BackgroundTransparency = 1
+noclipBindRow.Parent = panel10
+
+local noclipBindLabel = Instance.new("TextLabel")
+noclipBindLabel.Size = UDim2.new(0.6, -4, 1, 0)
+noclipBindLabel.Position = UDim2.new(0, 0, 0, 0)
+noclipBindLabel.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
+noclipBindLabel.BackgroundTransparency = 0.35
+noclipBindLabel.BorderSizePixel = 0
+noclipBindLabel.Text = "Noclip"
+noclipBindLabel.TextColor3 = Color3.new(1,1,1)
+noclipBindLabel.Font = Enum.Font.Gotham
+noclipBindLabel.TextSize = 13
+noclipBindLabel.Parent = noclipBindRow
+
+local noclipBindBtn = Instance.new("TextButton")
+noclipBindBtn.Size = UDim2.new(0.4, 0, 1, 0)
+noclipBindBtn.Position = UDim2.new(0.6, 0, 0, 0)
+noclipBindBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
+noclipBindBtn.BackgroundTransparency = 0.35
+noclipBindBtn.BorderSizePixel = 0
+noclipBindBtn.Text = keyCodeToText(S.noclipKeyCode or Enum.KeyCode.J)
+noclipBindBtn.TextColor3 = Color3.new(1,1,1)
+noclipBindBtn.Font = Enum.Font.Gotham
+noclipBindBtn.TextSize = 13
+noclipBindBtn.Parent = noclipBindRow
+
+S.btnRefs.noclipBindBtn = noclipBindBtn
+
+noclipBindBtn.MouseButton1Click:Connect(function()
+    S.waitingForKeybind = "Noclip"
+    setBindButtonWaiting(noclipBindBtn)
+    createNotification("Keybind", "Press a key for Noclip")
+end)
+
+-- Menu Bind row (Dưới nút Noclip)
 local menuBindRow = Instance.new("Frame")
 menuBindRow.Size = UDim2.new(1, 0, 0, 36)
 menuBindRow.BackgroundTransparency = 1
@@ -5058,11 +5112,11 @@ end
         if mobileShiftLockEnabled and isMobileDevice() then
             createMobileShiftLockButton()
             stopMobileShiftLock()
-            createNotification("Mobile ShiftLock", "Enabled")
+            createNotification("Mobile ShiftLock", "ON")
         else
             stopMobileShiftLock()
             destroyMobileShiftLockButton()
-            createNotification("Mobile ShiftLock", "Disabled")
+            createNotification("Mobile ShiftLock", "OFF")
         end
     end
 
@@ -5338,25 +5392,29 @@ infJumpToggle.MouseButton1Click:Connect(function()
 infJumpToggle.BackgroundTransparency = S.infJumpEnabled and 0 or 0.35
 
     if S.infJumpEnabled then
-        startInfJump()
-    else
-        stopInfJump()
-    end
+    startInfJump()
+    createNotification("Inf Jump", "ON")
+else
+    stopInfJump()
+    createNotification("Inf Jump", "OFF")
+end
 end)
 
 noclipToggle.MouseButton1Click:Connect(function()
     S.noclipEnabled = not S.noclipEnabled
+
     noclipToggle.Text = S.noclipEnabled and "Noclip: ON" or "Noclip: OFF"
     noclipToggle.BackgroundColor3 = S.noclipEnabled and Color3.fromRGB(50, 200, 120) or Color3.fromRGB(38, 38, 38)
     noclipToggle.BackgroundTransparency = S.noclipEnabled and 0 or 0.35
 
     if S.noclipEnabled then
         startNoclip()
+        createNotification("Noclip", "ON")
     else
         stopNoclip()
+        createNotification("Noclip", "OFF")
     end
     
-    -- Thêm dòng này để nút Float đồng bộ màu sắc khi bấm nút trong Menu
     updateNoclipFloatVisual()
 end)
 
@@ -5377,18 +5435,21 @@ noclipFloatToggleBtn.MouseButton1Click:Connect(function()
     end
 end)
 S.flyToggle.MouseButton1Click:Connect(function()
-   S.flySpeed = tonumber(flySpeedInput.Text) or S.flySpeed or 2
+    S.flySpeed = tonumber(flySpeedInput.Text) or S.flySpeed or 2
     S.flyEnabled = not S.flyEnabled
 
     S.flyToggle.Text = S.flyEnabled and "Fly: ON" or "Fly: OFF"
-   S.flyToggle.BackgroundColor3 = S.flyEnabled and Color3.fromRGB(50, 200, 120) or Color3.fromRGB(38, 38, 38)
-S.flyToggle.BackgroundTransparency = S.flyEnabled and 0 or 0.35
+    S.flyToggle.BackgroundColor3 = S.flyEnabled and Color3.fromRGB(50, 200, 120) or Color3.fromRGB(38, 38, 38)
+    S.flyToggle.BackgroundTransparency = S.flyEnabled and 0 or 0.35
 
     if S.flyEnabled then
         startFly()
+        createNotification("Fly", "ON")
     else
         stopFly()
+        createNotification("Fly", "OFF")
     end
+
     updateFlyFloatVisual()
 end)
 flySpeedInput.FocusLost:Connect(function()
@@ -5781,7 +5842,7 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
                     end
                     createNotification("Keybind", "Invisible = " .. tostring(newKey):gsub("Enum.KeyCode.", ""))
 
-                elseif S.waitingForKeybind == "Fly" then
+                                elseif S.waitingForKeybind == "Fly" then
                     S.flyKeyCode = newKey
 
                     if S.btnRefs.flyBindBtn then
@@ -5790,6 +5851,16 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
                         S.btnRefs.flyBindBtn.BackgroundTransparency = 0.35
                     end
                     createNotification("Keybind", "Fly = " .. tostring(newKey):gsub("Enum.KeyCode.", ""))
+
+                elseif S.waitingForKeybind == "Noclip" then
+                    S.noclipKeyCode = newKey
+
+                    if S.btnRefs.noclipBindBtn then
+                        S.btnRefs.noclipBindBtn.Text = tostring(newKey):gsub("Enum.KeyCode.", "")
+                        S.btnRefs.noclipBindBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
+                        S.btnRefs.noclipBindBtn.BackgroundTransparency = 0.35
+                    end
+                    createNotification("Keybind", "Noclip = " .. tostring(newKey):gsub("Enum.KeyCode.", ""))
 
                 -- XỬ LÝ ĐỔI PHÍM MENU Ở ĐÂY
                 elseif S.waitingForKeybind == "Menu" then
@@ -5825,7 +5896,7 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
         return
     end
 
-    -- Fly keybind
+        -- Fly keybind
     if input.KeyCode == (S.flyKeyCode or Enum.KeyCode.F) then
         S.flySpeed = tonumber(S.btnRefs.flySpeedInput and S.btnRefs.flySpeedInput.Text) or S.flySpeed or 2
         S.flyEnabled = not S.flyEnabled
@@ -5837,16 +5908,41 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
         end
 
         if S.flyEnabled then
-            startFly()
-        else
-            stopFly()
-        end
+    startFly()
+    createNotification("Fly", "ON")
+else
+    stopFly()
+    createNotification("Fly", "OFF")
+end
 
         updateFlyFloatVisual()
         return
     end
+
+    -- Noclip keybind
+    if input.KeyCode == (S.noclipKeyCode or Enum.KeyCode.J) then
+        S.noclipEnabled = not S.noclipEnabled
+
+        if S.btnRefs.noclipToggle then
+            S.btnRefs.noclipToggle.Text = S.noclipEnabled and "Noclip: ON" or "Noclip: OFF"
+            S.btnRefs.noclipToggle.BackgroundColor3 = S.noclipEnabled and Color3.fromRGB(50, 200, 120) or Color3.fromRGB(38, 38, 38)
+            S.btnRefs.noclipToggle.BackgroundTransparency = S.noclipEnabled and 0 or 0.35
+        end
+
+        if S.noclipEnabled then
+    startNoclip()
+    createNotification("Noclip", "ON")
+else
+    stopNoclip()
+    createNotification("Noclip", "OFF")
+end
+
+        updateNoclipFloatVisual()
+        return
+    end
 end)
 
+ 
 UserInputService.InputBegan:Connect(function(input, gameProcessed)
     if not S.ctrlClickTPEnabled then
         return
