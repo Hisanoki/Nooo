@@ -114,8 +114,8 @@ end
 
 -- CONFIG
 local DEFAULT_HITBOX_SIZE = 15
-local ESP_COLOR = Color3.fromRGB(0, 255, 0)
-local HEADBOX_COLOR = Color3.fromRGB(255, 150, 150)
+local ESP_COLOR = Color3.fromRGB(255, 110, 110)
+
 local ESP_TRANSPARENCY = 0.7
 local TEXT_ESP_COLOR = Color3.fromRGB(255, 255, 255)
 
@@ -1354,15 +1354,26 @@ titleLabel.TextXAlignment = Enum.TextXAlignment.Left
 titleLabel.Parent = titleBar
 
 local pingLabel = Instance.new("TextLabel")
-pingLabel.Size = UDim2.new(0, 78, 1, 0)
+pingLabel.Size = UDim2.new(0, 92, 1, 0)
 pingLabel.Position = UDim2.new(0, 82, 0, 0)
 pingLabel.BackgroundTransparency = 1
-pingLabel.Text = "| --ms"
+pingLabel.Text = "| Ping --ms"
 pingLabel.TextColor3 = Color3.fromRGB(170, 170, 170)
 pingLabel.Font = Enum.Font.GothamMedium
 pingLabel.TextSize = 12
 pingLabel.TextXAlignment = Enum.TextXAlignment.Left
 pingLabel.Parent = titleBar
+
+local fpsLabel = Instance.new("TextLabel")
+fpsLabel.Size = UDim2.new(0, 70, 1, 0)
+fpsLabel.Position = UDim2.new(0, 170, 0, 0)
+fpsLabel.BackgroundTransparency = 1
+fpsLabel.Text = "| Fps: --"
+fpsLabel.TextColor3 = Color3.fromRGB(170, 170, 170)
+fpsLabel.Font = Enum.Font.GothamMedium
+fpsLabel.TextSize = 12
+fpsLabel.TextXAlignment = Enum.TextXAlignment.Left
+fpsLabel.Parent = titleBar
 
 local function getBestPingValue()
     local ping = nil
@@ -1397,9 +1408,22 @@ local function getBestPingValue()
 
     return ping
 end
+local fpsFrames = 0
+local fpsValue = 0
+local fpsLastTime = tick()
 
+RunService.RenderStepped:Connect(function()
+    fpsFrames += 1
+    local now = tick()
+
+    if now - fpsLastTime >= 1 then
+        fpsValue = math.floor(fpsFrames / (now - fpsLastTime) + 0.5)
+        fpsFrames = 0
+        fpsLastTime = now
+    end
+end)
 task.spawn(function()
-    while pingLabel and pingLabel.Parent do
+    while pingLabel and pingLabel.Parent and fpsLabel and fpsLabel.Parent do
         local ping = getBestPingValue()
 
         if ping then
@@ -1415,6 +1439,16 @@ task.spawn(function()
         else
             pingLabel.Text = "| Ping --ms"
             pingLabel.TextColor3 = Color3.fromRGB(170, 170, 170)
+        end
+
+        fpsLabel.Text = "| Fps: " .. tostring(fpsValue)
+
+        if fpsValue >= 50 then
+            fpsLabel.TextColor3 = Color3.fromRGB(70, 255, 120) -- xanh
+        elseif fpsValue >= 30 then
+            fpsLabel.TextColor3 = Color3.fromRGB(255, 210, 90) -- vàng
+        else
+            fpsLabel.TextColor3 = Color3.fromRGB(255, 95, 95) -- đỏ
         end
 
         task.wait(0.35)
@@ -1700,6 +1734,11 @@ chamsToggle.BackgroundTransparency = 0.35
 S.btnRefs.chamsToggle = chamsToggle
 
 chamsToggle.MouseButton1Click:Connect(function()
+    -- Không cho bật Chams nếu Head Hit Box đang ON
+    if not S.chamsEnabled and S.autoHitboxEnabled then
+        return
+    end
+
     S.chamsEnabled = not S.chamsEnabled
     
     if S.chamsEnabled then
@@ -1708,7 +1747,7 @@ chamsToggle.MouseButton1Click:Connect(function()
         chamsToggle.BackgroundTransparency = 0
         
         for _, p in pairs(game.Players:GetPlayers()) do
-            if p ~= game.Players.LocalPlayer and p.Character then
+            if p ~= game.Players.LocalPlayer and p.Character and isAlive(p.Character) then
                 addChams(p.Character, getTeamColor(p))
             end
         end
@@ -1716,7 +1755,6 @@ chamsToggle.MouseButton1Click:Connect(function()
         chamsToggle.Text = "Esp Chams: OFF"
         chamsToggle.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
         chamsToggle.BackgroundTransparency = 0.35
-        
         
         for _, p in pairs(game.Players:GetPlayers()) do
             if p.Character then
@@ -5296,6 +5334,23 @@ autoToggle.MouseButton1Click:Connect(function()
     local size = tonumber(S.sizeInput.Text) or DEFAULT_HITBOX_SIZE
 
     if S.autoHitboxEnabled then
+        -- Nếu bật Head Hit Box thì tự tắt Esp Chams
+        if S.chamsEnabled then
+            S.chamsEnabled = false
+
+            if S.btnRefs.chamsToggle then
+                S.btnRefs.chamsToggle.Text = "Esp Chams: OFF"
+                S.btnRefs.chamsToggle.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
+                S.btnRefs.chamsToggle.BackgroundTransparency = 0.35
+            end
+
+            for _, p in pairs(Players:GetPlayers()) do
+                if p.Character then
+                    removeChams(p.Character)
+                end
+            end
+        end
+
         for _, player in pairs(Players:GetPlayers()) do
             if player ~= LocalPlayer and player.Character and isAlive(player.Character) then
                 applyHeadHitbox(player.Character, size)
