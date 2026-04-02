@@ -431,8 +431,8 @@ local function removeHeadHitbox(character)
     head.Material = Enum.Material.Plastic
     head.Massless = false
 end
-local function applyHeadHitbox(character, size)
-    if not character then return end
+local function applyHeadHitbox(player, character, size)
+    if not player or not character then return end
     if not isAlive(character) then return end
 
     if S.processedChars[character] then return end
@@ -456,13 +456,16 @@ local function applyHeadHitbox(character, size)
         existingMesh:Destroy()
     end
 
+    local teamColor = getTeamColor(player)
+
     head.Massless = true
     head.Size = Vector3.new(size, size, size)
     head.CanCollide = false
     head.Transparency = 0.5
     head.Material = Enum.Material.ForceField
+    head.Color = teamColor
 
-   addBoxESP(character, HEADBOX_COLOR, size)
+    addBoxESP(character, teamColor, size)
 
     S.processedChars[character] = true
 end
@@ -610,7 +613,7 @@ local function onCharacterReady(player, character)
     if not character.Parent or humanoid.Health <= 0 then return end
 
     local size = tonumber(S.sizeInput and S.sizeInput.Text) or DEFAULT_HITBOX_SIZE
-    if S.autoHitboxEnabled    then pcall(applyHeadHitbox,  character, size)                  end
+    if S.autoHitboxEnabled    then pcall(applyHeadHitbox,  player, character, size)          end
     if S.autoBodyHitboxEnabled then pcall(applyBodyHitbox, character, size)                  end
     if S.boxESPEnabled         then pcall(addBoxESP, character, getTeamColor(player), size)  end
     if S.espNameAllState or (S.nameESPEnabled and S.selectedPlayers[player]) then
@@ -5353,7 +5356,7 @@ autoToggle.MouseButton1Click:Connect(function()
 
         for _, player in pairs(Players:GetPlayers()) do
             if player ~= LocalPlayer and player.Character and isAlive(player.Character) then
-                applyHeadHitbox(player.Character, size)
+                applyHeadHitbox(player, player.Character, size)
             end
         end
     else
@@ -6231,7 +6234,7 @@ task.spawn(function()
                     local char = player.Character
                     if char and isAlive(char) then
                         if not S.playerConnections[player] then registerPlayer(player) end
-                        applyHeadHitbox(char, size)
+                        applyHeadHitbox(player, char, size)
                     end
                 end
             end
@@ -6288,7 +6291,7 @@ task.spawn(function()
                     if S.autoHitboxEnabled then
                         local hSize = tonumber(S.sizeInput and S.sizeInput.Text) or DEFAULT_HITBOX_SIZE
                         if not S.processedChars[char] then
-                            pcall(applyHeadHitbox, char, hSize)
+                            pcall(applyHeadHitbox, player, char, hSize)
                         elseif not char:FindFirstChild("StarCrowOutline") then
                             -- pcall(addOutlineChams, char)
                         end
