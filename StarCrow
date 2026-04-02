@@ -765,7 +765,6 @@ local function flashButton(btn)
     end)
 end
 -- ─── FLY SYSTEM ───────────────────────────────────────────────────────────────
-
 local function startFly()
     local char = LocalPlayer.Character
     if not char then return end
@@ -782,6 +781,8 @@ local function startFly()
 
     local bg = Instance.new("BodyGyro")
     bg.MaxTorque = Vector3.new(9e9,9e9,9e9)
+    bg.P = 1e7
+bg.D = 12000
     bg.CFrame = hrp.CFrame
     bg.Parent = hrp
 
@@ -803,16 +804,17 @@ local function startFly()
             end
         end
 
-        
-
         if move.Magnitude > 0 then
             move = move.Unit
         end
 
         bv.Velocity = move * S.flySpeed * 50
-        bg.CFrame = cam.CFrame
+
+        local look = cam.CFrame.LookVector
+        bg.CFrame = CFrame.lookAt(hrp.Position, hrp.Position + look, Vector3.new(0, 1, 0))
     end)
 end
+
 local function stopFly()
     local char = LocalPlayer.Character
     if not char then return end
@@ -837,7 +839,6 @@ local function stopFly()
         end
     end
 end
-
 -- INF JUMP SYSTEM
 
 local function startInfJump()
