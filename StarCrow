@@ -406,7 +406,7 @@ end
 local function removeHeadHitbox(character)
     if not character then return end
     S.processedChars[character] = nil
-    removeBoxESP(character)
+    removeOutlineChams(character)
 
     local head = character:FindFirstChild("Head")
     if not head then return end
@@ -427,19 +427,33 @@ local function removeHeadHitbox(character)
     end
 
     head.Transparency = 0
-    head.CanCollide = true
+    head.CanCollide = false
     head.Material = Enum.Material.Plastic
     head.Massless = false
 end
+
 local function applyHeadHitbox(player, character, size)
     if not player or not character then return end
-    if not isAlive(character) then return end
 
-    if S.processedChars[character] then return end
+    local humanoid = character:FindFirstChildOfClass("Humanoid")
+    if not humanoid or humanoid.Health <= 0 then
+        removeHeadHitbox(character)
+        return
+    end
 
     local head = character:FindFirstChild("Head")
     if not head then return end
 
+    local teamColor = getTeamColor(player)
+    local targetSize = Vector3.new(size, size, size)
+
+    -- Nếu chết trong lúc loop thì xóa hitbox ngay
+    if humanoid.Health <= 0 then
+        removeHeadHitbox(character)
+        return
+    end
+
+    -- Backup size 1 lần duy nhất
     if not head:FindFirstChild("OriginalSize") then
         local sv = Instance.new("Vector3Value")
         sv.Name = "OriginalSize"
@@ -447,25 +461,69 @@ local function applyHeadHitbox(player, character, size)
         sv.Parent = head
     end
 
-    local existingMesh = head:FindFirstChildOfClass("SpecialMesh") or head:FindFirstChildOfClass("BlockMesh")
-    if existingMesh and not head:FindFirstChild("__MeshBackup") then
-        local folder = Instance.new("Folder")
-        folder.Name = "__MeshBackup"
-        folder.Parent = head
-        existingMesh:Clone().Parent = folder
-        existingMesh:Destroy()
+    -- Backup mesh 1 lần duy nhất
+    local meshBackup = head:FindFirstChild("__MeshBackup")
+    if not meshBackup then
+        local existingMesh = head:FindFirstChildOfClass("SpecialMesh") or head:FindFirstChildOfClass("BlockMesh")
+        if existingMesh then
+            local folder = Instance.new("Folder")
+            folder.Name = "__MeshBackup"
+            folder.Parent = head
+            existingMesh:Clone().Parent = folder
+            existingMesh:Destroy()
+        end
+    else
+        -- Nếu game tự add mesh lại thì xóa tiếp để head nhìn đúng hitbox
+        local strayMesh = head:FindFirstChildOfClass("SpecialMesh") or head:FindFirstChildOfClass("BlockMesh")
+        if strayMesh then
+            strayMesh:Destroy()
+        end
     end
 
-    local teamColor = getTeamColor(player)
+    -- Nếu chết sau khi backup xong thì vẫn remove ngay
+    if humanoid.Health <= 0 then
+        removeHeadHitbox(character)
+        return
+    end
 
-    head.Massless = true
-    head.Size = Vector3.new(size, size, size)
-    head.CanCollide = false
-    head.Transparency = 0.5
-    head.Material = Enum.Material.ForceField
-    head.Color = teamColor
+    -- Force lại visual nếu bị game reset
+    local needsRefresh =
+        head.Size ~= targetSize
+        or head.Transparency < 0.45 or head.Transparency > 0.55
+        or head.Material ~= Enum.Material.ForceField
+        or head.CanCollide ~= false
+        or head.Massless ~= true
+        or head.Color ~= teamColor
 
-    addBoxESP(character, teamColor, size)
+    if needsRefresh then
+        head.Massless = true
+        head.Size = targetSize
+        head.CanCollide = false
+        head.Transparency = 0.5
+        head.Material = Enum.Material.ForceField
+        head.Color = teamColor
+    end
+
+    if not character:FindFirstChild("StarCrowOutline") then
+        addOutlineChams(character)
+    end
+
+    -- Hook chết 1 lần duy nhất cho mỗi character
+    if not character:FindFirstChild("__HeadHitboxDeathHook") then
+        local tag = Instance.new("BoolValue")
+        tag.Name = "__HeadHitboxDeathHook"
+        tag.Parent = character
+
+        humanoid.Died:Connect(function()
+            removeHeadHitbox(character)
+        end)
+
+        humanoid:GetPropertyChangedSignal("Health"):Connect(function()
+            if humanoid.Health <= 0 then
+                removeHeadHitbox(character)
+            end
+        end)
+    end
 
     S.processedChars[character] = true
 end
@@ -5363,22 +5421,21 @@ autoToggle.MouseButton1Click:Connect(function()
     local size = tonumber(S.sizeInput.Text) or DEFAULT_HITBOX_SIZE
 
     if S.autoHitboxEnabled then
-        -- Nếu bật Head Hit Box thì tự tắt Esp Chams
-        if S.chamsEnabled then
-            S.chamsEnabled = false
-
-            if S.btnRefs.chamsToggle then
-                S.btnRefs.chamsToggle.Text = "Esp Chams: OFF"
-                S.btnRefs.chamsToggle.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
-                S.btnRefs.chamsToggle.BackgroundTransparency = 0.35
-            end
-
-            for _, p in pairs(Players:GetPlayers()) do
-                if p.Character then
-                    removeChams(p.Character)
-                end
-            end
+        if S.autoHitboxEnabled then
+    for _, player in pairs(Players:GetPlayers()) do
+        if player ~= LocalPlayer and player.Character and isAlive(player.Character) then
+            applyHeadHitbox(player, player.Character, size)
         end
+    end
+else
+    local charsToRemove = {}
+    for char, _ in pairs(S.processedChars) do
+        table.insert(charsToRemove, char)
+    end
+    for _, char in ipairs(charsToRemove) do
+        removeHeadHitbox(char)
+    end
+end
 
         for _, player in pairs(Players:GetPlayers()) do
             if player ~= LocalPlayer and player.Character and isAlive(player.Character) then
