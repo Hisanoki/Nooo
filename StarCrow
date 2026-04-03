@@ -1821,8 +1821,8 @@ chamsToggle.BackgroundTransparency = 0.35
 S.btnRefs.chamsToggle = chamsToggle
 
 chamsToggle.MouseButton1Click:Connect(function()
-    -- Không cho bật Chams nếu Head Hit Box đang ON
-    if not S.chamsEnabled and S.autoHitboxEnabled then
+        -- Không cho bật Chams nếu Head hoặc Body Hit Box đang ON
+    if not S.chamsEnabled and (S.autoHitboxEnabled or S.autoBodyHitboxEnabled) then
         return
     end
 
@@ -5404,8 +5404,36 @@ closeButton.MouseButton1Click:Connect(function()
 end)
 
 autoToggle.MouseButton1Click:Connect(function()
-    -- Mutual exclusion: không bật nếu body đang ON
-    if not S.autoHitboxEnabled and S.autoBodyHitboxEnabled then return end
+    -- Nếu đang bật Head Hit Box từ OFF -> ON thì tự tắt Body Hitbox + Esp Chams
+if not S.autoHitboxEnabled then
+    -- Tắt Body Hitbox nếu đang ON
+    if S.autoBodyHitboxEnabled then
+        S.autoBodyHitboxEnabled = false
+        bodyToggle.Text = "Body Hit Box: OFF"
+        bodyToggle.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
+        bodyToggle.BackgroundTransparency = 0.35
+
+        for _, player in pairs(Players:GetPlayers()) do
+            if player ~= LocalPlayer and player.Character then
+                resetBodyHitbox(player.Character)
+            end
+        end
+    end
+
+    -- Tắt Esp Chams nếu đang ON
+    if S.chamsEnabled then
+        S.chamsEnabled = false
+        chamsToggle.Text = "Esp Chams: OFF"
+        chamsToggle.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
+        chamsToggle.BackgroundTransparency = 0.35
+
+        for _, player in pairs(Players:GetPlayers()) do
+            if player ~= LocalPlayer and player.Character then
+                removeChams(player.Character)
+            end
+        end
+    end
+end
 
     S.autoHitboxEnabled = not S.autoHitboxEnabled
     autoToggle.Text = S.autoHitboxEnabled and "Head Hit Box: ON" or "Head Hit Box: OFF"
@@ -5452,8 +5480,36 @@ end
 end)
 
 bodyToggle.MouseButton1Click:Connect(function()
-    -- Mutual exclusion: không bật nếu head đang ON
-    if not S.autoBodyHitboxEnabled and S.autoHitboxEnabled then return end
+    -- Nếu đang bật Body Hit Box từ OFF -> ON thì tự tắt Head Hit Box + Esp Chams
+if not S.autoBodyHitboxEnabled then
+    -- Tắt Head Hit Box nếu đang ON
+    if S.autoHitboxEnabled then
+        S.autoHitboxEnabled = false
+        autoToggle.Text = "Head Hit Box: OFF"
+        autoToggle.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
+        autoToggle.BackgroundTransparency = 0.35
+
+        for _, player in pairs(Players:GetPlayers()) do
+            if player ~= LocalPlayer and player.Character then
+                resetHeadHitbox(player.Character)
+            end
+        end
+    end
+
+    -- Tắt Esp Chams nếu đang ON
+    if S.chamsEnabled then
+        S.chamsEnabled = false
+        chamsToggle.Text = "Esp Chams: OFF"
+        chamsToggle.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
+        chamsToggle.BackgroundTransparency = 0.35
+
+        for _, player in pairs(Players:GetPlayers()) do
+            if player ~= LocalPlayer and player.Character then
+                removeChams(player.Character)
+            end
+        end
+    end
+end
 
     S.autoBodyHitboxEnabled = not S.autoBodyHitboxEnabled
     bodyToggle.Text = S.autoBodyHitboxEnabled and "Body Hit Box: ON" or "Body Hit Box: OFF"
