@@ -764,6 +764,25 @@ local function flashButton(btn)
         btn.BackgroundTransparency = original.transparency
     end)
 end
+local ContextActionService = game:GetService("ContextActionService")
+
+local ContextActionService = game:GetService("ContextActionService")
+
+local ContextActionService = game:GetService("ContextActionService")
+
+local ContextActionService = game:GetService("ContextActionService")
+
+-- ─── HELPER: tìm nút jump mobile ──────────────────────────────────────────────
+local function getMobileJumpButton()
+    local pg = LocalPlayer:FindFirstChild("PlayerGui")
+    if not pg then return nil end
+    local touchGui = pg:FindFirstChild("TouchGui")
+    if not touchGui then return nil end
+    local frame = touchGui:FindFirstChild("TouchControlFrame")
+    if not frame then return nil end
+    return frame:FindFirstChild("JumpButton")
+end
+
 -- ─── FLY SYSTEM ───────────────────────────────────────────────────────────────
 local function startFly()
     local char = LocalPlayer.Character
@@ -782,9 +801,17 @@ local function startFly()
     local bg = Instance.new("BodyGyro")
     bg.MaxTorque = Vector3.new(9e9,9e9,9e9)
     bg.P = 1e7
-bg.D = 12000
+    bg.D = 12000
     bg.CFrame = hrp.CFrame
     bg.Parent = hrp
+
+    -- Khi nhảy: snap ngay về fly, không có animation
+    S.jumpStateConnection = humanoid.StateChanged:Connect(function(_, new)
+        if new == Enum.HumanoidStateType.Jumping
+        or new == Enum.HumanoidStateType.Freefall then
+            humanoid.PlatformStand = true
+        end
+    end)
 
     S.flyConnection = RunService.RenderStepped:Connect(function()
         local cam = workspace.CurrentCamera
@@ -794,11 +821,9 @@ bg.D = 12000
         if md.Magnitude > 0 then
             local flatLook  = Vector3.new(cam.CFrame.LookVector.X, 0, cam.CFrame.LookVector.Z)
             local flatRight = Vector3.new(cam.CFrame.RightVector.X, 0, cam.CFrame.RightVector.Z)
-
             if flatLook.Magnitude > 0.01 and flatRight.Magnitude > 0.01 then
                 local fwdAmt   = md:Dot(flatLook.Unit)
                 local rightAmt = md:Dot(flatRight.Unit)
-
                 move += cam.CFrame.LookVector  * fwdAmt
                 move += cam.CFrame.RightVector * rightAmt
             end
@@ -818,12 +843,16 @@ end
 local function stopFly()
     local char = LocalPlayer.Character
     if not char then return end
-
     local hrp = char:FindFirstChild("HumanoidRootPart")
     local humanoid = char:FindFirstChildOfClass("Humanoid")
 
     if humanoid then
         humanoid.PlatformStand = false
+    end
+
+    if S.jumpStateConnection then
+        S.jumpStateConnection:Disconnect()
+        S.jumpStateConnection = nil
     end
 
     if S.flyConnection then
@@ -839,6 +868,8 @@ local function stopFly()
         end
     end
 end
+
+
 -- INF JUMP SYSTEM
 
 local function startInfJump()
