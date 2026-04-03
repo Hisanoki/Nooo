@@ -417,6 +417,13 @@ local function removeHeadHitbox(character)
         origSize:Destroy()
     end
 
+    -- ✅ Restore màu gốc
+    local origColor = head:FindFirstChild("OriginalColor")
+    if origColor then
+        head.Color = origColor.Value
+        origColor:Destroy()
+    end
+
     local meshBackup = head:FindFirstChild("__MeshBackup")
     if meshBackup then
         local realMesh = meshBackup:FindFirstChildOfClass("SpecialMesh") or meshBackup:FindFirstChildOfClass("BlockMesh")
@@ -447,9 +454,11 @@ local function applyHeadHitbox(player, character, size)
     local teamColor = getTeamColor(player)
     local targetSize = Vector3.new(size, size, size)
 
-    -- Nếu chết trong lúc loop thì xóa hitbox ngay
+    -- ✅ Chỉ remove nếu character đã được xử lý trước đó (đã có hitbox thật sự)
     if humanoid.Health <= 0 then
-        removeHeadHitbox(character)
+        if S.processedChars[character] then
+            removeHeadHitbox(character)
+        end
         return
     end
 
@@ -459,6 +468,14 @@ local function applyHeadHitbox(player, character, size)
         sv.Name = "OriginalSize"
         sv.Value = head.Size
         sv.Parent = head
+    end
+
+    -- ✅ Backup color 1 lần duy nhất
+    if not head:FindFirstChild("OriginalColor") then
+        local cv = Instance.new("Color3Value")
+        cv.Name = "OriginalColor"
+        cv.Value = head.Color
+        cv.Parent = head
     end
 
     -- Backup mesh 1 lần duy nhất
@@ -515,12 +532,16 @@ local function applyHeadHitbox(player, character, size)
         tag.Parent = character
 
         humanoid.Died:Connect(function()
-            removeHeadHitbox(character)
+            if character and character.Parent then
+                removeHeadHitbox(character)
+            end
         end)
 
         humanoid:GetPropertyChangedSignal("Health"):Connect(function()
             if humanoid.Health <= 0 then
-                removeHeadHitbox(character)
+                if character and character.Parent then
+                    removeHeadHitbox(character)
+                end
             end
         end)
     end
