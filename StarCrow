@@ -1592,7 +1592,7 @@ closeButton.Parent = mainFrame
 _mkCorner(4, closeButton)
 
 -- ─── LEFT VERTICAL TAB SIDEBAR ────────────────────────────────────────────────
-local TAB_W = 72
+local TAB_W = 82
 
 local sideBar = Instance.new("Frame")
 sideBar.Size = UDim2.new(0, TAB_W, 1, -32)
@@ -1616,31 +1616,73 @@ do
     sidePad.Parent = sideBar
 end
 
--- Tab button factory
+-- Tab button factory (FIX ICON + TEXT)
 local tabBtns = {}
 do
     local tabColors = {
-    Color3.fromRGB(25,25,25), Color3.fromRGB(25,25,25),
-    Color3.fromRGB(25,25,25), Color3.fromRGB(25,25,25),
-    Color3.fromRGB(25,25,25), Color3.fromRGB(25,25,25),
-    Color3.fromRGB(25,25,25), Color3.fromRGB(25,25,25),
-    Color3.fromRGB(25,25,25)
-}
+        Color3.fromRGB(25,25,25), Color3.fromRGB(25,25,25),
+        Color3.fromRGB(25,25,25), Color3.fromRGB(25,25,25),
+        Color3.fromRGB(25,25,25), Color3.fromRGB(25,25,25),
+        Color3.fromRGB(25,25,25), Color3.fromRGB(25,25,25),
+        Color3.fromRGB(25,25,25)
+    }
+
     local tabNames = {"Player", "ESP", "Teleport", "Troll", "Misc", "Server", "Tools", "Aimbot", "Setting"}
+
+    
+    local tabIcons = {
+    "rbxassetid://117259180607823", -- Player
+    "rbxassetid://120129574453255", -- ESP
+    "rbxassetid://6723742952", -- Teleport
+    "rbxassetid://6862780932", -- Troll
+    "rbxassetid://85940683783058", -- Misc
+    "rbxassetid://9692125126", -- Server
+    "rbxassetid://484396034", -- Tools
+    "rbxassetid://95264995174476", -- Aimbot
+    "rbxassetid://7059346373"  -- Setting
+}
+
     for i = 1, 9 do
-    local btn = Instance.new("TextButton")
-    btn.Size = UDim2.new(1, 0, 0, 30)
-    btn.BackgroundColor3 = tabColors[i]
-    btn.BackgroundTransparency = 0.6
-    btn.BorderSizePixel = 0
-    btn.Text = tabNames[i]
-    btn.TextColor3 = Color3.fromRGB(255,255,255)
-    btn.Font = Enum.Font.GothamBold
-    btn.TextSize = 12
-    btn.LayoutOrder = i
-    btn.Parent = sideBar
-    local bc = Instance.new("UICorner"); bc.CornerRadius = UDim.new(0,6); bc.Parent = btn
-    tabBtns[i] = btn
+        local btn = Instance.new("TextButton")
+        btn.Size = UDim2.new(1, 0, 0, 30)
+        btn.BackgroundColor3 = tabColors[i]
+        btn.BackgroundTransparency = 0.6
+        btn.BorderSizePixel = 0
+        btn.Text = ""
+        btn.LayoutOrder = i
+        btn.Parent = sideBar
+
+        local bc = Instance.new("UICorner")
+        bc.CornerRadius = UDim.new(0,6)
+        bc.Parent = btn
+
+        -- icon
+        local icon = Instance.new("ImageLabel")
+icon.Name = "TabIcon"
+icon.Size = UDim2.new(0, 18, 0, 18)
+icon.Position = UDim2.new(0, 6, 0.5, -9)
+icon.BackgroundTransparency = 1
+icon.Image = tabIcons[i]
+icon.ScaleType = Enum.ScaleType.Fit
+icon.ImageColor3 = Color3.fromRGB(245,245,245)
+icon.Parent = btn
+
+        -- text riêng, không dùng TextButton.Text nữa để khỏi lệch
+        local label = Instance.new("TextLabel")
+        label.Name = "TabLabel"
+        label.BackgroundTransparency = 1
+        label.Position = UDim2.new(0, 26, 0, 0)
+        label.Size = UDim2.new(1, -28, 1, 0)
+        label.Text = tabNames[i]
+        label.TextColor3 = Color3.fromRGB(255,255,255)
+        label.Font = Enum.Font.GothamBold
+        label.TextSize = 11
+        label.TextXAlignment = Enum.TextXAlignment.Left
+        label.TextYAlignment = Enum.TextYAlignment.Center
+        label.ClipsDescendants = true
+        label.Parent = btn
+
+        tabBtns[i] = btn
     end
 end
 -- ─── CONTENT PANELS ───────────────────────────────────────────────────────────
@@ -2392,7 +2434,7 @@ local function runEquipAllTools()
 end
 -- ─── FLOAT BUTTON HELPERS ─────────────────────────────────────────────────────
 -- Tạo drag logic riêng cho từng nút, track đúng input object để tránh joystick
-
+S.floatDragLocked = false
 local function makeDraggableFloat(btn)
     local fDragging = false
     local fMoved = false
@@ -2403,11 +2445,20 @@ local function makeDraggableFloat(btn)
     btn.InputBegan:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1
         or input.UserInputType == Enum.UserInputType.Touch then
+
+            -- Nếu đang khóa drag float thì không cho bắt đầu kéo
+            if S.floatDragLocked then
+                fDragging = false
+                fDragInput = nil
+                return
+            end
+
             fDragging = true
             fMoved = false
             fDragStart = input.Position
             fDragPos = btn.Position
             fDragInput = input
+
             input.Changed:Connect(function()
                 if input.UserInputState == Enum.UserInputState.End then
                     fDragging = false
@@ -2418,11 +2469,16 @@ local function makeDraggableFloat(btn)
     end)
 
     UserInputService.InputChanged:Connect(function(input)
+        -- Nếu đang bật khóa drag thì chặn luôn
+        if S.floatDragLocked then
+            return
+        end
+
         -- Chỉ move khi đúng input object đã bắt đầu drag → joystick không can thiệp
         if fDragging and (
-    input == fDragInput or 
-    input.UserInputType == Enum.UserInputType.MouseMovement
-) then
+            input == fDragInput or 
+            input.UserInputType == Enum.UserInputType.MouseMovement
+        ) then
             local delta = input.Position - fDragStart
             if delta.Magnitude > 6 then fMoved = true end
             btn.Position = UDim2.new(
@@ -3832,6 +3888,7 @@ noclipFloatEnabled  = S.noclipFloatEnabled,
 feUseInputText      = S.feUseInput and S.feUseInput.Text or "",
 floatBtnSize        = S.floatBtnSize,
 keybindsEnabled     = S.keybindsEnabled,
+floatDragLocked     = S.floatDragLocked,
 invisKeyName        = tostring(S.invisKeyCode):gsub("Enum.KeyCode.", ""),
 flyKeyName          = tostring(S.flyKeyCode):gsub("Enum.KeyCode.", ""),
 noclipKeyName       = tostring(S.noclipKeyCode or Enum.KeyCode.J):gsub("Enum.KeyCode.", ""),
@@ -4172,13 +4229,30 @@ end)
 
         if S.btnRefs.keybindsBtn then
             if S.keybindsEnabled then
-                S.btnRefs.keybindsBtn.Text = "Keybinds: ON"
-                S.btnRefs.keybindsBtn.BackgroundColor3 = Color3.fromRGB(50, 200, 120)
-                S.btnRefs.keybindsBtn.BackgroundTransparency = 0
-            else
-                S.btnRefs.keybindsBtn.Text = "Keybinds: OFF"
+                S.btnRefs.keybindsBtn.Text = "Disable Keybinds: OFF"
                 S.btnRefs.keybindsBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
                 S.btnRefs.keybindsBtn.BackgroundTransparency = 0.35
+            else
+                S.btnRefs.keybindsBtn.Text = "Disable Keybinds: ON"
+                S.btnRefs.keybindsBtn.BackgroundColor3 = Color3.fromRGB(50, 200, 120)
+                S.btnRefs.keybindsBtn.BackgroundTransparency = 0
+            end
+        end
+    end
+end)
+pcall(function()
+    if cfg.floatDragLocked ~= nil then
+        S.floatDragLocked = cfg.floatDragLocked
+
+        if S.btnRefs.floatDragLockBtn then
+            if S.floatDragLocked then
+                S.btnRefs.floatDragLockBtn.Text = "Undraggable Float Buttons: ON"
+                S.btnRefs.floatDragLockBtn.BackgroundColor3 = Color3.fromRGB(50, 200, 120)
+                S.btnRefs.floatDragLockBtn.BackgroundTransparency = 0
+            else
+                S.btnRefs.floatDragLockBtn.Text = "Undraggable Float Buttons: OFF"
+                S.btnRefs.floatDragLockBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
+                S.btnRefs.floatDragLockBtn.BackgroundTransparency = 0.35
             end
         end
     end
@@ -4313,15 +4387,15 @@ end)
     deleteDivider.BorderSizePixel = 0
 end
 do
-    local _lbl = createTransparentLabel("Keybind", panel10)
+    local _lbl = createTransparentLabel("Keybinds", panel10)
     _lbl.TextColor3 = Color3.fromRGB(255,255,255)
     _lbl.Font = Enum.Font.GothamBold
     _lbl.TextSize = 14
 end
 -- Nút bật/tắt toàn bộ keybind keyboard (trừ menu)
-local keybindsBtn = createTransparentButton("Keybinds: ON", Color3.fromRGB(50, 200, 120), panel10)
-keybindsBtn.BackgroundColor3 = Color3.fromRGB(50, 200, 120)
-keybindsBtn.BackgroundTransparency = 0
+local keybindsBtn = createTransparentButton("Disable Keybinds: OFF", Color3.fromRGB(38, 38, 38), panel10)
+keybindsBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
+keybindsBtn.BackgroundTransparency = 0.35
 keybindsBtn.TextSize = 13
 keybindsBtn.Size = UDim2.new(1, 0, 0, 36)
 
@@ -4331,25 +4405,19 @@ local function updateKeybindsBtn()
     if not keybindsBtn then return end
 
     if S.keybindsEnabled then
-        keybindsBtn.Text = "Keybinds: ON"
-        keybindsBtn.BackgroundColor3 = Color3.fromRGB(50, 200, 120)
-        keybindsBtn.BackgroundTransparency = 0
-    else
-        keybindsBtn.Text = "Keybinds: OFF"
+        keybindsBtn.Text = "Disable Keybinds: OFF"
         keybindsBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
         keybindsBtn.BackgroundTransparency = 0.35
+    else
+        keybindsBtn.Text = "Disable Keybinds: ON"
+       keybindsBtn.BackgroundColor3 = Color3.fromRGB(50, 200, 120)
+keybindsBtn.BackgroundTransparency = 0
     end
 end
 
 keybindsBtn.MouseButton1Click:Connect(function()
     S.keybindsEnabled = not S.keybindsEnabled
     updateKeybindsBtn()
-
-    if S.keybindsEnabled then
-        createNotification("Keybinds", "All keybinds enabled")
-    else
-        createNotification("Keybinds", "All keybinds disabled")
-    end
 end)
 local function keyCodeToText(keyCode)
     if not keyCode then
@@ -4371,6 +4439,37 @@ local function setBindButtonNormal(btn, keyCode)
     btn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
     btn.BackgroundTransparency = 0.35
 end
+-- Undraggable Float Buttons row (ngay dưới nút Keybinds)
+local floatDragLockBtn = createTransparentButton("Undraggable Float Buttons: OFF", Color3.fromRGB(38, 38, 38), panel10)
+floatDragLockBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
+floatDragLockBtn.BackgroundTransparency = 0.35
+floatDragLockBtn.TextSize = 13
+floatDragLockBtn.TextScaled = false
+floatDragLockBtn.TextWrapped = false
+floatDragLockBtn.Size = UDim2.new(1, 0, 0, 36)
+
+S.btnRefs.floatDragLockBtn = floatDragLockBtn
+
+local function updateFloatDragLockBtn()
+    if not floatDragLockBtn then return end
+
+    if S.floatDragLocked then
+        floatDragLockBtn.Text = "Undraggable Float Buttons: ON"
+        floatDragLockBtn.BackgroundColor3 = Color3.fromRGB(50, 200, 120)
+        floatDragLockBtn.BackgroundTransparency = 0
+    else
+        floatDragLockBtn.Text = "Undraggable Float Buttons: OFF"
+        floatDragLockBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
+        floatDragLockBtn.BackgroundTransparency = 0.35
+    end
+end
+
+floatDragLockBtn.MouseButton1Click:Connect(function()
+    S.floatDragLocked = not S.floatDragLocked
+    updateFloatDragLockBtn()
+end)
+
+updateFloatDragLockBtn()
 
 -- Invisible row
 local invisBindRow = Instance.new("Frame")
@@ -4523,34 +4622,8 @@ menuBindBtn.MouseButton1Click:Connect(function()
     setBindButtonWaiting(menuBindBtn)
     createNotification("Keybind", "Press a key for Open/Close Menu")
 end)
-    -- Trạng thái file
-    local fileStatusLabel = Instance.new("TextLabel")
-    fileStatusLabel.Size = UDim2.new(1, 0, 0, 24)
-    fileStatusLabel.BackgroundTransparency = 1
-    fileStatusLabel.TextColor3 = Color3.fromRGB(140, 200, 140)
-    fileStatusLabel.Font = Enum.Font.Gotham
-    fileStatusLabel.TextSize = 11
-    fileStatusLabel.TextXAlignment = Enum.TextXAlignment.Left
-    fileStatusLabel.Parent = panel10
 
-    local function updateFileStatus()
-        if isfile(SAVE_FILE) then
-            fileStatusLabel.Text = ""
-            fileStatusLabel.TextColor3 = Color3.fromRGB(80, 220, 120)
-        else
-            fileStatusLabel.Text = ""
-            fileStatusLabel.TextColor3 = Color3.fromRGB(220, 100, 80)
-        end
-    end
-
-    updateFileStatus()
-    -- Cập nhật trạng thái mỗi lần mở tab
-    task.spawn(function()
-        while true do
-            task.wait(2)
-            pcall(updateFileStatus)
-        end
-    end)
+    
 end
 
 local function CountFlingTargets()
