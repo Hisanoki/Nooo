@@ -417,7 +417,6 @@ local function removeHeadHitbox(character)
         origSize:Destroy()
     end
 
-    -- ✅ Restore màu gốc
     local origColor = head:FindFirstChild("OriginalColor")
     if origColor then
         head.Color = origColor.Value
@@ -444,7 +443,9 @@ local function applyHeadHitbox(player, character, size)
 
     local humanoid = character:FindFirstChildOfClass("Humanoid")
     if not humanoid or humanoid.Health <= 0 then
-        removeHeadHitbox(character)
+        if S.processedChars[character] then
+            removeHeadHitbox(character)
+        end
         return
     end
 
@@ -454,7 +455,6 @@ local function applyHeadHitbox(player, character, size)
     local teamColor = getTeamColor(player)
     local targetSize = Vector3.new(size, size, size)
 
-    -- ✅ Chỉ remove nếu character đã được xử lý trước đó (đã có hitbox thật sự)
     if humanoid.Health <= 0 then
         if S.processedChars[character] then
             removeHeadHitbox(character)
@@ -462,7 +462,6 @@ local function applyHeadHitbox(player, character, size)
         return
     end
 
-    -- Backup size 1 lần duy nhất
     if not head:FindFirstChild("OriginalSize") then
         local sv = Instance.new("Vector3Value")
         sv.Name = "OriginalSize"
@@ -470,7 +469,6 @@ local function applyHeadHitbox(player, character, size)
         sv.Parent = head
     end
 
-    -- ✅ Backup color 1 lần duy nhất
     if not head:FindFirstChild("OriginalColor") then
         local cv = Instance.new("Color3Value")
         cv.Name = "OriginalColor"
@@ -478,7 +476,6 @@ local function applyHeadHitbox(player, character, size)
         cv.Parent = head
     end
 
-    -- Backup mesh 1 lần duy nhất
     local meshBackup = head:FindFirstChild("__MeshBackup")
     if not meshBackup then
         local existingMesh = head:FindFirstChildOfClass("SpecialMesh") or head:FindFirstChildOfClass("BlockMesh")
@@ -490,20 +487,17 @@ local function applyHeadHitbox(player, character, size)
             existingMesh:Destroy()
         end
     else
-        -- Nếu game tự add mesh lại thì xóa tiếp để head nhìn đúng hitbox
         local strayMesh = head:FindFirstChildOfClass("SpecialMesh") or head:FindFirstChildOfClass("BlockMesh")
         if strayMesh then
             strayMesh:Destroy()
         end
     end
 
-    -- Nếu chết sau khi backup xong thì vẫn remove ngay
     if humanoid.Health <= 0 then
         removeHeadHitbox(character)
         return
     end
 
-    -- Force lại visual nếu bị game reset
     local needsRefresh =
         head.Size ~= targetSize
         or head.Transparency < 0.45 or head.Transparency > 0.55
@@ -525,7 +519,6 @@ local function applyHeadHitbox(player, character, size)
         addOutlineChams(character)
     end
 
-    -- Hook chết 1 lần duy nhất cho mỗi character
     if not character:FindFirstChild("__HeadHitboxDeathHook") then
         local tag = Instance.new("BoolValue")
         tag.Name = "__HeadHitboxDeathHook"
@@ -541,6 +534,28 @@ local function applyHeadHitbox(player, character, size)
             if humanoid.Health <= 0 then
                 if character and character.Parent then
                     removeHeadHitbox(character)
+                end
+            end
+        end)
+
+        task.spawn(function()
+            while true do
+                task.wait(0.5)
+
+                if not character or not character.Parent then
+                    task.wait(2)
+                    if not character or not character.Parent then break end
+                end
+
+                if not S.autoHitboxEnabled then break end
+                if not S.processedChars[character] then break end
+
+                -- ✅ Re-fetch humanoid mỗi vòng, tránh dùng reference cũ bị replace
+                local currentHumanoid = character:FindFirstChildOfClass("Humanoid")
+                if not currentHumanoid or currentHumanoid.Health <= 0 then break end
+
+                if not character:FindFirstChild("StarCrowOutline") then
+                    addOutlineChams(character)
                 end
             end
         end)
