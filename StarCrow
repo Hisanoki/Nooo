@@ -110,8 +110,6 @@ function StopSpectate()
     end
 end
 
-
-
 -- CONFIG
 local DEFAULT_HITBOX_SIZE = 15
 local ESP_COLOR = Color3.fromRGB(255, 110, 110)
@@ -162,13 +160,11 @@ local function setCharacterTransparency(character, transparency)
     if not character then return end
 
     for _, d in character:GetDescendants() do
-        -- Bỏ qua toàn bộ accessory / layered clothing / tóc / nón / tai...
         if d:FindFirstAncestorOfClass("Accessory") then
             continue
         end
 
         if d:IsA("BasePart") then
-            -- Giữ đầu + giữ HRP
             if d.Name == "Head" or d.Name == "HumanoidRootPart" then
                 d.Transparency = 0
             else
@@ -176,7 +172,6 @@ local function setCharacterTransparency(character, transparency)
             end
 
         elseif d:IsA("Decal") then
-            -- Giữ mặt
             if d.Name == "face" and d.Parent and d.Parent.Name == "Head" then
                 d.Transparency = 0
             else
@@ -393,7 +388,7 @@ local function createTracerESP(player)
 
         line.From = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y - 8)
         line.To = Vector2.new(pos.X, pos.Y)
-        line.Color = getTeamColor(player) -- nhận biết team
+        line.Color = getTeamColor(player)
         line.Visible = true
     end)
 
@@ -550,7 +545,6 @@ local function applyHeadHitbox(player, character, size)
                 if not S.autoHitboxEnabled then break end
                 if not S.processedChars[character] then break end
 
-                -- ✅ Re-fetch humanoid mỗi vòng, tránh dùng reference cũ bị replace
                 local currentHumanoid = character:FindFirstChildOfClass("Humanoid")
                 if not currentHumanoid or currentHumanoid.Health <= 0 then break end
 
@@ -693,7 +687,6 @@ local function cleanupPlayerConnections(player)
     end
 end
 
-
 local function onCharacterReady(player, character)
     if not character then return end
 
@@ -702,7 +695,6 @@ local function onCharacterReady(player, character)
     local hrp      = character:WaitForChild("HumanoidRootPart", 10)
     if not humanoid or not head or not hrp then return end
 
-    -- Poll đến khi thực sự có máu, không check isAlive() 1 lần rồi bỏ
     repeat task.wait(0.1) until humanoid.Health > 0 or not character.Parent
     if not character.Parent or humanoid.Health <= 0 then return end
 
@@ -715,7 +707,6 @@ local function onCharacterReady(player, character)
     end
     if S.chamsEnabled then pcall(addChams, character, getTeamColor(player)) end
     if S.tracerESPEnabled then pcall(createTracerESP, player) end
-    -- Cleanup khi chết hoặc character bị xóa
     humanoid.Died:Connect(function()
         S.processedChars[character] = nil
         removeHeadHitbox(character)
@@ -744,8 +735,6 @@ local function registerPlayer(player)
 
     S.playerConnections[player] = {}
 
-    -- Polling loop: cứ 0.5s check player.Character có đổi không
-    -- Không dùng CharacterAdded event để tránh race condition
     task.spawn(function()
         local lastChar = nil
         while player.Parent do
@@ -827,7 +816,6 @@ local flashDefaults = setmetatable({}, {__mode = "k"})
 local function flashButton(btn)
     if not btn then return end
 
-    -- Lưu style gốc của nút 1 lần duy nhất
     if not flashDefaults[btn] then
         flashDefaults[btn] = {
             color = btn.BackgroundColor3,
@@ -835,7 +823,6 @@ local function flashButton(btn)
         }
     end
 
-    -- Nếu nút đang không xanh (tức là đang ở trạng thái gốc), cập nhật lại style gốc
     if btn.BackgroundColor3 ~= Color3.fromRGB(50, 200, 120) or btn.BackgroundTransparency ~= 0 then
         flashDefaults[btn].color = btn.BackgroundColor3
         flashDefaults[btn].transparency = btn.BackgroundTransparency
@@ -866,7 +853,7 @@ local ContextActionService = game:GetService("ContextActionService")
 
 local ContextActionService = game:GetService("ContextActionService")
 
--- ─── HELPER: tìm nút jump mobile ──────────────────────────────────────────────
+-- ─── HELPER: tm nt jump mobile ──────────────────────────────────────────────
 local function getMobileJumpButton()
     local pg = LocalPlayer:FindFirstChild("PlayerGui")
     if not pg then return nil end
@@ -899,7 +886,6 @@ local function startFly()
     bg.CFrame = hrp.CFrame
     bg.Parent = hrp
 
-    -- Khi nhảy: snap ngay về fly, không có animation
     S.jumpStateConnection = humanoid.StateChanged:Connect(function(_, new)
         if new == Enum.HumanoidStateType.Jumping
         or new == Enum.HumanoidStateType.Freefall then
@@ -962,7 +948,6 @@ local function stopFly()
         end
     end
 end
-
 
 -- INF JUMP SYSTEM
 
@@ -1222,7 +1207,6 @@ local function disableAntiFling()
     createNotification("Anti Fling", "OFF", 3)
 end
 
-
 local function _mkCorner(radius, parent)
     local c = Instance.new("UICorner")
     c.CornerRadius = UDim.new(0, radius)
@@ -1259,13 +1243,11 @@ if not gui.Parent then
     gui.Parent = LocalPlayer:WaitForChild("PlayerGui")
 end
 
--- ─── CUSTOM NOTIFICATION (bottom-right, rounded, với icon) ──────────────────
--- Hoàn toàn độc lập, tự tạo ScreenGui riêng, không phụ thuộc biến ngoài.
+-- ─── CUSTOM NOTIFICATION (bottom-right, rounded, vi icon) ──────────────────
 local function showCustomNotif(text, duration)
     duration = duration or 3.5
     local TweenService = game:GetService("TweenService")
 
-    -- Tạo hoặc lấy lại ScreenGui dành riêng cho notif
     local parent
     pcall(function() parent = game:GetService("CoreGui") end)
     if not parent then parent = LocalPlayer:FindFirstChildOfClass("PlayerGui") end
@@ -1286,7 +1268,6 @@ local function showCustomNotif(text, duration)
     end
     if not notifGui or not notifGui.Parent then return end
 
-    -- Container giữ các notif xếp chồng từ dưới lên
     local container = notifGui:FindFirstChild("NotifContainer")
     if not container then
         container = Instance.new("Frame")
@@ -1388,7 +1369,6 @@ do
     _s.Color = Color3.fromRGB(255, 255, 255)
     _s.Thickness = 2
 end
--- Drag logic: PC dùng MouseMovement, Mobile track input object (tránh joystick)
 local _tbDragging = false
 local _tbMoved = false
 local _tbIsTouch = false
@@ -1555,9 +1535,9 @@ task.spawn(function()
             if ping <= 200 then
                 pingLabel.TextColor3 = Color3.fromRGB(70, 255, 120) -- xanh
             elseif ping <= 500 then
-                pingLabel.TextColor3 = Color3.fromRGB(255, 210, 90) -- vàng
+                pingLabel.TextColor3 = Color3.fromRGB(255, 210, 90)
             else
-                pingLabel.TextColor3 = Color3.fromRGB(255, 95, 95) -- đỏ
+                pingLabel.TextColor3 = Color3.fromRGB(255, 95, 95)
             end
         else
             pingLabel.Text = "| Ping --ms"
@@ -1569,9 +1549,9 @@ task.spawn(function()
         if fpsValue >= 50 then
             fpsLabel.TextColor3 = Color3.fromRGB(70, 255, 120) -- xanh
         elseif fpsValue >= 30 then
-            fpsLabel.TextColor3 = Color3.fromRGB(255, 210, 90) -- vàng
+            fpsLabel.TextColor3 = Color3.fromRGB(255, 210, 90)
         else
-            fpsLabel.TextColor3 = Color3.fromRGB(255, 95, 95) -- đỏ
+            fpsLabel.TextColor3 = Color3.fromRGB(255, 95, 95)
         end
 
         task.wait(0.35)
@@ -1629,7 +1609,6 @@ do
 
     local tabNames = {"Player", "ESP", "Teleport", "Troll", "Misc", "Server", "Tools", "Aimbot", "Setting"}
 
-    
     local tabIcons = {
     "rbxassetid://117259180607823", -- Player
     "rbxassetid://120129574453255", -- ESP
@@ -1639,7 +1618,7 @@ do
     "rbxassetid://9692125126", -- Server
     "rbxassetid://484396034", -- Tools
     "rbxassetid://95264995174476", -- Aimbot
-    "rbxassetid://7059346373"  -- Setting
+    "rbxassetid://7059346373" -- Setting
 }
 
     for i = 1, 9 do
@@ -1667,7 +1646,6 @@ icon.ScaleType = Enum.ScaleType.Fit
 icon.ImageColor3 = Color3.fromRGB(245,245,245)
 icon.Parent = btn
 
-        -- text riêng, không dùng TextButton.Text nữa để khỏi lệch
         local label = Instance.new("TextLabel")
         label.Name = "TabLabel"
         label.BackgroundTransparency = 1
@@ -1716,13 +1694,12 @@ local function makeScrollPanel()
     return panel, layout
 end
 
-
 local panel2 = makeScrollPanel() -- Player
 local panel3 = makeScrollPanel() -- ESP
 local panel4 = makeScrollPanel() -- Teleport
 local panel5 = makeScrollPanel() -- Troll
-local panel6 = makeScrollPanel() -- Misc   
-local panel7 = makeScrollPanel() -- Server 
+local panel6 = makeScrollPanel() -- Misc
+local panel7 = makeScrollPanel() -- Server
 local panel8 = makeScrollPanel() -- Tools
 local panel9 = makeScrollPanel() -- Aimbot
 local panel10 = makeScrollPanel() -- SaveSettings
@@ -1890,16 +1867,13 @@ espNameAllBtn.BackgroundTransparency = 0.35
 espNameAllBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
 S.btnRefs.espNameAllBtn = espNameAllBtn
 
--- boxESPBtn removed (bỏ theo yêu cầu)
 local chamsToggle = createTransparentButton("Esp Chams: OFF", Color3.fromRGB(38, 38, 38), panel3)
 
--- THIẾT LẬP MÀU MẶC ĐỊNH KHI MỚI CHẠY SCRIPT (Để giống các nút khác)
 chamsToggle.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
 chamsToggle.BackgroundTransparency = 0.35
 S.btnRefs.chamsToggle = chamsToggle
 
 chamsToggle.MouseButton1Click:Connect(function()
-        -- Không cho bật Chams nếu Head hoặc Body Hit Box đang ON
     if not S.chamsEnabled and (S.autoHitboxEnabled or S.autoBodyHitboxEnabled) then
         return
     end
@@ -2065,7 +2039,6 @@ S.bangBtn = createTransparentButton("BANG PLAYER : OFF", Color3.fromRGB(38, 38, 
 S.bangBtn.BackgroundTransparency = 0.35
 S.bangBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
 
-
 S.loopBringBtn = createTransparentButton("LOOP BRING PLAYER : OFF", Color3.fromRGB(38, 38, 38), panel5)
 S.loopBringBtn.BackgroundTransparency = 0.35
 S.loopBringBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
@@ -2136,8 +2109,6 @@ autoClickBtn.BackgroundTransparency = 0.35
 autoClickBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
 S.btnRefs.autoClickBtn = autoClickBtn
 
-
-
 local AUTOCLICK_DELAY_PC = 0.15
 local AUTOCLICK_DELAY_MOBILE = 0.08
 
@@ -2153,7 +2124,6 @@ local function doGlobalClick()
 
     local vp = cam.ViewportSize
 
-    -- lệch xuống góc phải để tránh đè UI
     local x = math.floor(vp.X * 0.78)
     local y = math.floor(vp.Y * 0.82)
 
@@ -2186,23 +2156,18 @@ local function startAutoClick()
 
     S.autoClickConnection = task.spawn(function()
         while S.autoClickEnabled do
-            -- nếu menu đang mở thì pause để khỏi tự bấm vào UI
             if mainFrame and mainFrame.Visible then
                 task.wait(0.1)
             else
                 if isMobile then
-                    -- MOBILE: ưu tiên activate tool để không khóa joystick/camera
                     local usedTool = activateHeldTool()
 
-                    -- nếu không cầm tool thì KHÔNG click giả trên mobile
-                    -- để tránh khóa điều khiển
                     if not usedTool then
                         task.wait(0.15)
                     else
                         task.wait(AUTOCLICK_DELAY_MOBILE)
                     end
                 else
-                    -- PC: vẫn dùng global click như cũ
                     doGlobalClick()
                     task.wait(AUTOCLICK_DELAY_PC)
                 end
@@ -2268,7 +2233,6 @@ do
         end
     end
 
-    -- Expose để applyConfig gọi khi load save
     S.setAntiVoid = setAntiVoid
 
     antiVoidBtn.MouseButton1Click:Connect(function()
@@ -2433,20 +2397,18 @@ local function runEquipAllTools()
     end
 end
 -- ─── FLOAT BUTTON HELPERS ─────────────────────────────────────────────────────
--- Tạo drag logic riêng cho từng nút, track đúng input object để tránh joystick
 S.floatDragLocked = false
 local function makeDraggableFloat(btn)
     local fDragging = false
     local fMoved = false
     local fDragStart = nil
     local fDragPos = nil
-    local fDragInput = nil  -- track đúng input object
+    local fDragInput = nil
 
     btn.InputBegan:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1
         or input.UserInputType == Enum.UserInputType.Touch then
 
-            -- Nếu đang khóa drag float thì không cho bắt đầu kéo
             if S.floatDragLocked then
                 fDragging = false
                 fDragInput = nil
@@ -2469,12 +2431,10 @@ local function makeDraggableFloat(btn)
     end)
 
     UserInputService.InputChanged:Connect(function(input)
-        -- Nếu đang bật khóa drag thì chặn luôn
         if S.floatDragLocked then
             return
         end
 
-        -- Chỉ move khi đúng input object đã bắt đầu drag → joystick không can thiệp
         if fDragging and (
             input == fDragInput or 
             input.UserInputType == Enum.UserInputType.MouseMovement
@@ -2519,7 +2479,6 @@ local function createNoclipFloat()
 
     S.noclipFloatBtn = Instance.new("TextButton")
     S.noclipFloatBtn.Size = UDim2.new(0, S.floatBtnSize, 0, S.floatBtnSize)
-    -- Vị trí mặc định (tính toán tránh đè lên nút Fly/Invis)
     S.noclipFloatBtn.Position = UDim2.new(0.85, S.floatBtnSize + 14, 0.5, -(S.floatBtnSize * 2 + 18))
     if S.noclipFloatPos then
         local p = S.noclipFloatPos
@@ -2560,7 +2519,6 @@ local function createNoclipFloat()
 
         S.noclipEnabled = not S.noclipEnabled
 
-        -- Cập nhật nút chính trong Menu
         if S.btnRefs.noclipToggle then
             S.btnRefs.noclipToggle.Text = S.noclipEnabled and "Noclip: ON" or "Noclip: OFF"
             S.btnRefs.noclipToggle.BackgroundColor3 = S.noclipEnabled and Color3.fromRGB(50, 200, 120) or Color3.fromRGB(38, 38, 38)
@@ -2779,7 +2737,6 @@ local function createAuraFloat()
         runToolAura()
     end)
 end
-
 
 -- ─── DROP FLOAT ───────────────────────────────────────────────────────────────
 
@@ -3127,11 +3084,11 @@ do
 end
 
 local feToolScroll = Instance.new("ScrollingFrame")
-feToolScroll.Size = UDim2.new(1, 0, 0, 95) -- nhỏ hơn
+feToolScroll.Size = UDim2.new(1, 0, 0, 95)
 feToolScroll.BackgroundColor3 = Color3.fromRGB(22, 22, 22)
 feToolScroll.BackgroundTransparency = 0.35
 feToolScroll.BorderSizePixel = 0
-feToolScroll.ScrollBarThickness = 3 -- mỏng hơn
+feToolScroll.ScrollBarThickness = 3
 feToolScroll.ScrollBarImageColor3 = Color3.fromRGB(200, 25, 25)
 feToolScroll.CanvasSize = UDim2.new(0, 0, 0, 0)
 feToolScroll.AutomaticCanvasSize = Enum.AutomaticSize.Y
@@ -3139,7 +3096,7 @@ feToolScroll.Parent = panel8
 do
     local feTSLayout = Instance.new("UIListLayout", feToolScroll)
     feTSLayout.SortOrder = Enum.SortOrder.LayoutOrder
-    feTSLayout.Padding = UDim.new(0, 2) -- sát hơn
+    feTSLayout.Padding = UDim.new(0, 2)
     local feTSPad = Instance.new("UIPadding", feToolScroll)
     feTSPad.PaddingLeft = UDim.new(0, 3)
     feTSPad.PaddingRight = UDim.new(0, 3)
@@ -3159,7 +3116,6 @@ local function refreshFeTools()
     local seen = {}
     local toolList = {}
 
-    -- Tool trong Backpack = nằm trên
     for _, obj in pairs(LocalPlayer.Backpack:GetChildren()) do
         if obj:IsA("Tool") and not seen[obj.Name] then
             seen[obj.Name] = true
@@ -3170,7 +3126,6 @@ local function refreshFeTools()
         end
     end
 
-    -- Tool đang equip trong Character = nằm dưới
     if char then
         for _, obj in pairs(char:GetChildren()) do
             if obj:IsA("Tool") and not seen[obj.Name] then
@@ -3211,7 +3166,6 @@ local function refreshFeTools()
             local char = LocalPlayer.Character
             if not char then return end
 
-            -- đang equip rồi thì thôi
             if data.Equipped then
                 return
             end
@@ -3234,7 +3188,7 @@ local function refreshFeTools()
         empty.Name = "EmptyLabel"
         empty.Size = UDim2.new(1, 0, 0, 22)
         empty.BackgroundTransparency = 1
-        empty.Text = "Backpack trống"
+        empty.Text = "Backpack is empty"
         empty.TextColor3 = Color3.fromRGB(120, 120, 120)
         empty.TextScaled = false
         empty.TextSize = 11
@@ -3311,13 +3265,12 @@ end)
 refreshFeTools()
 -- ─── PANEL 9: AIMBOT ─────────────────────────────────────────────────────────
 
-do -- AIMBOT SCOPE: isolated do..end tránh vượt 200 local
+do
     local _lbl = createTransparentLabel("Aimbot", panel9)
     _lbl.TextColor3 = Color3.fromRGB(255, 255, 255)
     _lbl.Font = Enum.Font.GothamBold
     _lbl.TextSize = 14
 
-    -- Settings table (1 local thay vì nhiều local riêng lẻ)
     local AimSettings = {
     AimEnabled          = false,
     FOV                 = 75,
@@ -3342,13 +3295,11 @@ do -- AIMBOT SCOPE: isolated do..end tránh vượt 200 local
     local AIM_OFF = Color3.fromRGB(38, 38, 38)
     local FOV_COL = Color3.fromRGB(80, 255, 100)
 
-    -- Dọn standalone AimAssistUI cũ nếu có
     pcall(function()
         local cg = game:GetService("CoreGui")
         if cg:FindFirstChild("AimAssistUI") then cg.AimAssistUI:Destroy() end
     end)
 
-    -- ScreenGui riêng cho FOV Circle (CoreGui)
     local aimGui = Instance.new("ScreenGui")
     aimGui.Name             = "AimAssistUI"
     aimGui.ResetOnSpawn     = false
@@ -3377,7 +3328,7 @@ do -- AIMBOT SCOPE: isolated do..end tránh vượt 200 local
     -- Helper style button
     local function aimStyle(btn, state)
     if state then
-        btn.BackgroundColor3 = Color3.fromRGB(50, 200, 120) -- giống tab khác
+        btn.BackgroundColor3 = Color3.fromRGB(50, 200, 120)
         btn.BackgroundTransparency = 0
     else
         btn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
@@ -3405,10 +3356,6 @@ end
     local predictionBtn = createTransparentButton("Prediction: ON", AIM_OFF, panel9)
     aimStyle(predictionBtn, AimSettings.Prediction)
     S.btnRefs.predictionBtn = predictionBtn
-
-    
-
-    -- FOV Circle không có button riêng — bật/tắt theo Aim Assist
 
     -- Aim Part label + row
     do
@@ -3549,8 +3496,7 @@ end
         aimStyle(predictionBtn, AimSettings.Prediction)
     end)
 
-    
-    -- ── Aim logic (hàm nội bộ, prefix _ tránh xung đột với scope ngoài) ────
+ -- ── Aim logic (hm ni b, prefix _ trnh xung t vi scope ngoi) ────
     local function _aimAlive(char)
     local h = char and char:FindFirstChildOfClass("Humanoid")
     return h and h.Health > 0
@@ -3654,9 +3600,8 @@ end
 
  local currentAimTarget = nil
 local lastAimScan = 0
-local AIM_SCAN_INTERVAL = 0.05 -- 20 lần/giây thay vì mỗi frame
+local AIM_SCAN_INTERVAL = 0.05
 
--- RenderStepped: chỉ update FOV + aim vào target đã cache
 RunService.RenderStepped:Connect(function()
     local vs = Camera.ViewportSize
     FOVCircleAim.Position = UDim2.new(
@@ -3709,7 +3654,6 @@ do
         end
     end
 
-    -- Đọc config từ file JSON, trả về table hoặc nil
     local function loadConfig()
         if not isfile(SAVE_FILE) then return nil end
         local ok, data = pcall(function()
@@ -3719,7 +3663,6 @@ do
         return nil
     end
 
-    -- Ghi config hiện tại vào file (overwrite)
     local function saveConfig()
         ensureFolder()
         local cfg = {
@@ -3763,7 +3706,6 @@ invisKeyName        = tostring(S.invisKeyCode):gsub("Enum.KeyCode.", ""),
 flyKeyName          = tostring(S.flyKeyCode):gsub("Enum.KeyCode.", ""),
 noclipKeyName       = tostring(S.noclipKeyCode or Enum.KeyCode.J):gsub("Enum.KeyCode.", ""),
 menuKeyName         = tostring(S.menuKeyCode or S.menuKeybind):gsub("Enum.KeyCode.", ""),
-            -- Float button positions (lưu vị trí sau khi kéo)
             invisFloatPos    = S.invisFloatBtn    and {S.invisFloatBtn.Position.X.Scale,    S.invisFloatBtn.Position.X.Offset,    S.invisFloatBtn.Position.Y.Scale,    S.invisFloatBtn.Position.Y.Offset}    or nil,
             flyFloatPos      = S.flyFloatBtn      and {S.flyFloatBtn.Position.X.Scale,      S.flyFloatBtn.Position.X.Offset,      S.flyFloatBtn.Position.Y.Scale,      S.flyFloatBtn.Position.Y.Offset}      or nil,
             noclipFloatPos   = S.noclipFloatBtn   and {S.noclipFloatBtn.Position.X.Scale,   S.noclipFloatBtn.Position.X.Offset,   S.noclipFloatBtn.Position.Y.Scale,   S.noclipFloatBtn.Position.Y.Offset}   or nil,
@@ -3782,14 +3724,12 @@ menuKeyName         = tostring(S.menuKeyCode or S.menuKeybind):gsub("Enum.KeyCod
         end
     end
 
-    -- Áp dụng config đã load lên UI + kích hoạt chức năng
     local function safeClick(btn)
         if not btn or not btn.Parent then return false end
         local ok = pcall(function() btn:FireMouseButton1Click() end)
         return ok
     end
 
-    -- Helper: force-sync một toggle button (state + UI)
     local function syncBtn(btn, isOn, textOn, textOff)
         if not btn then return end
         btn.Text = isOn and textOn or textOff
@@ -3886,7 +3826,6 @@ menuKeyName         = tostring(S.menuKeyCode or S.menuKeybind):gsub("Enum.KeyCod
         pcall(function()
             if cfg.nameESPEnabled and not S.nameESPEnabled then
                 S.nameESPEnabled = true
-                -- Populate selectedPlayers và tạo ESP cho tất cả player
                 for _, player in pairs(Players:GetPlayers()) do
                     if player ~= LocalPlayer then
                         S.selectedPlayers[player] = true
@@ -3950,7 +3889,6 @@ menuKeyName         = tostring(S.menuKeyCode or S.menuKeybind):gsub("Enum.KeyCod
             end
         end)
 
-        -- Anti Fling → gọi enableAntiFling trực tiếp
         pcall(function()
             if cfg.antiFlingEnabled and not S.antiFlingEnabled then
                 S.antiFlingEnabled = true
@@ -3959,7 +3897,6 @@ menuKeyName         = tostring(S.menuKeyCode or S.menuKeybind):gsub("Enum.KeyCod
             end
         end)
 
-        -- Anti AFK → set state trực tiếp
         pcall(function()
             if cfg.antiAfkEnabled and not S.antiAfkEnabled then
                 S.antiAfkEnabled = true
@@ -3967,35 +3904,30 @@ menuKeyName         = tostring(S.menuKeyCode or S.menuKeybind):gsub("Enum.KeyCod
             end
         end)
 
-        -- Anti Void → gọi setter trực tiếp
         pcall(function()
             if cfg.antiVoidEnabled and S.setAntiVoid then
                 S.setAntiVoid(true, true)
             end
         end)
 
-        -- Instant Interact → gọi setter trực tiếp
         pcall(function()
             if cfg.instantBuyEnabled and S.setInstantBuyEnabled then
                 S.setInstantBuyEnabled(true)
             end
         end)
 
-        -- LoopFullBright → gọi setter trực tiếp
         pcall(function()
             if cfg.loopFBEnabled and S.setLoopFB then
                 S.setLoopFB(true, true)
             end
         end)
 
-        -- Mobile ShiftLock → gọi setter trực tiếp
         pcall(function()
             if cfg.mobileShiftLock and S.setMobileShiftLockEnabled then
                 S.setMobileShiftLockEnabled(true)
             end
         end)
 
-        -- Auto Click → gọi startAutoClick trực tiếp
         pcall(function()
             if cfg.autoClickEnabled and not S.autoClickEnabled then
                 S.autoClickEnabled = true
@@ -4005,7 +3937,6 @@ menuKeyName         = tostring(S.menuKeyCode or S.menuKeybind):gsub("Enum.KeyCod
         end)
 
         -- ─── FeTool Floats ────────────────────────────────────────────────────────
-        -- Set vị trí trước, sau đó gọi create function trực tiếp
 
         pcall(function()
             if cfg.invisFloatPos and type(cfg.invisFloatPos) == "table" and #cfg.invisFloatPos == 4 then
@@ -4176,9 +4107,8 @@ pcall(function()
     end
 end)
 end 
-    -- ── Auto load khi script chạy ──
     task.spawn(function()
-        task.wait(1) -- đợi UI khởi tạo xong
+        task.wait(1)
         showCustomNotif("Loading config...\nPlease wait 2 seconds", 3)
         task.wait(2)
         local cfg = nil
@@ -4187,7 +4117,7 @@ end
         end)
         if ok and cfg then
             applyConfig(cfg)
-            showCustomNotif("✓ Configuration has been applied!", 3)
+            showCustomNotif(" Configuration has been applied!", 3)
         else
             showCustomNotif("No config found!", 3)
         end
@@ -4201,10 +4131,6 @@ end
     _lbl.TextSize = 14
 end
 
-
-    
-
-    -- Nút SAVE
     local saveBtn = createTransparentButton("Save Config", Color3.fromRGB(38, 38, 38), panel10)
     saveBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
 saveBtn.BackgroundTransparency = 0.35
@@ -4223,9 +4149,6 @@ saveBtn.BackgroundTransparency = 0.35
 end)
     end)
 
-    
-
-    -- Nút DELETE config
     local deleteBtn = createTransparentButton("Deleted Config", Color3.fromRGB(38, 38, 38), panel10)
     deleteBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
 deleteBtn.BackgroundTransparency = 0.35
@@ -4262,7 +4185,6 @@ do
     _lbl.Font = Enum.Font.GothamBold
     _lbl.TextSize = 14
 end
--- Nút bật/tắt toàn bộ keybind keyboard (trừ menu)
 local keybindsBtn = createTransparentButton("Disable Keybinds: OFF", Color3.fromRGB(38, 38, 38), panel10)
 keybindsBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
 keybindsBtn.BackgroundTransparency = 0.35
@@ -4309,7 +4231,6 @@ local function setBindButtonNormal(btn, keyCode)
     btn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
     btn.BackgroundTransparency = 0.35
 end
--- Undraggable Float Buttons row (ngay dưới nút Keybinds)
 local floatDragLockBtn = createTransparentButton("Undraggable Float Buttons: OFF", Color3.fromRGB(38, 38, 38), panel10)
 floatDragLockBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
 floatDragLockBtn.BackgroundTransparency = 0.35
@@ -4342,7 +4263,6 @@ end)
 updateFloatDragLockBtn()
 -- ─── FLOAT BUTTON SIZE SLIDER ────────────────────────────────────────────────
 do
-    -- Label hiển thị giá trị hiện tại
     local sizeValueLabel = Instance.new("TextLabel")
     sizeValueLabel.Size = UDim2.new(1, 0, 0, 20)
     sizeValueLabel.BackgroundTransparency = 1
@@ -4370,7 +4290,7 @@ do
     track.Parent = sliderHolder
     _mkCorner(3, track)
 
-    -- Slider value 1-100 → pixel size 30-130
+    -- Slider value 1-100  pixel size 30-130
    local MIN_FLOAT_SIZE = 30
 local MAX_FLOAT_SIZE = 130
 
@@ -4400,7 +4320,6 @@ end
     thumb.Parent = track
     _mkCorner(7, thumb)
 
-    -- Invisible hitbox trên toàn track để bắt click/touch dễ hơn
     local sliderBtn = Instance.new("TextButton")
     sliderBtn.Size = UDim2.new(1, 0, 0, 30)
     sliderBtn.Position = UDim2.new(0, 0, 0.5, -15)
@@ -4410,7 +4329,7 @@ end
     sliderBtn.Parent = track
 
     local sDragging = false
-    local sInput = nil  -- track đúng input object, tránh joystick/other touch can thiệp
+    local sInput = nil
 
     local function applySlider(screenPos)
         local abs = track.AbsolutePosition
@@ -4425,7 +4344,6 @@ sizeValueLabel.Text = "Float Size: " .. tostring(S.floatBtnSize)
 local fillRel = (curVal - MIN_FLOAT_SIZE) / (MAX_FLOAT_SIZE - MIN_FLOAT_SIZE)
         fill.Size  = UDim2.new(fillRel, 0, 1, 0)
         thumb.Position = UDim2.new(fillRel, 0, 0.5, 0)
-        -- Cập nhật kích thước float button đang hiển thị
         if S.auraFloatBtn then
             S.auraFloatBtn.Size = UDim2.new(0, S.floatBtnSize, 0, S.floatBtnSize)
         end
@@ -4464,7 +4382,6 @@ if S.noclipFloatBtn then
         end
     end)
 
-    -- InputChanged global - PC dùng MouseMovement, mobile dùng đúng touch input
 UserInputService.InputChanged:Connect(function(input)
     if not sDragging then return end
 
@@ -4550,7 +4467,6 @@ flyBindBtn.MouseButton1Click:Connect(function()
     createNotification("Keybind", "Press a key for Fly")
 end)
 
--- Noclip Bind row (Dưới nút Fly)
 local noclipBindRow = Instance.new("Frame")
 noclipBindRow.Size = UDim2.new(1, 0, 0, 36)
 noclipBindRow.BackgroundTransparency = 1
@@ -4588,11 +4504,10 @@ noclipBindBtn.MouseButton1Click:Connect(function()
     createNotification("Keybind", "Press a key for Noclip")
 end)
 
--- Menu Bind row (Dưới nút Noclip)
 local menuBindRow = Instance.new("Frame")
 menuBindRow.Size = UDim2.new(1, 0, 0, 36)
 menuBindRow.BackgroundTransparency = 1
-menuBindRow.Parent = panel10 -- Gắn vào panel10 (Setting)
+menuBindRow.Parent = panel10
 
 local menuBindLabel = Instance.new("TextLabel")
 menuBindLabel.Size = UDim2.new(0.6, -4, 1, 0)
@@ -4612,7 +4527,7 @@ menuBindBtn.Position = UDim2.new(0.6, 0, 0, 0)
 menuBindBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
 menuBindBtn.BackgroundTransparency = 0.35
 menuBindBtn.BorderSizePixel = 0
-menuBindBtn.Text = keyCodeToText(S.menuKeybind) -- Lấy phím từ bảng S bạn đã tạo
+menuBindBtn.Text = keyCodeToText(S.menuKeybind)
 menuBindBtn.TextColor3 = Color3.new(1,1,1)
 menuBindBtn.Font = Enum.Font.Gotham
 menuBindBtn.TextSize = 13
@@ -4621,12 +4536,11 @@ menuBindBtn.Parent = menuBindRow
 S.btnRefs.menuBindBtn = menuBindBtn
 
 menuBindBtn.MouseButton1Click:Connect(function()
-    S.waitingForKeybind = "Menu" -- Đặt trạng thái chờ phím cho Menu
+    S.waitingForKeybind = "Menu"
     setBindButtonWaiting(menuBindBtn)
     createNotification("Keybind", "Press a key for Open/Close Menu")
 end)
 
-    
 end
 
 local function CountFlingTargets()
@@ -4677,7 +4591,7 @@ local function RefreshFlingPlayerList()
             local checkmark = Instance.new("TextLabel")
             checkmark.Size = UDim2.new(1,0,1,0)
             checkmark.BackgroundTransparency = 1
-            checkmark.Text = "✓"
+            checkmark.Text = ""
             checkmark.TextColor3 = Color3.fromRGB(0,255,100)
             checkmark.TextSize = 16
             checkmark.Font = Enum.Font.GothamBold
@@ -4887,7 +4801,6 @@ S.walkFlingBtn.MouseButton1Click:Connect(function()
             antiFlingBtn.BackgroundTransparency = 0
             enableAntiFling()
         else
-            -- nếu Anti Fling đã được bật sẵn bằng tay thì Walk Fling không được quyền quản
             if antiFlingWasManuallyEnabled then
                 walkFlingAutoEnabledAntiFling = false
             end
@@ -4968,7 +4881,6 @@ S.loopBringBtn.MouseButton1Click:Connect(function()
                         local hum = player.Character:FindFirstChildOfClass("Humanoid")
 
                         if targetHRP and hum then
-                            -- lưu state gốc 1 lần
                             if not S.loopBringStates[player] then
                                 S.loopBringStates[player] = {
                                     WalkSpeed = hum.WalkSpeed,
@@ -4977,7 +4889,6 @@ S.loopBringBtn.MouseButton1Click:Connect(function()
                                 }
                             end
 
-                            -- freeze vừa đủ, vẫn giữ khả năng bị hit
                             hum.WalkSpeed = 0
                             hum.JumpPower = 0
                             hum.AutoRotate = false
@@ -4986,7 +4897,6 @@ S.loopBringBtn.MouseButton1Click:Connect(function()
                                 track:Stop(0.1)
                             end
 
-                            -- chỉ tắt collision để chồng lên nhau, KHÔNG tắt touch/query
                             for _, part in ipairs(player.Character:GetDescendants()) do
                                 if part:IsA("BasePart") then
                                     part.CanCollide = false
@@ -4996,7 +4906,6 @@ S.loopBringBtn.MouseButton1Click:Connect(function()
                                 end
                             end
 
-                            
                             targetHRP.CFrame = hrp.CFrame * CFrame.new(0, 0, -4)
                         end
                     end
@@ -5012,7 +4921,6 @@ S.loopBringBtn.MouseButton1Click:Connect(function()
         S.loopBringBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
         S.loopBringBtn.BackgroundTransparency = 0.35
 
-        -- trả lại state khi OFF
         for player, state in pairs(S.loopBringStates) do
             if player and player.Parent and player.Character then
                 local hum = player.Character:FindFirstChildOfClass("Humanoid")
@@ -5036,7 +4944,6 @@ S.loopBringBtn.MouseButton1Click:Connect(function()
     end
 
 end)
-
 
 flingSelectAllBtn.MouseButton1Click:Connect(function()
     local oldColor = flingSelectAllBtn.BackgroundColor3
@@ -5070,7 +4977,6 @@ flingDeselectAllBtn.MouseButton1Click:Connect(function()
 
     ToggleAllFling(false)
 end)
-
 
 antiFlingBtn.MouseButton1Click:Connect(function()
     S.antiFlingEnabled = not S.antiFlingEnabled
@@ -5115,7 +5021,6 @@ do
         end
     end
 
-    -- Expose để applyConfig gọi khi load save
     S.setLoopFB = setLoopFB
 
     loopFBBtn.MouseButton1Click:Connect(function()
@@ -5132,7 +5037,6 @@ noFogBtn.MouseButton1Click:Connect(function()
     lighting.FogStart = 0
     lighting.FogEnd = 1000000
 
-    -- xóa atmosphere nếu có
     for _,v in pairs(lighting:GetChildren()) do
         if v:IsA("Atmosphere") then
             v:Destroy()
@@ -5171,7 +5075,6 @@ do
         end
         instantBuySeen[prompt] = true
 
-        -- Chỉ chỉnh những prompt có hold duration (phải giữ)
         if prompt.HoldDuration and prompt.HoldDuration > 0 then
             pcall(function()
                 prompt.HoldDuration = 0
@@ -5221,7 +5124,6 @@ do
         end
     end
 
-    -- Expose để applyConfig gọi khi load save
     S.setInstantBuyEnabled = setInstantBuyEnabled
 
     instantBuyBtn.MouseButton1Click:Connect(function()
@@ -5291,7 +5193,7 @@ do
 
         mobileCrosshair = Instance.new("ImageLabel")
 mobileCrosshair.Name = "MobileShiftLockCrosshair"
-mobileCrosshair.Size = UDim2.new(0, 24, 0, 24) -- chỉnh to/nhỏ ở đây
+mobileCrosshair.Size = UDim2.new(0, 24, 0, 24)
 mobileCrosshair.AnchorPoint = Vector2.new(0.5, 0.5)
 mobileCrosshair.Position = UDim2.new(0.5, 0, 0.5, 0)
 mobileCrosshair.BackgroundTransparency = 1
@@ -5425,7 +5327,6 @@ end
         end
     end
 
-    -- Expose để applyConfig gọi khi load save
     S.setMobileShiftLockEnabled = setMobileShiftLockEnabled
 
     mobileShiftLockBtn.MouseButton1Click:Connect(function()
@@ -5476,7 +5377,6 @@ do
         end
     end
 
-    -- Expose để applyConfig gọi khi load save
     S.setLoopspeedEnabled = setLoopspeedEnabled
 
     S.loopspeedToggle.MouseButton1Click:Connect(function() setLoopspeedEnabled(not loopspeedEnabled) end)
@@ -5484,7 +5384,6 @@ end
 
 -- ─── BUTTON EVENTS ────────────────────────────────────────────────────────────
 
--- -- Trạng thái mặc định
 mainFrame.Visible = false
 
 local function openMenu()
@@ -5504,21 +5403,17 @@ local function toggleMenu()
     end
 end
 
--- Bấm toggle button -> mở/đóng menu (bỏ qua nếu vừa kéo)
 toggleBtn.MouseButton1Click:Connect(function()
     if _tbMoved then _tbMoved = false; return end
     toggleMenu()
 end)
 
--- Bấm X -> đóng menu + hiện lại thanh mở menu
 closeButton.MouseButton1Click:Connect(function()
     closeMenu()
 end)
 
 autoToggle.MouseButton1Click:Connect(function()
-    -- Nếu đang bật Head Hit Box từ OFF -> ON thì tự tắt Body Hitbox + Esp Chams
 if not S.autoHitboxEnabled then
-    -- Tắt Body Hitbox nếu đang ON
     if S.autoBodyHitboxEnabled then
         S.autoBodyHitboxEnabled = false
         bodyToggle.Text = "Body Hit Box: OFF"
@@ -5532,7 +5427,6 @@ if not S.autoHitboxEnabled then
         end
     end
 
-    -- Tắt Esp Chams nếu đang ON
     if S.chamsEnabled then
         S.chamsEnabled = false
         chamsToggle.Text = "Esp Chams: OFF"
@@ -5592,9 +5486,7 @@ end
 end)
 
 bodyToggle.MouseButton1Click:Connect(function()
-    -- Nếu đang bật Body Hit Box từ OFF -> ON thì tự tắt Head Hit Box + Esp Chams
 if not S.autoBodyHitboxEnabled then
-    -- Tắt Head Hit Box nếu đang ON
     if S.autoHitboxEnabled then
         S.autoHitboxEnabled = false
         autoToggle.Text = "Head Hit Box: OFF"
@@ -5608,7 +5500,6 @@ if not S.autoBodyHitboxEnabled then
         end
     end
 
-    -- Tắt Esp Chams nếu đang ON
     if S.chamsEnabled then
         S.chamsEnabled = false
         chamsToggle.Text = "Esp Chams: OFF"
@@ -5643,7 +5534,6 @@ end
             end
         end
     else
-        -- Reset tất cả về default khi tắt
         for _, player in pairs(Players:GetPlayers()) do
             if player ~= LocalPlayer and player.Character then
                 resetBodyHitbox(player.Character)
@@ -5669,7 +5559,6 @@ removeAllBtn.MouseButton1Click:Connect(function()
         end
     end
 
-    -- Tắt cả 2 toggle
     S.autoHitboxEnabled = false
     S.autoBodyHitboxEnabled = false
     autoToggle.Text = "Head Hit Box: OFF"
@@ -5707,7 +5596,6 @@ autoNameESP.MouseButton1Click:Connect(function()
             removeNameESP(player)
         end
     else
-        -- Chỉ tạo ESP cho các player đã được chọn trong danh sách
         for _, player in pairs(Players:GetPlayers()) do
             if player ~= LocalPlayer and S.selectedPlayers[player] and player.Character and isAlive(player.Character) then
                 createNameESP(player, player.Character)
@@ -5715,7 +5603,6 @@ autoNameESP.MouseButton1Click:Connect(function()
         end
     end
 end)
-
 
 espNameAllBtn.MouseButton1Click:Connect(function()
     S.espNameAllState = not S.espNameAllState
@@ -5743,8 +5630,6 @@ espNameAllBtn.MouseButton1Click:Connect(function()
 
     updatePlayerList()
 end)
-
--- boxESPBtn handler removed (bỏ theo yêu cầu)
 
 S.invisButton.MouseButton1Click:Connect(toggleInvisibility)
 invisFloatToggleBtn.MouseButton1Click:Connect(function()
@@ -5795,7 +5680,6 @@ noclipToggle.MouseButton1Click:Connect(function()
     updateNoclipFloatVisual()
 end)
 
--- Thêm Event cho nút Noclip Float
 noclipFloatToggleBtn.MouseButton1Click:Connect(function()
     S.noclipFloatEnabled = not S.noclipFloatEnabled
 
@@ -5868,7 +5752,6 @@ rejoinBtn.MouseButton1Click:Connect(function()
         })
     end)
 
-    -- tự chạy lại script sau khi rejoin
     if queue then
         queue('loadstring(game:HttpGet("https://raw.githubusercontent.com/Hisanoki/Nooo/refs/heads/main/StarCrow"))()')
     end
@@ -5901,7 +5784,6 @@ serverHopBtn.MouseButton1Click:Connect(function()
         })
     end)
 
-    -- tự chạy lại script sau khi hop
     queue_on_teleport('loadstring(game:HttpGet("https://raw.githubusercontent.com/Hisanoki/Nooo/refs/heads/main/StarCrow"))()')
 
     local PlaceID = game.PlaceId
@@ -6188,23 +6070,19 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
         return
     end
 
-    -- đang gõ chat / textbox thì bỏ qua hết
     if UserInputService:GetFocusedTextBox() then
         return
     end
 
-    -- Nút Menu luôn hoạt động (không bị Keybinds OFF chặn)
     if input.KeyCode == (S.menuKeyCode or Enum.KeyCode.RightControl) then
         toggleMenu()
         return
     end
 
-    -- Nếu đang chờ đổi keybind thì bắt phím ở đây
     if S.waitingForKeybind then
         local newKey = input.KeyCode
 
         if newKey ~= Enum.KeyCode.Unknown then
-            -- Chặn không cho Fly và Invis xài trùng phím Menu đang cài
             if S.waitingForKeybind ~= "Menu" and newKey == (S.menuKeyCode or Enum.KeyCode.RightControl) then
                 createNotification("Keybind", keyCodeToText(newKey) .. " is reserved for menu")
             else
@@ -6239,7 +6117,6 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
                     end
                     createNotification("Keybind", "Noclip = " .. tostring(newKey):gsub("Enum.KeyCode.", ""))
 
-                -- XỬ LÝ ĐỔI PHÍM MENU Ở ĐÂY
                 elseif S.waitingForKeybind == "Menu" then
                     S.menuKeyCode = newKey
 
@@ -6257,12 +6134,10 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
         return
     end
 
-    -- Tắt toàn bộ keybind keyboard khác
     if not S.keybindsEnabled then
         return
     end
 
-    -- Các phím khác mới bị chặn nếu game/UI đang ăn input
     if gameProcessed then
         return
     end
@@ -6319,7 +6194,6 @@ end
     end
 end)
 
- 
 UserInputService.InputBegan:Connect(function(input, gameProcessed)
     if not S.ctrlClickTPEnabled then
         return
@@ -6519,8 +6393,6 @@ task.spawn(function()
 end)
 
 -- ─── ESP / CHAMS / OUTLINE REPAIR WATCHDOG ────────────────────────────────────
--- Safety net: cứ 1.5s scan tất cả player đang alive, ai thiếu effect thì tự vá lại
--- Giải quyết trường hợp chết liên tục / respawn nhanh bị miss
 task.spawn(function()
     while true do
         task.wait(1.5)
@@ -6528,17 +6400,14 @@ task.spawn(function()
             if player ~= LocalPlayer then
                 local char = player.Character
                 if char and isAlive(char) then
-                    -- Đảm bảo player đã được register
                     if not S.playerConnections[player] then
                         registerPlayer(player)
                     end
 
-                    -- Repair Chams nếu bị mất
                     if S.chamsEnabled and not char:FindFirstChild("StarCrowChams") then
                         pcall(addChams, char, getTeamColor(player))
                     end
 
-                    -- Repair hitbox: char mới chưa processed → apply; đã processed nhưng mất outline → repair
                     if S.autoHitboxEnabled then
                         local hSize = tonumber(S.sizeInput and S.sizeInput.Text) or DEFAULT_HITBOX_SIZE
                         if not S.processedChars[char] then
@@ -6548,7 +6417,6 @@ task.spawn(function()
                         end
                     end
 
-                    -- Repair Name ESP nếu bị mất
                     if S.espNameAllState or (S.nameESPEnabled and S.selectedPlayers[player]) then
                         local head = char:FindFirstChild("Head")
                         if head and not head:FindFirstChild("NameESP") then
