@@ -613,7 +613,7 @@ local function createNameESP(player, char)
     billboard.Size = UDim2.new(0, 200, 0, 50)
     billboard.StudsOffset = Vector3.new(0, 2.5, 0)
     billboard.AlwaysOnTop = true
-    billboard.MaxDistance = 1000
+    billboard.MaxDistance = math.huge
     billboard.Parent = head
 
     local nameLabel = Instance.new("TextLabel")
