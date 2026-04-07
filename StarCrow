@@ -1748,7 +1748,11 @@ local removeAllBtn = createTransparentButton("Remove All Hitboxes", Color3.fromR
 removeAllBtn.BackgroundColor3 = Color3.fromRGB(38,38,38)
 removeAllBtn.BackgroundTransparency = 0.35
 S.statusLabel = createTransparentLabel("Processing: 0 Players", panel2)
-createTransparentLabel("Spectate Player", panel2)
+S.statusLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+do
+    local specLbl = createTransparentLabel("Spectate Player", panel2)
+    specLbl.TextColor3 = Color3.fromRGB(255, 255, 255)
+end
 
 S.specContainer = Instance.new("ScrollingFrame")
 S.specContainer.Size = UDim2.new(1,0,0,120)
@@ -1833,7 +1837,10 @@ S.selectedSpecButton = nil
     end)
 end)
 
-createTransparentLabel("Loopspeed", panel2)
+do
+    local loopspeedLbl = createTransparentLabel("Loopspeed", panel2)
+    loopspeedLbl.TextColor3 = Color3.fromRGB(255, 255, 255)
+end
 
 S.loopspeedInput = createTransparentInput("Speed (e.g. 30)", "30", panel2)
 
@@ -1957,7 +1964,10 @@ tracerToggle.MouseButton1Click:Connect(function()
         end
     end
 end)
-createTransparentLabel("Fly", panel2)
+do
+    local flyLbl = createTransparentLabel("Fly", panel2) 
+    flyLbl.TextColor3 = Color3.fromRGB(255, 255, 255)
+end
 local flySpeedInput = createTransparentInput("Fly Speed", "5", panel2)
 S.btnRefs.flySpeedInput = flySpeedInput
 S.flyToggle = createTransparentButton("Fly: OFF", Color3.fromRGB(38, 38, 38), panel2)
@@ -3087,7 +3097,7 @@ end)
 -- ─── USE TOOL PANEL BUTTONS ───────────────────────────────────────────────────
 do
     local useDiv = createTransparentLabel(" Use Tool", panel8)
-    useDiv.TextColor3 = Color3.fromRGB(150, 150, 150)
+    useDiv.TextColor3 = Color3.fromRGB(255, 255, 255)
 end
 
 S.feUseInput = createTransparentInput("Item name", "", panel8)
@@ -3123,7 +3133,7 @@ end)
 
 do
     local feEquipDiv = createTransparentLabel(" Equip Tool ", panel8)
-    feEquipDiv.TextColor3 = Color3.fromRGB(150, 150, 150)
+    feEquipDiv.TextColor3 = Color3.fromRGB(255, 255, 255)
 end
 
 local feToolScroll = Instance.new("ScrollingFrame")
@@ -3413,7 +3423,7 @@ end
     -- Aim Part label + row
     do
         local _aplbl = createTransparentLabel("Aim Part:", panel9)
-        _aplbl.TextColor3 = Color3.fromRGB(200, 200, 200)
+        _aplbl.TextColor3 = Color3.fromRGB(255, 255, 255)
     end
     do
         local aimPartRow = Instance.new("Frame")
@@ -4347,7 +4357,7 @@ do
     sizeValueLabel.Size = UDim2.new(1, 0, 0, 20)
     sizeValueLabel.BackgroundTransparency = 1
     sizeValueLabel.Text = "Float Size: " .. tostring(S.floatBtnSize)
-    sizeValueLabel.TextColor3 = Color3.fromRGB(190, 190, 190)
+    sizeValueLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
     sizeValueLabel.Font = Enum.Font.Gotham
     sizeValueLabel.TextSize = 12
     sizeValueLabel.TextXAlignment = Enum.TextXAlignment.Center
