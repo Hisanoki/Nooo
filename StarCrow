@@ -2924,7 +2924,7 @@ local function doUseTool()
     end
     local tool = findUseTool(name)
     if not tool then
-        createNotification("Use Tool", "Het: " .. name)
+        createNotification("Use Tool", "Not found " .. name)
         return
     end
     S.useCooling = true
@@ -3086,7 +3086,7 @@ feEquipAllFloatToggleBtn.MouseButton1Click:Connect(function()
 end)
 -- ─── USE TOOL PANEL BUTTONS ───────────────────────────────────────────────────
 do
-    local useDiv = createTransparentLabel("── Use Tool ──", panel8)
+    local useDiv = createTransparentLabel(" Use Tool", panel8)
     useDiv.TextColor3 = Color3.fromRGB(150, 150, 150)
 end
 
@@ -3122,7 +3122,7 @@ feUseFloatToggleBtn.MouseButton1Click:Connect(function()
 end)
 
 do
-    local feEquipDiv = createTransparentLabel("── Equip Tool ──", panel8)
+    local feEquipDiv = createTransparentLabel(" Equip Tool ", panel8)
     feEquipDiv.TextColor3 = Color3.fromRGB(150, 150, 150)
 end
 
