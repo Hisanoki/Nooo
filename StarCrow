@@ -3120,137 +3120,7 @@ feUseFloatToggleBtn.MouseButton1Click:Connect(function()
         destroyUseFloat()
     end
 end)
--- ─── FLOAT BUTTON SIZE SLIDER ────────────────────────────────────────────────
-do
-    -- Label hiển thị giá trị hiện tại
-    local sizeValueLabel = Instance.new("TextLabel")
-    sizeValueLabel.Size = UDim2.new(1, 0, 0, 20)
-    sizeValueLabel.BackgroundTransparency = 1
-    sizeValueLabel.Text = "Float Size: " .. tostring(S.floatBtnSize)
-    sizeValueLabel.TextColor3 = Color3.fromRGB(190, 190, 190)
-    sizeValueLabel.Font = Enum.Font.Gotham
-    sizeValueLabel.TextSize = 12
-    sizeValueLabel.TextXAlignment = Enum.TextXAlignment.Center
-    sizeValueLabel.Parent = panel8
 
-    -- Thanh slider
-    local sliderHolder = Instance.new("Frame")
-    sliderHolder.Size = UDim2.new(1, 0, 0, 30)
-    sliderHolder.BackgroundColor3 = Color3.fromRGB(28, 28, 28)
-    sliderHolder.BackgroundTransparency = 0.4
-    sliderHolder.BorderSizePixel = 0
-    sliderHolder.Parent = panel8
-    _mkCorner(6, sliderHolder)
-
-    local track = Instance.new("Frame")
-    track.Size = UDim2.new(1, -20, 0, 6)
-    track.Position = UDim2.new(0, 10, 0.5, -3)
-    track.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
-    track.BorderSizePixel = 0
-    track.Parent = sliderHolder
-    _mkCorner(3, track)
-
-    -- Slider value 1-100 → pixel size 30-130
-   local MIN_FLOAT_SIZE = 30
-local MAX_FLOAT_SIZE = 130
-
-local function valToSize(v)
-    return math.clamp(v, MIN_FLOAT_SIZE, MAX_FLOAT_SIZE)
-end
-
-local function sizeToVal(s)
-    return math.clamp(s, MIN_FLOAT_SIZE, MAX_FLOAT_SIZE)
-end
-    local curVal = sizeToVal(S.floatBtnSize)
-
-    local fill = Instance.new("Frame")
-   fill.Size = UDim2.new((curVal - MIN_FLOAT_SIZE) / (MAX_FLOAT_SIZE - MIN_FLOAT_SIZE), 0, 1, 0)
-    fill.BackgroundColor3 = Color3.fromRGB(180, 40, 40)
-    fill.BorderSizePixel = 0
-    fill.Parent = track
-    _mkCorner(3, fill)
-
-    local thumb = Instance.new("Frame")
-    thumb.Size = UDim2.new(0, 14, 0, 14)
-    thumb.AnchorPoint = Vector2.new(0.5, 0.5)
-    thumb.Position = UDim2.new((curVal - MIN_FLOAT_SIZE) / (MAX_FLOAT_SIZE - MIN_FLOAT_SIZE), 0, 0.5, 0)
-    thumb.BackgroundColor3 = Color3.fromRGB(230, 230, 230)
-    thumb.BorderSizePixel = 0
-    thumb.ZIndex = 5
-    thumb.Parent = track
-    _mkCorner(7, thumb)
-
-    -- Invisible hitbox trên toàn track để bắt click/touch dễ hơn
-    local sliderBtn = Instance.new("TextButton")
-    sliderBtn.Size = UDim2.new(1, 0, 0, 30)
-    sliderBtn.Position = UDim2.new(0, 0, 0.5, -15)
-    sliderBtn.BackgroundTransparency = 1
-    sliderBtn.Text = ""
-    sliderBtn.ZIndex = 6
-    sliderBtn.Parent = track
-
-    local sDragging = false
-    local sInput = nil  -- track đúng input object, tránh joystick/other touch can thiệp
-
-    local function applySlider(screenPos)
-        local abs = track.AbsolutePosition
-        local sz  = track.AbsoluteSize
-        local rel = math.clamp((screenPos.X - abs.X) / sz.X, 0, 1)
-        curVal = math.floor(MIN_FLOAT_SIZE + rel * (MAX_FLOAT_SIZE - MIN_FLOAT_SIZE) + 0.5)
-curVal = math.clamp(curVal, MIN_FLOAT_SIZE, MAX_FLOAT_SIZE)
-
-S.floatBtnSize = curVal
-sizeValueLabel.Text = "Float Size: " .. tostring(S.floatBtnSize)
-
-local fillRel = (curVal - MIN_FLOAT_SIZE) / (MAX_FLOAT_SIZE - MIN_FLOAT_SIZE)
-        fill.Size  = UDim2.new(fillRel, 0, 1, 0)
-        thumb.Position = UDim2.new(fillRel, 0, 0.5, 0)
-        -- Cập nhật kích thước float button đang hiển thị
-        if S.auraFloatBtn then
-            S.auraFloatBtn.Size = UDim2.new(0, S.floatBtnSize, 0, S.floatBtnSize)
-        end
-        if S.dropFloatBtn then
-            S.dropFloatBtn.Size = UDim2.new(0, S.floatBtnSize, 0, S.floatBtnSize)
-        end
-        if S.equipAllFloatBtn then
-    S.equipAllFloatBtn.Size = UDim2.new(0, S.floatBtnSize, 0, S.floatBtnSize)
-end
-        if S.useFloatBtn then
-            S.useFloatBtn.Size = UDim2.new(0, S.floatBtnSize, 0, S.floatBtnSize)
-        end
-        if S.invisFloatBtn then
-    S.invisFloatBtn.Size = UDim2.new(0, S.floatBtnSize, 0, S.floatBtnSize)
-end
-if S.flyFloatBtn then
-    S.flyFloatBtn.Size = UDim2.new(0, S.floatBtnSize, 0, S.floatBtnSize)
-end
-if S.noclipFloatBtn then
-            S.noclipFloatBtn.Size = UDim2.new(0, S.floatBtnSize, 0, S.floatBtnSize)
-        end
-    end
-
-    sliderBtn.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1
-        or input.UserInputType == Enum.UserInputType.Touch then
-            sDragging = true
-            sInput = input
-            applySlider(input.Position)
-            input.Changed:Connect(function()
-                if input.UserInputState == Enum.UserInputState.End then
-                    sDragging = false
-                    sInput = nil
-                end
-            end)
-        end
-    end)
-
-    -- InputChanged global - chỉ xử lý đúng input object đã bắt đầu, không bị lẫn joystick mobile
-    UserInputService.InputChanged:Connect(function(input)
-        if sDragging and input == sInput then
-            applySlider(input.Position)
-        end
-    end)
-end
 do
     local feEquipDiv = createTransparentLabel("── Equip Tool ──", panel8)
     feEquipDiv.TextColor3 = Color3.fromRGB(150, 150, 150)
@@ -4387,7 +4257,7 @@ end)
     deleteDivider.BorderSizePixel = 0
 end
 do
-    local _lbl = createTransparentLabel("Keybinds", panel10)
+    local _lbl = createTransparentLabel("GUI", panel10)
     _lbl.TextColor3 = Color3.fromRGB(255,255,255)
     _lbl.Font = Enum.Font.GothamBold
     _lbl.TextSize = 14
@@ -4470,7 +4340,140 @@ floatDragLockBtn.MouseButton1Click:Connect(function()
 end)
 
 updateFloatDragLockBtn()
+-- ─── FLOAT BUTTON SIZE SLIDER ────────────────────────────────────────────────
+do
+    -- Label hiển thị giá trị hiện tại
+    local sizeValueLabel = Instance.new("TextLabel")
+    sizeValueLabel.Size = UDim2.new(1, 0, 0, 20)
+    sizeValueLabel.BackgroundTransparency = 1
+    sizeValueLabel.Text = "Float Size: " .. tostring(S.floatBtnSize)
+    sizeValueLabel.TextColor3 = Color3.fromRGB(190, 190, 190)
+    sizeValueLabel.Font = Enum.Font.Gotham
+    sizeValueLabel.TextSize = 12
+    sizeValueLabel.TextXAlignment = Enum.TextXAlignment.Center
+    sizeValueLabel.Parent = panel10
 
+    -- Thanh slider
+    local sliderHolder = Instance.new("Frame")
+    sliderHolder.Size = UDim2.new(1, 0, 0, 30)
+    sliderHolder.BackgroundColor3 = Color3.fromRGB(28, 28, 28)
+    sliderHolder.BackgroundTransparency = 0.4
+    sliderHolder.BorderSizePixel = 0
+    sliderHolder.Parent = panel10
+    _mkCorner(6, sliderHolder)
+
+    local track = Instance.new("Frame")
+    track.Size = UDim2.new(1, -20, 0, 6)
+    track.Position = UDim2.new(0, 10, 0.5, -3)
+    track.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
+    track.BorderSizePixel = 0
+    track.Parent = sliderHolder
+    _mkCorner(3, track)
+
+    -- Slider value 1-100 → pixel size 30-130
+   local MIN_FLOAT_SIZE = 30
+local MAX_FLOAT_SIZE = 130
+
+local function valToSize(v)
+    return math.clamp(v, MIN_FLOAT_SIZE, MAX_FLOAT_SIZE)
+end
+
+local function sizeToVal(s)
+    return math.clamp(s, MIN_FLOAT_SIZE, MAX_FLOAT_SIZE)
+end
+    local curVal = sizeToVal(S.floatBtnSize)
+
+    local fill = Instance.new("Frame")
+   fill.Size = UDim2.new((curVal - MIN_FLOAT_SIZE) / (MAX_FLOAT_SIZE - MIN_FLOAT_SIZE), 0, 1, 0)
+    fill.BackgroundColor3 = Color3.fromRGB(180, 40, 40)
+    fill.BorderSizePixel = 0
+    fill.Parent = track
+    _mkCorner(3, fill)
+
+    local thumb = Instance.new("Frame")
+    thumb.Size = UDim2.new(0, 14, 0, 14)
+    thumb.AnchorPoint = Vector2.new(0.5, 0.5)
+    thumb.Position = UDim2.new((curVal - MIN_FLOAT_SIZE) / (MAX_FLOAT_SIZE - MIN_FLOAT_SIZE), 0, 0.5, 0)
+    thumb.BackgroundColor3 = Color3.fromRGB(230, 230, 230)
+    thumb.BorderSizePixel = 0
+    thumb.ZIndex = 5
+    thumb.Parent = track
+    _mkCorner(7, thumb)
+
+    -- Invisible hitbox trên toàn track để bắt click/touch dễ hơn
+    local sliderBtn = Instance.new("TextButton")
+    sliderBtn.Size = UDim2.new(1, 0, 0, 30)
+    sliderBtn.Position = UDim2.new(0, 0, 0.5, -15)
+    sliderBtn.BackgroundTransparency = 1
+    sliderBtn.Text = ""
+    sliderBtn.ZIndex = 6
+    sliderBtn.Parent = track
+
+    local sDragging = false
+    local sInput = nil  -- track đúng input object, tránh joystick/other touch can thiệp
+
+    local function applySlider(screenPos)
+        local abs = track.AbsolutePosition
+        local sz  = track.AbsoluteSize
+        local rel = math.clamp((screenPos.X - abs.X) / sz.X, 0, 1)
+        curVal = math.floor(MIN_FLOAT_SIZE + rel * (MAX_FLOAT_SIZE - MIN_FLOAT_SIZE) + 0.5)
+curVal = math.clamp(curVal, MIN_FLOAT_SIZE, MAX_FLOAT_SIZE)
+
+S.floatBtnSize = curVal
+sizeValueLabel.Text = "Float Size: " .. tostring(S.floatBtnSize)
+
+local fillRel = (curVal - MIN_FLOAT_SIZE) / (MAX_FLOAT_SIZE - MIN_FLOAT_SIZE)
+        fill.Size  = UDim2.new(fillRel, 0, 1, 0)
+        thumb.Position = UDim2.new(fillRel, 0, 0.5, 0)
+        -- Cập nhật kích thước float button đang hiển thị
+        if S.auraFloatBtn then
+            S.auraFloatBtn.Size = UDim2.new(0, S.floatBtnSize, 0, S.floatBtnSize)
+        end
+        if S.dropFloatBtn then
+            S.dropFloatBtn.Size = UDim2.new(0, S.floatBtnSize, 0, S.floatBtnSize)
+        end
+        if S.equipAllFloatBtn then
+    S.equipAllFloatBtn.Size = UDim2.new(0, S.floatBtnSize, 0, S.floatBtnSize)
+end
+        if S.useFloatBtn then
+            S.useFloatBtn.Size = UDim2.new(0, S.floatBtnSize, 0, S.floatBtnSize)
+        end
+        if S.invisFloatBtn then
+    S.invisFloatBtn.Size = UDim2.new(0, S.floatBtnSize, 0, S.floatBtnSize)
+end
+if S.flyFloatBtn then
+    S.flyFloatBtn.Size = UDim2.new(0, S.floatBtnSize, 0, S.floatBtnSize)
+end
+if S.noclipFloatBtn then
+            S.noclipFloatBtn.Size = UDim2.new(0, S.floatBtnSize, 0, S.floatBtnSize)
+        end
+    end
+
+    sliderBtn.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1
+        or input.UserInputType == Enum.UserInputType.Touch then
+            sDragging = true
+            sInput = input
+            applySlider(input.Position)
+            input.Changed:Connect(function()
+                if input.UserInputState == Enum.UserInputState.End then
+                    sDragging = false
+                    sInput = nil
+                end
+            end)
+        end
+    end)
+
+    -- InputChanged global - PC dùng MouseMovement, mobile dùng đúng touch input
+UserInputService.InputChanged:Connect(function(input)
+    if not sDragging then return end
+
+    if input == sInput
+    or input.UserInputType == Enum.UserInputType.MouseMovement then
+        applySlider(input.Position)
+    end
+end)
+end
 -- Invisible row
 local invisBindRow = Instance.new("Frame")
 invisBindRow.Size = UDim2.new(1, 0, 0, 36)
