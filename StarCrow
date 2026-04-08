@@ -1218,7 +1218,7 @@ local function _mkStroke(color, thickness, parent)
     s.Thickness = thickness
     s.Parent = parent
 end
--- ─── GUI SETUP ────────────────────────────────────────────────────────────────
+--  GUI SETUP 
 local old = LocalPlayer.PlayerGui:FindFirstChild("Gui")
 if old then
     old:Destroy()
@@ -1967,7 +1967,7 @@ local noclipFloatToggleBtn = createTransparentButton("Noclip Float: OFF", Color3
 noclipFloatToggleBtn.BackgroundTransparency = 0.35
 noclipFloatToggleBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
 S.btnRefs.noclipFloatToggleBtn = noclipFloatToggleBtn
---  PANEL 3: TELEPORT 
+--  PANEL 4: TELEPORT 
 
 do
     local _lbl = createTransparentLabel("Teleport Player", panel4)
@@ -3482,7 +3482,7 @@ end
         end)
     end
 
-    --  Click handlers cho toggle buttons
+    --  Click handlers for toggle buttons
     aimToggleBtn.MouseButton1Click:Connect(function()
         AimSettings.AimEnabled = not AimSettings.AimEnabled
         AimSettings.ShowFOV    = AimSettings.AimEnabled
@@ -4153,7 +4153,7 @@ end
 
     
 
-    -- Nút SAVE
+    -- Save Button
     local saveBtn = createTransparentButton("Save Config", Color3.fromRGB(38, 38, 38), panel10)
     saveBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
 saveBtn.BackgroundTransparency = 0.35
@@ -4174,8 +4174,8 @@ end)
 
     
 
-    -- Nút DELETE config
-    local deleteBtn = createTransparentButton("Deleted Config", Color3.fromRGB(38, 38, 38), panel10)
+    -- Delete config button
+    local deleteBtn = createTransparentButton("Delete Config", Color3.fromRGB(38, 38, 38), panel10)
     deleteBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
 deleteBtn.BackgroundTransparency = 0.35
     deleteBtn.TextSize = 13
@@ -4299,7 +4299,7 @@ do
     sizeValueLabel.TextXAlignment = Enum.TextXAlignment.Center
     sizeValueLabel.Parent = panel10
 
-    -- Thanh slider
+    -- Slider track
     local sliderHolder = Instance.new("Frame")
     sliderHolder.Size = UDim2.new(1, 0, 0, 30)
     sliderHolder.BackgroundColor3 = Color3.fromRGB(28, 28, 28)
