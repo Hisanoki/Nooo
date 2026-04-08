@@ -7,7 +7,7 @@ local RunService = game:GetService("RunService")
 local StarterGui = game:GetService("StarterGui")
 local UserInputService = game:GetService("UserInputService")
 
--- ─── STATE TABLE ─────────────────────────────────────────────────────────────
+--  STATE TABLE
 local S = {
     chamsEnabled = false,
     SpectatingPlayer=nil, spectating=false, specConnection=nil,
@@ -60,8 +60,7 @@ btnRefs={},
 }
 S.speaker = LocalPlayer
 
--- ─── SPECTATE ─────────────────────────────────────────────────────────────────
-
+--  SPECTATE
 function SpectatePlayer(player)
     S.SpectatingPlayer = player
     S.spectating = true
@@ -133,7 +132,7 @@ local INVIS_CONFIG = {
 getgenv().OldPos = nil
 getgenv().FPDH = workspace.FallenPartsDestroyHeight
 
--- ─── HELPERS ──────────────────────────────────────────────────────────────────
+--  HELPERS 
 
 local function tableCount(t)
     local n = 0
@@ -195,7 +194,7 @@ local function isAlive(character)
     return humanoid and humanoid.Health > 0
 end
 
--- ─── INVISIBILITY ─────────────────────────────────────────────────────────────
+--  INVISIBILITY 
 
 local function playInvisSound()
 end
@@ -265,7 +264,7 @@ end
         createNotification("Invisible OFF", "You are now visible")
     end
 end
--- ─── BOX ESP ──────────────────────────────────────────────────────────────────
+--  BOX ESP 
 
 local function removeBoxESP(character)
     if not character then return end
@@ -299,7 +298,7 @@ local function addBoxESP(character, color, size)
     box.Parent = head
     S.boxESPObjects[character] = box
 end
--- ─── CHAMS ESP (HIGHLIGHT) ────────────────────────────────────────────────────
+--  CHAMS ESP 
 local function removeChams(character)
     if not character then return end
     local highlight = character:FindFirstChild("StarCrowChams")
@@ -343,7 +342,7 @@ local function addChams(character, color)
     highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
     highlight.Parent = character
 end
--- ─── TRACER ESP ───────────────────────────────────────────────────────────────
+--  TRACER ESP 
 
 local function removeTracerESP(player)
     if S.tracerESPObjects[player] then
@@ -399,7 +398,7 @@ local function createTracerESP(player)
         Connection = conn
     }
 end
--- ─── HEAD HITBOX ──────────────────────────────────────────────────────────────
+--  HEAD HITBOX 
 local function removeHeadHitbox(character)
     if not character then return end
     S.processedChars[character] = nil
@@ -559,7 +558,7 @@ local function applyHeadHitbox(player, character, size)
 
     S.processedChars[character] = true
 end
--- ─── BODY HITBOX (HRP direct resize, loop approach) ──────────────────────────
+--  BODY HITBOX 
 
 local function applyBodyHitbox(character, size)
     if not character then return end
@@ -587,7 +586,7 @@ local function resetBodyHitbox(character)
     removeOutlineChams(character)
 end
 
--- ─── NAME ESP ─────────────────────────────────────────────────────────────────
+--  NAME ESP 
 
 local function removeNameESP(player)
     if S.nameESPObjects[player] then
@@ -678,7 +677,7 @@ local function createNameESP(player, char)
     S.nameESPObjects[player] = billboard
 end
 
--- ─── PLAYER MANAGEMENT ────────────────────────────────────────────────────────
+--  PLAYER MANAGEMENT 
 
 local function cleanupPlayerConnections(player)
     if S.playerConnections[player] then
@@ -764,7 +763,7 @@ local function unregisterPlayer(player)
     S.selectedPlayers[player] = nil
 end
 
--- ─── UI HELPERS ───────────────────────────────────────────────────────────────
+--  UI HELPERS 
 
 local function createTransparentButton(text, color, parent)
     local btn = Instance.new("TextButton")
@@ -863,7 +862,7 @@ local function getMobileJumpButton()
     return frame:FindFirstChild("JumpButton")
 end
 
--- ─── FLY SYSTEM ───────────────────────────────────────────────────────────────
+--  FLY SYSTEM 
 local function startFly()
     local char = LocalPlayer.Character
     if not char then return end
@@ -985,7 +984,7 @@ local function stopNoclip()
     if S.noclipLoop then S.noclipLoop:Disconnect(); S.noclipLoop = nil end
 end
 
--- ─── FLING LOGIC ──────────────────────────────────────────────────────────────
+--  FLING LOGIC 
 
 local function FlingMessage(Title, Text, Time)
     game:GetService("StarterGui"):SetCore("SendNotification", {
@@ -1115,7 +1114,7 @@ local function SkidFling(TargetPlayer)
         return FlingMessage("Error", "Your character is not ready", 2)
     end
 end
--- ─── WALK FLING ──────────────────────────────────────────────────────────────
+--  WALK FLING 
 
 local function toggleWalkFling()
     S.walkflinging = not S.walkflinging
@@ -1173,7 +1172,7 @@ local function toggleWalkFling()
         end
     end
 end
--- ─── ANTI FLING ──────────────────────────────────────────────────────────────
+--  ANTI FLING 
 
 local function enableAntiFling()
     if S.antiFlingConnection then S.antiFlingConnection:Disconnect(); S.antiFlingConnection = nil end
@@ -1571,7 +1570,7 @@ closeButton.TextSize = 13
 closeButton.Parent = mainFrame
 _mkCorner(4, closeButton)
 
--- ─── LEFT VERTICAL TAB SIDEBAR ────────────────────────────────────────────────
+--  LEFT VERTICAL TAB SIDEBAR 
 local TAB_W = 82
 
 local sideBar = Instance.new("Frame")
@@ -1664,7 +1663,8 @@ icon.Parent = btn
         tabBtns[i] = btn
     end
 end
--- ─── CONTENT PANELS ───────────────────────────────────────────────────────────
+--  CONTENT PANELS 
+
 
 local function makeScrollPanel()
     local PANEL_W = 320 - TAB_W - 8
@@ -1705,7 +1705,7 @@ local panel7 = makeScrollPanel() -- Server
 local panel8 = makeScrollPanel() -- Tools
 local panel9 = makeScrollPanel() -- Aimbot
 local panel10 = makeScrollPanel() -- SaveSettings
--- ─── PANEL 1: HEAD HITBOX ─────────────────────────────────────────────────────
+--  PANEL 2: Player
 
 do
     local _lbl = createTransparentLabel("Hit Box", panel2)
@@ -1840,7 +1840,7 @@ S.invisSound.SoundId = INVIS_CONFIG.SOUND_ID
 S.invisSound.Volume = 0.5
 S.invisSound.Parent = gui
 
--- ─── PANEL 2: OTHER (ESP / Fly) ───────────────────────────────────────────────
+--  PANEL 3: ESP
 
 do
     local _lbl = createTransparentLabel("ESP", panel3)
@@ -1967,7 +1967,7 @@ local noclipFloatToggleBtn = createTransparentButton("Noclip Float: OFF", Color3
 noclipFloatToggleBtn.BackgroundTransparency = 0.35
 noclipFloatToggleBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
 S.btnRefs.noclipFloatToggleBtn = noclipFloatToggleBtn
--- ─── PANEL 3: TELEPORT ────────────────────────────────────────────────────────
+--  PANEL 3: TELEPORT 
 
 do
     local _lbl = createTransparentLabel("Teleport Player", panel4)
@@ -2008,7 +2008,7 @@ local ctrlClickTPBtn = createTransparentButton("Ctrl Click TP: OFF", Color3.from
 ctrlClickTPBtn.BackgroundTransparency = 0.35
 ctrlClickTPBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
 S.btnRefs.ctrlClickTPBtn = ctrlClickTPBtn
--- ─── PANEL 5: TROLL (FLING) ───────────────────────────────────────────────────
+--  PANEL 5: TROLL (FLING) 
 
 do
     local _lbl = createTransparentLabel("Troll", panel5)
@@ -2063,7 +2063,7 @@ local flingDeselectAllBtn = createTransparentButton("Deselect All", Color3.fromR
 flingDeselectAllBtn.BackgroundTransparency = 0.35
 flingDeselectAllBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
 
--- ─── PANEL 6: MISC ────────────────────────────────────────────────────────────
+--  PANEL 6: MISC 
 do
     local _lbl = createTransparentLabel("Misc", panel6)
     _lbl.TextColor3 = Color3.fromRGB(255,255,255)
@@ -2272,7 +2272,7 @@ do
     end)
 end
 
--- ─── PANEL 7: SERVER ──────────────────────────────────────────────────────────
+--  PANEL 7: SERVER 
 do
     local _lbl = createTransparentLabel("Server", panel7)
     _lbl.TextColor3 = Color3.fromRGB(255,255,255)
@@ -2350,7 +2350,7 @@ tpPosBtn.BackgroundColor3 = Color3.fromRGB(38,38,38)
 local copyPosBtn = createTransparentButton("Copy Position", Color3.fromRGB(38,38,38), panel7)
 copyPosBtn.BackgroundTransparency = 0.35
 copyPosBtn.BackgroundColor3 = Color3.fromRGB(38,38,38)
--- ─── PANEL 8: FETOOL ─────────────────────────────────────────────────────────
+--  PANEL 8: FETOOL 
 
 do
     local _lbl = createTransparentLabel("Tools", panel8)
@@ -2411,7 +2411,7 @@ local function runEquipAllTools()
         refreshFeTools()
     end
 end
--- ─── FLOAT BUTTON HELPERS ─────────────────────────────────────────────────────
+--  FLOAT BUTTON HELPERS 
 S.floatDragLocked = false
 local function makeDraggableFloat(btn)
     local fDragging = false
@@ -2465,7 +2465,7 @@ local function makeDraggableFloat(btn)
 
     return function() return fMoved end, function() fMoved = false end
 end
--- ─── NOCLIP FLOAT ───────────────────────────────────────────────────────────
+--  NOCLIP FLOAT
 
 local function updateNoclipFloatVisual()
     if not S.noclipFloatBtn or not S.noclipFloatStroke then return end
@@ -2551,7 +2551,7 @@ local function createNoclipFloat()
 
     updateNoclipFloatVisual()
 end
--- ─── INVISIBLE FLOAT ──────────────────────────────────────────────────────────
+--  INVISIBLE FLOAT 
 
 local function updateInvisFloatVisual()
     if not S.invisFloatBtn or not S.invisFloatStroke then return end
@@ -2702,7 +2702,7 @@ S.flyFloatBtn.Font = Enum.Font.GothamBold
 
     updateFlyFloatVisual()
 end
--- ─── AURA FLOAT ───────────────────────────────────────────────────────────────
+--  AURA FLOAT 
 
 local function destroyAuraFloat()
     if S.auraFloatBtn then
@@ -2754,7 +2754,7 @@ local function createAuraFloat()
 end
 
 
--- ─── DROP FLOAT ───────────────────────────────────────────────────────────────
+--  DROP FLOAT 
 
 local function destroyDropFloat()
     if S.dropFloatBtn then
@@ -2806,7 +2806,7 @@ local function createDropFloat()
         if tool then tool.Parent = workspace end
     end)
 end
--- ─── EQUIP ALL FLOAT ──────────────────────────────────────────────────────────
+--  EQUIP ALL FLOAT 
 
 local function destroyEquipAllFloat()
     if S.equipAllFloatBtn then
@@ -2859,7 +2859,7 @@ local function createEquipAllFloat()
         runEquipAllTools()
     end)
 end
--- ─── USE TOOL FLOAT ──────────────────────────────────────────────────────────
+--  USE TOOL FLOAT 
 
 local function destroyUseFloat()
     if S.useFloatBtn then
@@ -2958,7 +2958,7 @@ local function createUseFloat()
     end)
 end
 
--- ─── FETOOL BUTTONS ───────────────────────────────────────────────────────────
+--  FETOOL BUTTONS 
 
 S.feAuraBtn = createTransparentButton("Tool Aura", Color3.fromRGB(38, 38, 38), panel8)
 S.feAuraBtn.BackgroundTransparency = 0.35
@@ -3057,7 +3057,7 @@ feEquipAllFloatToggleBtn.MouseButton1Click:Connect(function()
         destroyEquipAllFloat()
     end
 end)
--- ─── USE TOOL PANEL BUTTONS ───────────────────────────────────────────────────
+--  USE TOOL PANEL BUTTONS 
 do
     local useDiv = createTransparentLabel(" Use Tool", panel8)
     useDiv.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -3279,7 +3279,7 @@ LocalPlayer.CharacterAdded:Connect(function(char)
 end)
 
 refreshFeTools()
--- ─── PANEL 9: AIMBOT ─────────────────────────────────────────────────────────
+--  PANEL 9: AIMBOT 
 
 do
     local _lbl = createTransparentLabel("Aimbot", panel9)
@@ -3352,7 +3352,7 @@ do
     end
 end
 
-    -- ── Toggle buttons ──────────────────────────────────────────────────────
+    --  Toggle buttons 
     local aimToggleBtn = createTransparentButton("Aimbot: OFF", AIM_OFF, panel9)
     aimStyle(aimToggleBtn, false)
     S.btnRefs.aimToggleBtn = aimToggleBtn
@@ -3482,7 +3482,7 @@ end
         end)
     end
 
-    -- ── Click handlers cho toggle buttons ───────────────────────────────────
+    --  Click handlers cho toggle buttons
     aimToggleBtn.MouseButton1Click:Connect(function()
         AimSettings.AimEnabled = not AimSettings.AimEnabled
         AimSettings.ShowFOV    = AimSettings.AimEnabled
@@ -3644,7 +3644,7 @@ RunService.RenderStepped:Connect(function()
 end)   
 end -- END AIMBOT SCOPE
 
--- ─── TAB SWITCH ───────────────────────────────────────────────────────────────
+--  TAB SWITCH 
 
 local panels = {panel2, panel3, panel4, panel5, panel6, panel7, panel8, panel9, panel10}
 
@@ -3662,7 +3662,7 @@ for i, btn in ipairs(tabBtns) do
 end
 switchTab(1)
 
--- ─── PANEL 10: SAVE SETTINGS ──────────────────────────────────────────────────
+--  PANEL 10: SAVE SETTINGS 
 do
     local SAVE_FOLDER = "StarCrow"
     local SAVE_FILE   = "StarCrow/StarSaveSetting"
@@ -3955,7 +3955,7 @@ menuKeyName         = tostring(S.menuKeyCode or S.menuKeybind):gsub("Enum.KeyCod
             end
         end)
 
-        -- ─── FeTool Floats ────────────────────────────────────────────────────────
+        --  FeTool Floats 
 
         pcall(function()
             if cfg.invisFloatPos and type(cfg.invisFloatPos) == "table" and #cfg.invisFloatPos == 4 then
@@ -4142,7 +4142,7 @@ end
         end
     end)
 
-    -- ── BUILD UI TAB SaveSettings ────────────────────────────────────────────
+    --  BUILD UI TAB SaveSettings 
     do
     local _lbl = createTransparentLabel("Save Config", panel10)
     _lbl.TextColor3 = Color3.fromRGB(255,255,255)
@@ -4287,7 +4287,7 @@ floatDragLockBtn.MouseButton1Click:Connect(function()
 end)
 
 updateFloatDragLockBtn()
--- ─── FLOAT BUTTON SIZE SLIDER ────────────────────────────────────────────────
+--  FLOAT BUTTON SIZE SLIDER 
 do
     local sizeValueLabel = Instance.new("TextLabel")
     sizeValueLabel.Size = UDim2.new(1, 0, 0, 20)
@@ -4722,7 +4722,7 @@ local function StopFling()
     FlingMessage("Fling Stopped", "Fling has been stopped", 2)
 end
 
--- ─── FLING BUTTON EVENTS ──────────────────────────────────────────────────────
+--  FLING BUTTON EVENTS 
 S.flingStartBtn.MouseButton1Click:Connect(function()
 
     if S.FlingActive then
@@ -5373,7 +5373,7 @@ end
         end
     end)
 end
--- ─── LOOPSPEED ────────────────────────────────────────────────────────────────
+--  LOOPSPEED 
 
 do
     local loopspeedEnabled = false
@@ -5412,7 +5412,7 @@ do
     S.loopspeedToggle.MouseButton1Click:Connect(function() setLoopspeedEnabled(not loopspeedEnabled) end)
 end
 
--- ─── BUTTON EVENTS ────────────────────────────────────────────────────────────
+--  BUTTON EVENTS 
 
 mainFrame.Visible = false
 
@@ -5981,7 +5981,7 @@ copyPosBtn.MouseButton1Click:Connect(function()
 
 end)
 
----- ─── TP BUTTON EVENTS ─────────────────────────────────────────────────────────
+-- TP BUTTON EVENTS 
 
 S.autoTPBtn.MouseButton1Click:Connect(function()
     S.autoTPEnabled = not S.autoTPEnabled
@@ -6096,7 +6096,7 @@ ctrlClickTPBtn.MouseButton1Click:Connect(function()
     end
 end)
 
--- ─── INPUT EVENTS ─────────────────────────────────────────────────────────────
+--  INPUT EVENTS 
 UserInputService.InputBegan:Connect(function(input, gameProcessed)
     if input.UserInputType ~= Enum.UserInputType.Keyboard then
         return
@@ -6255,7 +6255,7 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
 
     hrp.CFrame = hit + Vector3.new(0, 5, 0)
 end)
--- ─── LOCAL PLAYER EVENTS ──────────────────────────────────────────────────────
+--  LOCAL PLAYER EVENTS 
 
 LocalPlayer.CharacterAdded:Connect(function(character)
     S.flyEnabled = false
@@ -6287,7 +6287,7 @@ end
     setCharacterTransparency(character, 0)
 end)
 
--- ─── PLAYER ADDED/REMOVING ────────────────────────────────────────────────────
+--  PLAYER ADDED/REMOVING 
 
 Players.PlayerAdded:Connect(function(player)
     registerPlayer(player)
@@ -6307,7 +6307,7 @@ Players.PlayerRemoving:Connect(function(player)
     RefreshFlingPlayerList()
 end)
 
--- ─── PLAYER LIST UIs ──────────────────────────────────────────────────────────
+--  PLAYER LIST UIs
 
 local function updateTPList()
     for _,v in pairs(S.tpPlayerList:GetChildren()) do
@@ -6367,13 +6367,13 @@ btn.BackgroundTransparency = S.selectedPlayers[player] and 0 or 0.35
     end
 end
 
--- ─── REGISTER EXISTING PLAYERS ────────────────────────────────────────────────
+--  REGISTER EXISTING PLAYERS
 
 for _, player in pairs(Players:GetPlayers()) do
     registerPlayer(player)
 end
 
--- ─── WATCHDOG LOOP ────────────────────────────────────────────────────────────
+--  WATCHDOG LOOP 
 
 task.spawn(function()
     while true do
@@ -6425,7 +6425,7 @@ task.spawn(function()
     end
 end)
 
--- ─── ESP / CHAMS / OUTLINE REPAIR WATCHDOG ────────────────────────────────────
+--  ESP / CHAMS / OUTLINE REPAIR WATCHDOG 
 task.spawn(function()
     while true do
         task.wait(1.5)
@@ -6461,7 +6461,7 @@ task.spawn(function()
     end
 end)
 
--- ─── INIT ─────────────────────────────────────────────────────────────────────
+--  INIT 
 S.statusLabel.Text = "Processing: 0 Players"
 updatePlayerList()
 RefreshFlingPlayerList()
