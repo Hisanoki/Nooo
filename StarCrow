@@ -1348,25 +1348,104 @@ local function showCustomNotif(text, duration)
     end)
 end
 
--- Toggle button (middle-left, image, square rounded, white border, draggable)
-local toggleBtn = Instance.new("ImageButton")
-toggleBtn.Size = UDim2.new(0, 58, 0, 58)
-toggleBtn.Position = UDim2.new(0, 8, 0.5, -29)
-toggleBtn.AnchorPoint = Vector2.new(0, 0)
-toggleBtn.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
-toggleBtn.BackgroundTransparency = 0
+-- Toggle Menu
+local toggleBtn = Instance.new("TextButton")
+toggleBtn.Name = "OpenMenuButton"
+toggleBtn.Size = UDim2.new(0, 190, 0, 38)
+toggleBtn.Position = UDim2.new(0.5, -95, 0, 72)
+toggleBtn.BackgroundColor3 = Color3.fromRGB(28, 28, 28)
+toggleBtn.BackgroundTransparency = 0.42
 toggleBtn.BorderSizePixel = 0
-toggleBtn.Image = "rbxassetid://73309457774546"
-toggleBtn.ScaleType = Enum.ScaleType.Stretch
+toggleBtn.Text = ""
 toggleBtn.ZIndex = 5
 toggleBtn.Active = true
+toggleBtn.AutoButtonColor = false
 toggleBtn.Parent = gui
+
 do
-    local _c = Instance.new("UICorner", toggleBtn)
-    _c.CornerRadius = UDim.new(0, 14)
-    local _s = Instance.new("UIStroke", toggleBtn)
-    _s.Color = Color3.fromRGB(255, 255, 255)
-    _s.Thickness = 2
+    
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0, 6)
+    corner.Parent = toggleBtn
+
+    
+    local strokeFrame = Instance.new("Frame")
+    strokeFrame.Name = "StrokeFrame"
+    strokeFrame.Size = UDim2.new(1, 0, 1, 0)
+    strokeFrame.Position = UDim2.new(0, 0, 0, 0)
+    strokeFrame.BackgroundTransparency = 1
+    strokeFrame.BorderSizePixel = 0
+    strokeFrame.ZIndex = 6
+    strokeFrame.Parent = toggleBtn
+
+    local strokeCorner = Instance.new("UICorner")
+    strokeCorner.CornerRadius = UDim.new(0, 6)
+    strokeCorner.Parent = strokeFrame
+
+    local stroke = Instance.new("UIStroke")
+    stroke.Color = Color3.fromRGB(255, 255, 255)
+    stroke.Thickness = 2
+    stroke.Transparency = 0
+    stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+    stroke.Parent = strokeFrame
+
+    local strokeGradient = Instance.new("UIGradient")
+    strokeGradient.Color = ColorSequence.new({
+        ColorSequenceKeypoint.new(0, Color3.fromRGB(170, 70, 255)),
+        ColorSequenceKeypoint.new(1, Color3.fromRGB(70, 210, 255))
+    })
+    strokeGradient.Rotation = 0
+    strokeGradient.Parent = stroke
+
+    
+    local dragIcon = Instance.new("ImageLabel")
+    dragIcon.Name = "DragIcon"
+    dragIcon.Size = UDim2.new(0, 17, 0, 17)
+    dragIcon.Position = UDim2.new(0, 8, 0.5, -8)
+    dragIcon.BackgroundTransparency = 1
+    dragIcon.Image = "rbxassetid://6710235139"
+    dragIcon.ImageTransparency = 0.12
+    dragIcon.ScaleType = Enum.ScaleType.Fit
+    dragIcon.ZIndex = 7
+    dragIcon.Parent = toggleBtn
+
+    
+    local divider = Instance.new("Frame")
+    divider.Name = "Divider"
+    divider.Size = UDim2.new(0, 1, 1, 0)
+    divider.Position = UDim2.new(0, 32, 0, 0)
+    divider.BackgroundColor3 = Color3.fromRGB(200, 200, 200)
+    divider.BackgroundTransparency = 0.58
+    divider.BorderSizePixel = 0
+    divider.ZIndex = 7
+    divider.Parent = toggleBtn
+
+    
+    local sideIcon = Instance.new("ImageLabel")
+    sideIcon.Name = "SideIcon"
+    sideIcon.Size = UDim2.new(0, 22, 0, 22)
+    sideIcon.Position = UDim2.new(0, 35, 0.5, -11)
+    sideIcon.BackgroundTransparency = 1
+    sideIcon.Image = "rbxassetid://11400928498"
+    sideIcon.ImageTransparency = 0.04
+    sideIcon.ScaleType = Enum.ScaleType.Fit
+    sideIcon.ZIndex = 8
+    sideIcon.Parent = toggleBtn
+
+   
+    local nameLabel = Instance.new("TextLabel")
+    nameLabel.Name = "NameLabel"
+    nameLabel.Size = UDim2.new(0, 104, 1, 0)
+    nameLabel.Position = UDim2.new(0, 68, 0, 0)
+    nameLabel.BackgroundTransparency = 1
+    nameLabel.Text = "Open StarCrow"
+    nameLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+    nameLabel.Font = Enum.Font.GothamSemibold
+    nameLabel.TextSize = 14
+    nameLabel.TextXAlignment = Enum.TextXAlignment.Center
+    nameLabel.TextYAlignment = Enum.TextYAlignment.Center
+    nameLabel.ZIndex = 8
+    nameLabel.Parent = toggleBtn
 end
 local _tbDragging = false
 local _tbMoved = false
