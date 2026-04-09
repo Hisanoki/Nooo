@@ -1290,22 +1290,42 @@ local function showCustomNotif(text, duration)
     notifFrame.Name = "NotifCard"
     notifFrame.Size = UDim2.new(1, 0, 0, 68)
     notifFrame.BackgroundColor3 = Color3.fromRGB(18, 18, 24)
-    notifFrame.BackgroundTransparency = 0.08
+    notifFrame.BackgroundTransparency = 0.35
     notifFrame.BorderSizePixel = 0
     notifFrame.ClipsDescendants = true
     -- start off-screen to the right for slide-in
     notifFrame.Position = UDim2.new(2, 0, 0, 0)
     notifFrame.Parent = container
-
+    
+local blur = Instance.new("UIGradient")
+blur.Color = ColorSequence.new({
+    ColorSequenceKeypoint.new(0, Color3.fromRGB(255,255,255)),
+    ColorSequenceKeypoint.new(1, Color3.fromRGB(200,200,255))
+})
+blur.Transparency = NumberSequence.new({
+    NumberSequenceKeypoint.new(0, 0.9),
+    NumberSequenceKeypoint.new(1, 1)
+})
+blur.Rotation = 90
+blur.Parent = notifFrame
     local corner = Instance.new("UICorner")
-    corner.CornerRadius = UDim.new(0, 18)
+    corner.CornerRadius = UDim.new(0, 8)
     corner.Parent = notifFrame
 
     local stroke = Instance.new("UIStroke")
-    stroke.Color = Color3.fromRGB(70, 70, 100)
-    stroke.Thickness = 1.5
-    stroke.Transparency = 0.1
-    stroke.Parent = notifFrame
+stroke.Thickness = 2 
+stroke.Transparency = 0 
+stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+stroke.Color = Color3.fromRGB(255, 255, 255) 
+stroke.Parent = notifFrame
+
+local gradient = Instance.new("UIGradient")
+gradient.Color = ColorSequence.new({
+    ColorSequenceKeypoint.new(0, Color3.fromRGB(170, 70, 255)),   
+    ColorSequenceKeypoint.new(0.5, Color3.fromRGB(0, 180, 255)),   
+    ColorSequenceKeypoint.new(1, Color3.fromRGB(0, 0, 0))          
+})
+gradient.Parent = stroke
 
     local icon = Instance.new("ImageLabel")
     icon.Size = UDim2.new(0, 40, 0, 40)
@@ -1321,8 +1341,8 @@ local function showCustomNotif(text, duration)
     label.BackgroundTransparency = 1
     label.Text = text
     label.TextColor3 = Color3.fromRGB(255, 255, 255)
-    label.Font = Enum.Font.GothamBold
-    label.TextSize = 13
+    label.Font = Enum.Font.GothamSemibold
+    label.TextSize = 14
     label.TextWrapped = true
     label.TextXAlignment = Enum.TextXAlignment.Left
     label.TextYAlignment = Enum.TextYAlignment.Center
@@ -1391,9 +1411,10 @@ do
 
     local strokeGradient = Instance.new("UIGradient")
     strokeGradient.Color = ColorSequence.new({
-        ColorSequenceKeypoint.new(0, Color3.fromRGB(170, 70, 255)),
-        ColorSequenceKeypoint.new(1, Color3.fromRGB(70, 210, 255))
-    })
+    ColorSequenceKeypoint.new(0, Color3.fromRGB(170, 70, 255)),   
+    ColorSequenceKeypoint.new(0.5, Color3.fromRGB(0, 180, 255)),   
+    ColorSequenceKeypoint.new(1, Color3.fromRGB(0, 0, 0))          
+})
     strokeGradient.Rotation = 0
     strokeGradient.Parent = stroke
 
@@ -4205,21 +4226,31 @@ pcall(function()
     end
 end)
 end 
-    task.spawn(function()
-        task.wait(1)
-        showCustomNotif("Loading config...\nPlease wait 2 seconds", 3)
-        task.wait(2)
-        local cfg = nil
-        local ok, err = pcall(function()
-            cfg = loadConfig()
-        end)
-        if ok and cfg then
-            applyConfig(cfg)
-            showCustomNotif("✓ Configuration has been applied!", 3)
-        else
-            showCustomNotif("No config found!", 3)
-        end
+local scriptStartTime = tick()
+
+task.spawn(function()
+    task.wait(1)
+    showCustomNotif("Loading config...", 3)
+
+    task.wait(2)
+    local cfg = nil
+    local ok, err = pcall(function()
+        cfg = loadConfig()
     end)
+
+    if ok and cfg then
+        applyConfig(cfg)
+
+        local loadTime = tick() - scriptStartTime
+        showCustomNotif(string.format(
+            "Script has been successfully loaded in the game, Took %.2f seconds to load",
+            loadTime
+        ), 3.5)
+
+    else
+        showCustomNotif("No config found!", 3)
+    end
+end)
 
     --  BUILD UI TAB SaveSettings 
     do
