@@ -5497,11 +5497,13 @@ mainFrame.Visible = false
 
 local function openMenu()
     mainFrame.Visible = true
+    toggleBtn.Visible = false 
     updatePlayerList()
 end
 
 local function closeMenu()
     mainFrame.Visible = false
+    toggleBtn.Visible = true 
 end
 
 local function toggleMenu()
