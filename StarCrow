@@ -1198,12 +1198,12 @@ local function enableAntiFling()
             end
         end
     end)
-    createNotification("Anti Fling", "ON", 3)
+    
 end
 
 local function disableAntiFling()
     if S.antiFlingConnection then S.antiFlingConnection:Disconnect(); S.antiFlingConnection = nil end
-    createNotification("Anti Fling", "OFF", 3)
+    
 end
 
 
@@ -2314,11 +2314,11 @@ antiAfkBtn.MouseButton1Click:Connect(function()
     if S.antiAfkEnabled then
         antiAfkBtn.BackgroundColor3 = Color3.fromRGB(50, 200, 120)
         antiAfkBtn.BackgroundTransparency = 0
-        createNotification("Anti AFK", "ON")
+        
     else
         antiAfkBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
         antiAfkBtn.BackgroundTransparency = 0.35
-        createNotification("Anti AFK", "OFF")
+        
     end
 end)
 
@@ -2340,11 +2340,11 @@ do
         if antiVoidEnabled then
             antiVoidBtn.BackgroundColor3 = Color3.fromRGB(50, 200, 120)
             antiVoidBtn.BackgroundTransparency = 0
-            if not silent then createNotification("Anti Void", "ON") end
+            
         else
             antiVoidBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
             antiVoidBtn.BackgroundTransparency = 0.35
-            if not silent then createNotification("Anti Void", "OFF") end
+            
         end
     end
 
@@ -5799,10 +5799,10 @@ infJumpToggle.BackgroundTransparency = S.infJumpEnabled and 0 or 0.35
 
     if S.infJumpEnabled then
     startInfJump()
-    createNotification("Inf Jump", "ON")
+    
 else
     stopInfJump()
-    createNotification("Inf Jump", "OFF")
+    
 end
 end)
 
@@ -5815,10 +5815,10 @@ noclipToggle.MouseButton1Click:Connect(function()
 
     if S.noclipEnabled then
         startNoclip()
-        createNotification("Noclip", "ON")
+        
     else
         stopNoclip()
-        createNotification("Noclip", "OFF")
+        
     end
     
     updateNoclipFloatVisual()
@@ -5849,10 +5849,10 @@ S.flyToggle.MouseButton1Click:Connect(function()
 
     if S.flyEnabled then
         startFly()
-        createNotification("Fly", "ON")
+        
     else
         stopFly()
-        createNotification("Fly", "OFF")
+        
     end
 
     updateFlyFloatVisual()
