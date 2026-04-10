@@ -1243,7 +1243,7 @@ if not gui.Parent then
     gui.Parent = LocalPlayer:WaitForChild("PlayerGui")
 end
 
-local function showCustomNotif(text, duration)
+local function showCustomNotif(text, duration, useCheck)
     duration = duration or 3.5
     local TweenService = game:GetService("TweenService")
 
@@ -1336,26 +1336,78 @@ task.spawn(function()
 end)
 
     local icon = Instance.new("ImageLabel")
+    if useCheck then
+    icon.Size = UDim2.new(0, 20, 0, 20)
+    icon.Position = UDim2.new(0, 14, 0, 10)
+else
     icon.Size = UDim2.new(0, 40, 0, 40)
     icon.Position = UDim2.new(0, 14, 0.5, -20)
+end
     icon.BackgroundTransparency = 1
+    if useCheck then
+    icon.Image = "rbxassetid://13132087769"
+    
+    
+else
     icon.Image = "rbxassetid://73309457774546"
+end
     icon.ZIndex = 2
     icon.Parent = notifFrame
 
-    local label = Instance.new("TextLabel")
-    label.Size = UDim2.new(1, -64, 1, -12)
-    label.Position = UDim2.new(0, 60, 0, 6)
-    label.BackgroundTransparency = 1
-    label.Text = text
-    label.TextColor3 = Color3.fromRGB(255, 255, 255)
-    label.Font = Enum.Font.GothamSemibold
-    label.TextSize = 14
-    label.TextWrapped = true
-    label.TextXAlignment = Enum.TextXAlignment.Left
-    label.TextYAlignment = Enum.TextYAlignment.Center
-    label.ZIndex = 2
-    label.Parent = notifFrame
+if useCheck then
+        -- Title label: "StarCrow Says:" — sát bên icon, nổi bật
+        local titleLabel = Instance.new("TextLabel")
+        titleLabel.Size = UDim2.new(1, -44, 0, 24)
+        titleLabel.Position = UDim2.new(0, 40, 0, 7)
+        titleLabel.BackgroundTransparency = 1
+        titleLabel.Text = "StarCrow Says:"
+        titleLabel.TextXAlignment = Enum.TextXAlignment.Left
+        titleLabel.TextYAlignment = Enum.TextYAlignment.Center
+        titleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+        titleLabel.Font = Enum.Font.GothamBold
+        titleLabel.TextSize = 15
+        titleLabel.ZIndex = 2
+        titleLabel.Parent = notifFrame
+
+        -- Body label: message bên dưới
+        local rawParts = string.split(text, "\n")
+        local bodyText = ""
+        for i = 2, #rawParts do
+            local trimmed = rawParts[i]:match("^%s*(.-)%s*$")
+            if trimmed and trimmed ~= "" then
+                bodyText = trimmed
+                break
+            end
+        end
+        local bodyLabel = Instance.new("TextLabel")
+        bodyLabel.Size = UDim2.new(1, -20, 0, 28)
+        bodyLabel.Position = UDim2.new(0, 14, 0, 36)
+        bodyLabel.BackgroundTransparency = 1
+        bodyLabel.Text = bodyText
+        bodyLabel.TextXAlignment = Enum.TextXAlignment.Left
+        bodyLabel.TextYAlignment = Enum.TextYAlignment.Top
+        bodyLabel.TextColor3 = Color3.fromRGB(220, 220, 220)
+        bodyLabel.Font = Enum.Font.GothamSemibold
+        bodyLabel.TextSize = 13
+        bodyLabel.TextWrapped = true
+        bodyLabel.ZIndex = 2
+        bodyLabel.Parent = notifFrame
+    else
+        local label = Instance.new("TextLabel")
+        label.Size = UDim2.new(1, -64, 1, -12)
+        label.Position = UDim2.new(0, 60, 0, 4)
+        label.BackgroundTransparency = 1
+        label.Text = text
+        label.TextXAlignment = Enum.TextXAlignment.Left
+        label.TextColor3 = Color3.fromRGB(255, 255, 255)
+        label.Font = Enum.Font.GothamSemibold
+        label.TextSize = 14
+        label.TextWrapped = true
+        label.TextXAlignment = Enum.TextXAlignment.Left
+        label.TextYAlignment = Enum.TextYAlignment.Center
+        label.ZIndex = 2
+        label.Parent = notifFrame
+    end
 
     -- Slide in
     notifFrame.Position = UDim2.new(2, 0, 0, 0)
@@ -3853,10 +3905,10 @@ menuKeyName         = tostring(S.menuKeyCode or S.menuKeybind):gsub("Enum.KeyCod
             writefile(SAVE_FILE, game:GetService("HttpService"):JSONEncode(cfg))
         end)
         if ok2 then
-            createNotification("SaveSettings", "Config Saved!")
-        else
-            createNotification("SaveSettings", "Error Saving File!"..tostring(err))
-        end
+    showCustomNotif("StarCrow Says:\n\n   Settings saved successfully", 3, true)
+else
+    showCustomNotif("Error saving config: "..tostring(err), 3)
+end
     end
 
     local function safeClick(btn)
@@ -4309,11 +4361,11 @@ deleteBtn.BackgroundTransparency = 0.35
 
     deleteBtn.MouseButton1Click:Connect(function()
         if isfile(SAVE_FILE) then
-            pcall(function() delfile(SAVE_FILE) end)
-            createNotification("SaveSettings", "Config Deleted!")
-        else
-            createNotification("SaveSettings", "No config file found!")
-        end
+    pcall(function() delfile(SAVE_FILE) end)
+    showCustomNotif("StarCrow Says:\n\n   Settings Deleted", 3, true)
+else
+    showCustomNotif("No config found", 3)
+end
         deleteBtn.BackgroundColor3 = Color3.fromRGB(50, 200, 120)
         deleteBtn.BackgroundTransparency = 0
         task.delay(0.6, function()
