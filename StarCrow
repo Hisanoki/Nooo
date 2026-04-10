@@ -5956,13 +5956,7 @@ rejoinBtn.MouseButton1Click:Connect(function()
     local StarterGui = game:GetService("StarterGui")
     local queue = queue_on_teleport or queueonteleport
 
-    pcall(function()
-        StarterGui:SetCore("SendNotification", {
-            Title = "Server",
-            Text = "Rejoining...",
-            Duration = 2
-        })
-    end)
+    showCustomNotif("StarCrow Says:\n\n   Rejoining...", 2, true)
 
     if queue then
         queue('loadstring(game:HttpGet("https://raw.githubusercontent.com/Hisanoki/Nooo/refs/heads/main/StarCrow"))()')
@@ -5988,13 +5982,7 @@ serverHopBtn.MouseButton1Click:Connect(function()
     local Players = game:GetService("Players")
     local StarterGui = game:GetService("StarterGui")
 
-    pcall(function()
-        StarterGui:SetCore("SendNotification", {
-            Title = "Server",
-            Text = "Searching new server...",
-            Duration = 2
-        })
-    end)
+    showCustomNotif("StarCrow Says:\n\n   Searching new server...", 2, true)
 
     queue_on_teleport('loadstring(game:HttpGet("https://raw.githubusercontent.com/Hisanoki/Nooo/refs/heads/main/StarCrow"))()')
 
@@ -6019,13 +6007,7 @@ joinJobBtn.MouseButton1Click:Connect(function()
 
     if jobId ~= "" then
         
-        pcall(function()
-            game:GetService("StarterGui"):SetCore("SendNotification",{
-                Title = "Server",
-                Text = "Preparing to join server...",
-                Duration = 3
-            })
-        end)
+        showCustomNotif("StarCrow Says:\n\n   Preparing to join server...", 3, true)
 
         task.wait(1)
 
@@ -6049,38 +6031,20 @@ copyJobBtn.MouseButton1Click:Connect(function()
         setclipboard(game.JobId)
     end
 
-    pcall(function()
-        game:GetService("StarterGui"):SetCore("SendNotification",{
-            Title = "Server",
-            Text = "JobId copied!",
-            Duration = 3
-        })
-    end)
+    showCustomNotif("StarCrow Says:\n\n   JobId copied!", 3, true)
 
 end)
 tpPosBtn.MouseButton1Click:Connect(function()
 
     local text = posInput.Text
     if text == "" then
-        pcall(function()
-            game:GetService("StarterGui"):SetCore("SendNotification",{
-                Title = "Position",
-                Text = "Please enter a position first!",
-                Duration = 3
-            })
-        end)
+        showCustomNotif("StarCrow Says:\n\n   Please enter a position first!", 3, true)
         return
     end
 
     local parts = string.split(text, ",")
     if #parts < 3 then
-        pcall(function()
-            game:GetService("StarterGui"):SetCore("SendNotification",{
-                Title = "Position",
-                Text = "Invalid format! Use: X, Y, Z",
-                Duration = 3
-            })
-        end)
+        showCustomNotif("StarCrow Says:\n\n   Invalid format! Use: X, Y, Z", 3, true)
         return
     end
 
@@ -6089,13 +6053,7 @@ tpPosBtn.MouseButton1Click:Connect(function()
     local z = tonumber(parts[3] and parts[3]:match("^%s*(.-)%s*$"))
 
     if not x or not y or not z then
-        pcall(function()
-            game:GetService("StarterGui"):SetCore("SendNotification",{
-                Title = "Position",
-                Text = "Invalid numbers! Use: X, Y, Z",
-                Duration = 3
-            })
-        end)
+        showCustomNotif("StarCrow Says:\n\n   Invalid numbers! Use: X, Y, Z", 3, true)
         return
     end
 
@@ -6107,21 +6065,9 @@ tpPosBtn.MouseButton1Click:Connect(function()
     if hrp then
         hrp.CFrame = S.manualPositionCFrame
 
-        pcall(function()
-            game:GetService("StarterGui"):SetCore("SendNotification",{
-                Title = "Position",
-                Text = "Teleported to position!",
-                Duration = 3
-            })
-        end)
+        showCustomNotif("StarCrow Says:\n\n   Teleported to position!", 3, true)
     else
-        pcall(function()
-            game:GetService("StarterGui"):SetCore("SendNotification",{
-                Title = "Position",
-                Text = "HumanoidRootPart not found!",
-                Duration = 3
-            })
-        end)
+        showCustomNotif("StarCrow Says:\n\n   HumanoidRootPart not found!", 3, true)
     end
 
 end)
@@ -6132,13 +6078,7 @@ copyPosBtn.MouseButton1Click:Connect(function()
     local hrp = char and char:FindFirstChild("HumanoidRootPart")
 
     if not hrp then
-        pcall(function()
-            game:GetService("StarterGui"):SetCore("SendNotification",{
-                Title = "Position",
-                Text = "HumanoidRootPart not found!",
-                Duration = 3
-            })
-        end)
+        showCustomNotif("StarCrow Says:\n\n   HumanoidRootPart not found!", 3, true)
         return
     end
 
@@ -6151,13 +6091,7 @@ copyPosBtn.MouseButton1Click:Connect(function()
         setclipboard(posText)
     end
 
-    pcall(function()
-        game:GetService("StarterGui"):SetCore("SendNotification",{
-            Title = "Position",
-            Text = "Position copied!",
-            Duration = 3
-        })
-    end)
+    showCustomNotif("StarCrow Says:\n\n   Position copied!", 3, true)
 
 end)
 
