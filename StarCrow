@@ -240,7 +240,7 @@ if S.invisFloatStroke then
     S.invisFloatStroke.Color = Color3.fromRGB(50, 200, 120)
     S.invisFloatStroke.Thickness = 2.2
 end
-        createNotification("Invisible ON", "You are now invisible")
+        
     else
         local chair = workspace:FindFirstChild("invischair")
         if chair then chair:Destroy() end
@@ -261,7 +261,7 @@ if S.invisFloatStroke then
     S.invisFloatStroke.Color = Color3.fromRGB(62, 62, 62)
     S.invisFloatStroke.Thickness = 1.8
 end
-        createNotification("Invisible OFF", "You are now visible")
+        
     end
 end
 --  BOX ESP 
@@ -2297,7 +2297,7 @@ autoClickBtn.MouseButton1Click:Connect(function()
         autoClickBtn.Text = "Auto Click: OFF"
         autoClickBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
         autoClickBtn.BackgroundTransparency = 0.35
-        createNotification("Auto Click", "OFF")
+        
         return
     end
 
@@ -2305,7 +2305,7 @@ autoClickBtn.MouseButton1Click:Connect(function()
     autoClickBtn.Text = "Auto Click: ON"
     autoClickBtn.BackgroundColor3 = Color3.fromRGB(50, 200, 120)
     autoClickBtn.BackgroundTransparency = 0
-    createNotification("Auto Click", UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled and "ON (Mobile Tool Mode)" or "ON")
+    
 end)
 antiAfkBtn.MouseButton1Click:Connect(function()
     S.antiAfkEnabled = not S.antiAfkEnabled
@@ -4562,7 +4562,7 @@ S.btnRefs.invisBindBtn = invisBindBtn
 invisBindBtn.MouseButton1Click:Connect(function()
     S.waitingForKeybind = "Invisible"
     setBindButtonWaiting(invisBindBtn)
-    createNotification("Keybind", "Press a key for Invisible")
+    
 end)
 
 -- Fly row
@@ -4600,7 +4600,7 @@ S.btnRefs.flyBindBtn = flyBindBtn
 flyBindBtn.MouseButton1Click:Connect(function()
     S.waitingForKeybind = "Fly"
     setBindButtonWaiting(flyBindBtn)
-    createNotification("Keybind", "Press a key for Fly")
+   
 end)
 
 local noclipBindRow = Instance.new("Frame")
@@ -4637,7 +4637,7 @@ S.btnRefs.noclipBindBtn = noclipBindBtn
 noclipBindBtn.MouseButton1Click:Connect(function()
     S.waitingForKeybind = "Noclip"
     setBindButtonWaiting(noclipBindBtn)
-    createNotification("Keybind", "Press a key for Noclip")
+    
 end)
 
 local menuBindRow = Instance.new("Frame")
@@ -4674,7 +4674,7 @@ S.btnRefs.menuBindBtn = menuBindBtn
 menuBindBtn.MouseButton1Click:Connect(function()
     S.waitingForKeybind = "Menu"
     setBindButtonWaiting(menuBindBtn)
-    createNotification("Keybind", "Press a key for Open/Close Menu")
+    
 end)
 
     
@@ -5142,7 +5142,7 @@ do
             loopFBBtn.Text = "LoopFullBright: ON"
             loopFBBtn.BackgroundColor3 = Color3.fromRGB(50, 200, 120)
             loopFBBtn.BackgroundTransparency = 0
-            if not silent then createNotification("LoopFullBright", "ON") end
+            
             if fbConnection then fbConnection:Disconnect() end
             fbConnection = RunService.RenderStepped:Connect(function()
                 local lighting = game:GetService("Lighting")
@@ -5156,7 +5156,7 @@ do
             loopFBBtn.Text = "LoopFullBright: OFF"
             loopFBBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
             loopFBBtn.BackgroundTransparency = 0.35
-            if not silent then createNotification("LoopFullBright", "OFF") end
+            
             if fbConnection then fbConnection:Disconnect(); fbConnection = nil end
         end
     end
@@ -5183,7 +5183,7 @@ noFogBtn.MouseButton1Click:Connect(function()
         end
     end
 
-    createNotification("No Fog", "No Fog enabled")
+    
 
     task.wait(0.15)
     noFogBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
@@ -5258,9 +5258,9 @@ do
 
         if instantBuyEnabled then
             enableInstantBuy()
-            createNotification("Instant Interact", "ON")
+            
         else
-            createNotification("Instant Interact", "OFF")
+            
         end
     end
 
@@ -5289,7 +5289,7 @@ unlockCameraBtn.MouseButton1Click:Connect(function()
         end)
     end
 
-    createNotification("Unlock Camera", "Camera Unlocked")
+    
 end)
 do
     local mobileShiftLockEnabled = false
@@ -5459,11 +5459,11 @@ end
         if mobileShiftLockEnabled and isMobileDevice() then
             createMobileShiftLockButton()
             stopMobileShiftLock()
-            createNotification("Mobile ShiftLock", "ON")
+            
         else
             stopMobileShiftLock()
             destroyMobileShiftLockButton()
-            createNotification("Mobile ShiftLock", "OFF")
+            
         end
     end
 
@@ -6166,7 +6166,7 @@ tpToolBtn.BackgroundTransparency = 0
     local player = LocalPlayer
     
     if player.Backpack:FindFirstChild("Click TP") then
-        createNotification("Teleport Tool", "Tool already in backpack")
+        
         return
     end
 
@@ -6184,7 +6184,7 @@ tpToolBtn.BackgroundTransparency = 0
     end)
 
     tool.Parent = player.Backpack
-    createNotification("Teleport Tool", "Click TP tool added")
+    
 end)
 task.delay(0.2, function()
     if tpToolBtn then
@@ -6199,12 +6199,12 @@ ctrlClickTPBtn.MouseButton1Click:Connect(function()
         ctrlClickTPBtn.Text = "Ctrl Click TP: ON"
         ctrlClickTPBtn.BackgroundColor3 = Color3.fromRGB(50, 200, 120)
         ctrlClickTPBtn.BackgroundTransparency = 0
-        createNotification("Ctrl Click TP", "ON")
+        
     else
         ctrlClickTPBtn.Text = "Ctrl Click TP: OFF"
         ctrlClickTPBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
         ctrlClickTPBtn.BackgroundTransparency = 0.35
-        createNotification("Ctrl Click TP", "OFF")
+        
     end
 end)
 
@@ -6228,7 +6228,7 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
 
         if newKey ~= Enum.KeyCode.Unknown then
             if S.waitingForKeybind ~= "Menu" and newKey == (S.menuKeyCode or Enum.KeyCode.RightControl) then
-                createNotification("Keybind", keyCodeToText(newKey) .. " is reserved for menu")
+                
             else
                 if S.waitingForKeybind == "Invisible" then
                     S.invisKeyCode = newKey
@@ -6239,7 +6239,7 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
                         S.btnRefs.invisBindBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
                         S.btnRefs.invisBindBtn.BackgroundTransparency = 0.35
                     end
-                    createNotification("Keybind", "Invisible = " .. tostring(newKey):gsub("Enum.KeyCode.", ""))
+                    
 
                                 elseif S.waitingForKeybind == "Fly" then
                     S.flyKeyCode = newKey
@@ -6249,7 +6249,7 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
                         S.btnRefs.flyBindBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
                         S.btnRefs.flyBindBtn.BackgroundTransparency = 0.35
                     end
-                    createNotification("Keybind", "Fly = " .. tostring(newKey):gsub("Enum.KeyCode.", ""))
+                    
 
                 elseif S.waitingForKeybind == "Noclip" then
                     S.noclipKeyCode = newKey
@@ -6259,7 +6259,7 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
                         S.btnRefs.noclipBindBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
                         S.btnRefs.noclipBindBtn.BackgroundTransparency = 0.35
                     end
-                    createNotification("Keybind", "Noclip = " .. tostring(newKey):gsub("Enum.KeyCode.", ""))
+                    
 
                 elseif S.waitingForKeybind == "Menu" then
                     S.menuKeyCode = newKey
@@ -6269,7 +6269,7 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
                         S.btnRefs.menuBindBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
                         S.btnRefs.menuBindBtn.BackgroundTransparency = 0.35
                     end
-                    createNotification("Keybind", "Menu = " .. tostring(newKey):gsub("Enum.KeyCode.", ""))
+                    
                 end
             end
         end
@@ -6305,10 +6305,10 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
 
         if S.flyEnabled then
     startFly()
-    createNotification("Fly", "ON")
+    
 else
     stopFly()
-    createNotification("Fly", "OFF")
+    
 end
 
         updateFlyFloatVisual()
@@ -6327,10 +6327,10 @@ end
 
         if S.noclipEnabled then
     startNoclip()
-    createNotification("Noclip", "ON")
+    
 else
     stopNoclip()
-    createNotification("Noclip", "OFF")
+    
 end
 
         updateNoclipFloatVisual()
