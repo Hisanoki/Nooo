@@ -1215,7 +1215,7 @@ local function SkidFling(TargetPlayer)
     if Accessory and Accessory:FindFirstChild("Handle") then Handle = Accessory.Handle end
 
     if Character and Humanoid and RootPart then
-        if RootPart.Velocity.Magnitude < 50 then
+        if RootPart.AssemblyLinearVelocity.Magnitude < 50 then
             getgenv().OldPos = RootPart.CFrame
         end
         if THumanoid and THumanoid.Sit then
@@ -1233,8 +1233,8 @@ local function SkidFling(TargetPlayer)
         local FPos = function(BasePart, Pos, Ang)
             RootPart.CFrame = CFrame.new(BasePart.Position) * Pos * Ang
             Character:SetPrimaryPartCFrame(CFrame.new(BasePart.Position) * Pos * Ang)
-            RootPart.Velocity = Vector3.new(9e7, 9e7 * 10, 9e7)
-            RootPart.RotVelocity = Vector3.new(9e8, 9e8, 9e8)
+            RootPart.AssemblyLinearVelocity = Vector3.new(9e7, 9e7 * 10, 9e7)
+            RootPart.AssemblyAngularVelocity = Vector3.new(9e8, 9e8, 9e8)
         end
 
         local SFBasePart = function(BasePart)
@@ -1243,7 +1243,7 @@ local function SkidFling(TargetPlayer)
             local Angle = 0
             repeat
                 if RootPart and THumanoid then
-                    if BasePart.Velocity.Magnitude < 50 then
+                    if BasePart.AssemblyLinearVelocity.Magnitude < 50 then
                         Angle = Angle + 100
                         FPos(BasePart, CFrame.new(0, 1.5, 0) + THumanoid.MoveDirection * BasePart.Velocity.Magnitude / 1.25, CFrame.Angles(math.rad(Angle),0,0))
                         task.wait()
@@ -1307,7 +1307,8 @@ local function SkidFling(TargetPlayer)
                 Humanoid:ChangeState("GettingUp")
                 for _, part in pairs(Character:GetChildren()) do
                     if part:IsA("BasePart") then
-                        part.Velocity, part.RotVelocity = Vector3.new(), Vector3.new()
+                        part.AssemblyLinearVelocity = Vector3.new()
+                        part.AssemblyAngularVelocity = Vector3.new()
                     end
                 end
                 task.wait()
@@ -5325,7 +5326,7 @@ local function StartFling()
     end
     S.FlingActive = true
     UpdateFlingStatus()
-    FlingMessage("Fling Started", "Flinging " .. CountFlingTargets() .. " target(s)", 2)
+    showCustomNotif("StarCrow Says:\n\n   Flinging " .. CountFlingTargets() .. " target(s)", 2, true)
 
     spawn(function()
         while S.FlingActive do
@@ -5357,7 +5358,12 @@ local function StopFling()
     if not S.FlingActive then return end
     S.FlingActive = false
     UpdateFlingStatus()
-    FlingMessage("Fling Stopped", "Fling has been stopped", 2)
+    if S.flingStartBtn then
+        S.flingStartBtn.Text = "FLING PLAYER : OFF"
+        S.flingStartBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
+        S.flingStartBtn.BackgroundTransparency = 0.35
+    end
+    showCustomNotif("StarCrow Says:\n\n   Fling has been stopped", 2, true)
 end
 
 --  FLING BUTTON EVENTS 
@@ -5365,10 +5371,11 @@ S.flingStartBtn.MouseButton1Click:Connect(function()
 
     if S.FlingActive then
         StopFling()
-        S.flingStartBtn.Text = "FLING PLAYER : OFF"
-        S.flingStartBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
-        S.flingStartBtn.BackgroundTransparency = 0.35
     else
+        if CountFlingTargets() == 0 then
+            showCustomNotif("StarCrow Says:\n\n   Select a player first!", 2, "fail")
+            return
+        end
         S.flingStartBtn.Text = "FLING PLAYER : ON"
         S.flingStartBtn.BackgroundColor3 = Color3.fromRGB(50, 200, 120)
         S.flingStartBtn.BackgroundTransparency = 0
