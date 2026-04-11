@@ -1,7 +1,3 @@
--- ============================================================
---                   Cc Hub - Hero Selector
--- ============================================================
-
 local Players          = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
 local LocalPlayer      = Players.LocalPlayer
@@ -17,6 +13,7 @@ local HEROES = {
    
     "Spider Man [Ultimate 2024]",
     "Spider Man [Toei]",
+    "Chainsaw Man",
     "Killer Queen",
     "Kaneki Ken",
     "Kamen Rider Evol",
