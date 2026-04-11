@@ -1336,25 +1336,28 @@ task.spawn(function()
 end)
 
     local icon = Instance.new("ImageLabel")
-    if useCheck then
-    icon.Size = UDim2.new(0, 20, 0, 20)
-    icon.Position = UDim2.new(0, 14, 0, 10)
-else
-    icon.Size = UDim2.new(0, 40, 0, 40)
-    icon.Position = UDim2.new(0, 14, 0.5, -20)
-end
+    if useCheck == true then
+        icon.Size = UDim2.new(0, 20, 0, 20)
+        icon.Position = UDim2.new(0, 14, 0, 10)
+    elseif useCheck == "fail" then
+        icon.Size = UDim2.new(0, 28, 0, 28)
+        icon.Position = UDim2.new(0, 10, 0, 6)
+    else
+        icon.Size = UDim2.new(0, 40, 0, 40)
+        icon.Position = UDim2.new(0, 14, 0.5, -20)
+    end
     icon.BackgroundTransparency = 1
-    if useCheck then
-    icon.Image = "rbxassetid://13132087769"
-    
-    
-else
-    icon.Image = "rbxassetid://73309457774546"
-end
+    if useCheck == true then
+        icon.Image = "rbxassetid://13132087769"
+    elseif useCheck == "fail" then
+        icon.Image = "rbxassetid://5276992751"
+    else
+        icon.Image = "rbxassetid://73309457774546"
+    end
     icon.ZIndex = 2
     icon.Parent = notifFrame
 
-if useCheck then
+if useCheck == true or useCheck == "fail" then
         -- Title label: "StarCrow Says:" — sát bên icon, nổi bật
         local titleLabel = Instance.new("TextLabel")
         titleLabel.Size = UDim2.new(1, -44, 0, 24)
@@ -3054,18 +3057,18 @@ local function doUseTool()
     if not S.feUseInput then return end
     local name = S.feUseInput.Text:match("^%s*(.-)%s*$")
     if name == "" then
-        createNotification("Use Tool", "Item name not entered")
+        showCustomNotif("StarCrow Says:\n\n   Item name not entered", 3, "fail")
         return
     end
     local char = LocalPlayer.Character
     local human = char and char:FindFirstChildOfClass("Humanoid")
     if not char or not human then
-        createNotification("Use Tool", "Character not found")
+        showCustomNotif("StarCrow Says:\n\n   Character not found", 3, "fail")
         return
     end
     local tool = findUseTool(name)
     if not tool then
-        createNotification("Use Tool", "Not found " .. name)
+        showCustomNotif("StarCrow Says:\n\n   Not found: " .. name, 3, "fail")
         return
     end
     S.useCooling = true
@@ -3078,7 +3081,7 @@ local function doUseTool()
     if eq and eq.Name:lower() == name:lower() then
         eq:Activate()
     else
-        createNotification("Use Tool", "Equip failed")
+        showCustomNotif("StarCrow Says:\n\n   Equip failed", 3, "fail")
     end
     task.wait(0.28)
     if S.useFloatBtn then S.useFloatBtn.Text = "USE" end
@@ -6006,7 +6009,7 @@ joinJobBtn.MouseButton1Click:Connect(function()
     local jobId = jobIdInput.Text
 
     if jobId ~= "" then
-        
+
         showCustomNotif("StarCrow Says:\n\n   Preparing to join server...", 3, true)
 
         task.wait(1)
@@ -6016,12 +6019,31 @@ joinJobBtn.MouseButton1Click:Connect(function()
             queue('loadstring(game:HttpGet("https://raw.githubusercontent.com/Hisanoki/Nooo/refs/heads/main/StarCrow"))()')
         end
 
-        game:GetService("TeleportService"):TeleportToPlaceInstance(
-            game.PlaceId,
-            jobId,
-            game.Players.LocalPlayer
-        )
+        local TeleportService = game:GetService("TeleportService")
 
+        -- Lắng nghe fail event trước khi teleport
+        local failConn
+        failConn = TeleportService.TeleportInitFailed:Connect(function(player, result, errMsg)
+            if player == game.Players.LocalPlayer then
+                failConn:Disconnect()
+                showCustomNotif("StarCrow Says:\n\n   Join failed: " .. tostring(errMsg or result), 4, "fail")
+            end
+        end)
+
+        local ok, err = pcall(function()
+            TeleportService:TeleportToPlaceInstance(
+                game.PlaceId,
+                jobId,
+                game.Players.LocalPlayer
+            )
+        end)
+        if not ok then
+            failConn:Disconnect()
+            showCustomNotif("StarCrow Says:\n\n   Invalid Job ID!", 3, "fail")
+        end
+
+    else
+        showCustomNotif("StarCrow Says:\n\n   Please enter a Job ID!", 3, "fail")
     end
 
 end)
@@ -6038,13 +6060,13 @@ tpPosBtn.MouseButton1Click:Connect(function()
 
     local text = posInput.Text
     if text == "" then
-        showCustomNotif("StarCrow Says:\n\n   Please enter a position first!", 3, true)
+        showCustomNotif("StarCrow Says:\n\n   Please enter a position first!", 3, "fail")
         return
     end
 
     local parts = string.split(text, ",")
     if #parts < 3 then
-        showCustomNotif("StarCrow Says:\n\n   Invalid format! Use: X, Y, Z", 3, true)
+        showCustomNotif("StarCrow Says:\n\n   Invalid format! Use: X, Y, Z", 3, "fail")
         return
     end
 
@@ -6053,7 +6075,7 @@ tpPosBtn.MouseButton1Click:Connect(function()
     local z = tonumber(parts[3] and parts[3]:match("^%s*(.-)%s*$"))
 
     if not x or not y or not z then
-        showCustomNotif("StarCrow Says:\n\n   Invalid numbers! Use: X, Y, Z", 3, true)
+        showCustomNotif("StarCrow Says:\n\n   Invalid numbers! Use: X, Y, Z", 3, "fail")
         return
     end
 
@@ -6064,10 +6086,9 @@ tpPosBtn.MouseButton1Click:Connect(function()
 
     if hrp then
         hrp.CFrame = S.manualPositionCFrame
-
         showCustomNotif("StarCrow Says:\n\n   Teleported to position!", 3, true)
     else
-        showCustomNotif("StarCrow Says:\n\n   HumanoidRootPart not found!", 3, true)
+        showCustomNotif("StarCrow Says:\n\n   HumanoidRootPart not found!", 3, "fail")
     end
 
 end)
@@ -6078,7 +6099,7 @@ copyPosBtn.MouseButton1Click:Connect(function()
     local hrp = char and char:FindFirstChild("HumanoidRootPart")
 
     if not hrp then
-        showCustomNotif("StarCrow Says:\n\n   HumanoidRootPart not found!", 3, true)
+        showCustomNotif("StarCrow Says:\n\n   HumanoidRootPart not found!", 3, "fail")
         return
     end
 
