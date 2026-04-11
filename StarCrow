@@ -4696,7 +4696,11 @@ end)
         -- Float btn size
         pcall(function()
             if cfg.floatBtnSize then
-                S.floatBtnSize = cfg.floatBtnSize
+                if S.updateFloatSizeVisuals then
+                    S.updateFloatSizeVisuals(cfg.floatBtnSize)
+                else
+                    S.floatBtnSize = cfg.floatBtnSize
+                end
             end
         end)
         pcall(function()
@@ -4913,6 +4917,14 @@ local function keyCodeToText(keyCode)
 end
 
 local function setBindButtonWaiting(btn)
+    
+    local s = Instance.new("Sound")
+    s.SoundId = "rbxassetid://116394299154002"
+    s.Volume = 0.5
+    s.Parent = game:GetService("SoundService")
+    s:Play()
+    game:GetService("Debris"):AddItem(s, 2)
+
     btn.Text = "..."
     btn.BackgroundColor3 = Color3.fromRGB(50, 200, 120)
     btn.BackgroundTransparency = 0
@@ -5054,9 +5066,26 @@ end
 if S.flyFloatBtn then
     S.flyFloatBtn.Size = UDim2.new(0, S.floatBtnSize, 0, S.floatBtnSize)
 end
-if S.noclipFloatBtn then
-            S.noclipFloatBtn.Size = UDim2.new(0, S.floatBtnSize, 0, S.floatBtnSize)
-        end
+if S.noclipFloatBtn then S.noclipFloatBtn.Size = UDim2.new(0, S.floatBtnSize, 0, S.floatBtnSize) end
+    end
+
+    
+    S.updateFloatSizeVisuals = function(newSize)
+        curVal = math.clamp(newSize, MIN_FLOAT_SIZE, MAX_FLOAT_SIZE)
+        S.floatBtnSize = curVal
+        sizeValueLabel.Text = "Float Size: " .. tostring(S.floatBtnSize)
+
+        local fillRel = (curVal - MIN_FLOAT_SIZE) / (MAX_FLOAT_SIZE - MIN_FLOAT_SIZE)
+        fill.Size = UDim2.new(fillRel, 0, 1, 0)
+        thumb.Position = UDim2.new(fillRel, 0, 0.5, 0)
+
+        if S.auraFloatBtn then S.auraFloatBtn.Size = UDim2.new(0, S.floatBtnSize, 0, S.floatBtnSize) end
+        if S.dropFloatBtn then S.dropFloatBtn.Size = UDim2.new(0, S.floatBtnSize, 0, S.floatBtnSize) end
+        if S.equipAllFloatBtn then S.equipAllFloatBtn.Size = UDim2.new(0, S.floatBtnSize, 0, S.floatBtnSize) end
+        if S.useFloatBtn then S.useFloatBtn.Size = UDim2.new(0, S.floatBtnSize, 0, S.floatBtnSize) end
+        if S.invisFloatBtn then S.invisFloatBtn.Size = UDim2.new(0, S.floatBtnSize, 0, S.floatBtnSize) end
+        if S.flyFloatBtn then S.flyFloatBtn.Size = UDim2.new(0, S.floatBtnSize, 0, S.floatBtnSize) end
+        if S.noclipFloatBtn then S.noclipFloatBtn.Size = UDim2.new(0, S.floatBtnSize, 0, S.floatBtnSize) end
     end
 
     sliderBtn.InputBegan:Connect(function(input)
@@ -6952,7 +6981,9 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
     local hit = mouse.Hit
     if not hit then return end
 
-    hrp.CFrame = hit + Vector3.new(0, 5, 0)
+    
+    local pos = hit.Position + Vector3.new(0, 2.5, 0)
+    hrp.CFrame = CFrame.new(pos)
 end)
 --  LOCAL PLAYER EVENTS 
 
