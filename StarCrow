@@ -2648,7 +2648,7 @@ instantBuyBtn.BackgroundTransparency = 0.35
 instantBuyBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
 S.btnRefs.instantBuyBtn = instantBuyBtn
 
-local unlockCameraBtn = createTransparentButton("Unlock Camera", Color3.fromRGB(38, 38, 38), panel6)
+local unlockCameraBtn = createTransparentButton("To Third Person Camera", Color3.fromRGB(38, 38, 38), panel6)
 unlockCameraBtn.BackgroundTransparency = 0.35
 unlockCameraBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
 local mobileShiftLockBtn = createTransparentButton("Mobile ShiftLock: OFF", Color3.fromRGB(38, 38, 38), panel6)
@@ -5854,7 +5854,6 @@ unlockCameraBtn.MouseButton1Click:Connect(function()
     end)
 end)
 
-
 do
     local mobileShiftLockEnabled = false
     local mobileShiftLockActive = false
@@ -6688,32 +6687,41 @@ task.delay(0.2, function()
     end
 end)
 tpToolBtn.MouseButton1Click:Connect(function()
-flashButton(tpToolBtn)
-tpToolBtn.BackgroundColor3 = Color3.fromRGB(50, 200, 120)
-tpToolBtn.BackgroundTransparency = 0
-    local player = LocalPlayer
+    flashButton(tpToolBtn)
+    tpToolBtn.BackgroundColor3 = Color3.fromRGB(50, 200, 120)
+    tpToolBtn.BackgroundTransparency = 0
     
-    if player.Backpack:FindFirstChild("Click TP") then
+    local function giveTool()
+        if LocalPlayer.Backpack:FindFirstChild("Tp tool") or (LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Tp tool")) then
+            return
+        end
+
+        local tool = Instance.new("Tool")
+        tool.RequiresHandle = false
+        tool.Name = "Tp tool"
         
-        return
+        tool.Activated:Connect(function()
+            if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+                local pos = mouse.Hit.Position + Vector3.new(0, 2.5, 0)
+                LocalPlayer.Character.HumanoidRootPart.CFrame = CFrame.new(pos)
+            end
+        end)
+        
+        tool.Parent = LocalPlayer.Backpack
     end
 
-    local tool = Instance.new("Tool")
-    tool.Name = "Click TP"
-    tool.RequiresHandle = false
-    tool.CanBeDropped = false
+    if LocalPlayer.Character then
+        giveTool()
+    end
 
-    tool.Activated:Connect(function()
-        local char = player.Character
-        if not char then return end
-        local hrp = char:FindFirstChild("HumanoidRootPart")
-        if not hrp then return end
-        hrp.CFrame = mouse.Hit + Vector3.new(0,5,0)
-    end)
-
-    tool.Parent = player.Backpack
-    
+    if not S.tpToolRespawnConn then
+        S.tpToolRespawnConn = LocalPlayer.CharacterAdded:Connect(function()
+            task.wait(1) 
+            giveTool()
+        end)
+    end
 end)
+
 task.delay(0.2, function()
     if tpToolBtn then
         tpToolBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
