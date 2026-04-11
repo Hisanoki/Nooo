@@ -966,6 +966,14 @@ local function createTransparentButton(text, color, parent)
     local c = Instance.new("UICorner")
     c.CornerRadius = UDim.new(0, 4)
     c.Parent = btn
+    btn.MouseButton1Click:Connect(function()
+        local s = Instance.new("Sound")
+        s.SoundId = "rbxassetid://116394299154002"
+        s.Volume = 0.5
+        s.Parent = game:GetService("SoundService")
+        s:Play()
+        game:GetService("Debris"):AddItem(s, 2)
+    end)
     return btn
 end
 
@@ -4205,6 +4213,13 @@ for i, btn in ipairs(tabBtns) do
     btn.MouseButton1Click:Connect(function()
         local TS = game:GetService("TweenService")
 
+        local s = Instance.new("Sound")
+        s.SoundId = "rbxassetid://116394299154002"
+        s.Volume = 0.5
+        s.Parent = game:GetService("SoundService")
+        s:Play()
+        game:GetService("Debris"):AddItem(s, 2)
+
         -- 1) bounce nhấn xuống → nảy lên
         TS:Create(btn, TweenInfo.new(0.07, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
             Size = UDim2.new(1, -8, 0, 26),
@@ -6038,6 +6053,12 @@ local function closeMenu()
 end
 
 local function toggleMenu()
+    local s = Instance.new("Sound")
+    s.SoundId = "rbxassetid://116394299154002"
+    s.Volume = 0.5
+    s.Parent = game:GetService("SoundService")
+    s:Play()
+    game:GetService("Debris"):AddItem(s, 2)
     if mainFrame.Visible then
         closeMenu()
     else
@@ -6051,6 +6072,12 @@ toggleBtn.MouseButton1Click:Connect(function()
 end)
 
 closeButton.MouseButton1Click:Connect(function()
+    local s = Instance.new("Sound")
+    s.SoundId = "rbxassetid://116394299154002"
+    s.Volume = 0.5
+    s.Parent = game:GetService("SoundService")
+    s:Play()
+    game:GetService("Debris"):AddItem(s, 2)
     closeMenu()
 end)
 
