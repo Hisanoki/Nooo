@@ -1219,7 +1219,7 @@ local function SkidFling(TargetPlayer)
             getgenv().OldPos = RootPart.CFrame
         end
         if THumanoid and THumanoid.Sit then
-            return FlingMessage("Error", TargetPlayer.Name .. " is sitting", 2)
+           
         end
         if THead then
             workspace.CurrentCamera.CameraSubject = THead
@@ -1293,7 +1293,7 @@ local function SkidFling(TargetPlayer)
         elseif Handle then
             SFBasePart(Handle)
         else
-            return FlingMessage("Error", TargetPlayer.Name .. " has no valid parts", 2)
+            
         end
 
         BV:Destroy()
@@ -1316,7 +1316,7 @@ local function SkidFling(TargetPlayer)
             workspace.FallenPartsDestroyHeight = getgenv().FPDH
         end
     else
-        return FlingMessage("Error", "Your character is not ready", 2)
+        
     end
 end
 --  WALK FLING 
