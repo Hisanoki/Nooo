@@ -2648,6 +2648,33 @@ instantBuyBtn.BackgroundTransparency = 0.35
 instantBuyBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
 S.btnRefs.instantBuyBtn = instantBuyBtn
 
+
+S.firstPersonCameraBtn = createTransparentButton("To First Person Camera", Color3.fromRGB(38, 38, 38), panel6)
+S.firstPersonCameraBtn.BackgroundTransparency = 0.35
+S.firstPersonCameraBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
+
+
+S.firstPersonCameraBtn.MouseButton1Click:Connect(function()
+    flashButton(S.firstPersonCameraBtn)
+    
+    local cam = workspace.CurrentCamera
+    local char = LocalPlayer.Character
+    
+    if cam and char then
+        local hum = char:FindFirstChildWhichIsA("Humanoid")
+        if hum then
+            cam.CameraSubject = hum
+        end
+        cam.CameraType = Enum.CameraType.Custom
+    end
+    
+    LocalPlayer.CameraMode = Enum.CameraMode.LockFirstPerson
+    LocalPlayer.CameraMinZoomDistance = 0.5
+    LocalPlayer.CameraMaxZoomDistance = 0.5
+    
+    pcall(function() game:GetService("RunService"):UnbindFromRenderStep("StarCrow_UnlockCam_Force") end)
+end)
+
 local unlockCameraBtn = createTransparentButton("To Third Person Camera", Color3.fromRGB(38, 38, 38), panel6)
 unlockCameraBtn.BackgroundTransparency = 0.35
 unlockCameraBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
@@ -6652,11 +6679,35 @@ S.autoTPBtn.MouseButton1Click:Connect(function()
                 if targetChar then
                     local targetHRP = targetChar:FindFirstChild("HumanoidRootPart")
                     if targetHRP then
-                        myHRP.CFrame = targetHRP.CFrame + Vector3.new(0,3,0)
+                        
+                        myHRP.CFrame = targetHRP.CFrame * CFrame.new(0, 0, 2.5)
                     end
                 end
             end
         end)
+    end
+end)
+
+teleportBtn.MouseButton1Click:Connect(function()
+    flashButton(teleportBtn)
+    teleportBtn.BackgroundColor3 = Color3.fromRGB(50, 200, 120)
+    teleportBtn.BackgroundTransparency = 0
+    
+    local myChar = LocalPlayer.Character
+    if not myChar then return end
+    local myHRP = myChar:FindFirstChild("HumanoidRootPart")
+    if not myHRP then return end
+
+    for player,_ in pairs(S.selectedTPPlayers) do
+        local targetChar = player.Character
+        if targetChar then
+            local targetHRP = targetChar:FindFirstChild("HumanoidRootPart")
+            if targetHRP then
+               
+                myHRP.CFrame = targetHRP.CFrame * CFrame.new(0, 0, 2.5)
+                break
+            end
+        end
     end
 end)
 
@@ -6691,35 +6742,32 @@ tpToolBtn.MouseButton1Click:Connect(function()
     tpToolBtn.BackgroundColor3 = Color3.fromRGB(50, 200, 120)
     tpToolBtn.BackgroundTransparency = 0
     
-    local function giveTool()
-        if LocalPlayer.Backpack:FindFirstChild("Tp tool") or (LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Tp tool")) then
-            return
+    local backpack = LocalPlayer:FindFirstChild("Backpack")
+    local char = LocalPlayer.Character
+    
+   
+    if not backpack then return end
+    
+    
+    if backpack:FindFirstChild("Tp tool") or (char and char:FindFirstChild("Tp tool")) then
+        return -- Có rồi thì không tạo thêm
+    end
+
+    
+    local tool = Instance.new("Tool")
+    tool.RequiresHandle = false
+    tool.Name = "Tp tool"
+    
+    tool.Activated:Connect(function()
+        local currentChar = LocalPlayer.Character
+        if currentChar and currentChar:FindFirstChild("HumanoidRootPart") then
+            local pos = mouse.Hit.Position + Vector3.new(0, 2.5, 0)
+            currentChar.HumanoidRootPart.CFrame = CFrame.new(pos)
         end
-
-        local tool = Instance.new("Tool")
-        tool.RequiresHandle = false
-        tool.Name = "Tp tool"
-        
-        tool.Activated:Connect(function()
-            if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
-                local pos = mouse.Hit.Position + Vector3.new(0, 2.5, 0)
-                LocalPlayer.Character.HumanoidRootPart.CFrame = CFrame.new(pos)
-            end
-        end)
-        
-        tool.Parent = LocalPlayer.Backpack
-    end
-
-    if LocalPlayer.Character then
-        giveTool()
-    end
-
-    if not S.tpToolRespawnConn then
-        S.tpToolRespawnConn = LocalPlayer.CharacterAdded:Connect(function()
-            task.wait(1) 
-            giveTool()
-        end)
-    end
+    end)
+    
+    
+    tool.Parent = backpack
 end)
 
 task.delay(0.2, function()
