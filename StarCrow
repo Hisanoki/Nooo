@@ -5805,27 +5805,56 @@ do
         setInstantBuyEnabled(not instantBuyEnabled)
     end)
 end
+local RunService = game:GetService("RunService")
+
 unlockCameraBtn.MouseButton1Click:Connect(function()
     flashButton(unlockCameraBtn)
 
-    pcall(function()
-        LocalPlayer.CameraMode = Enum.CameraMode.Classic
-    end)
-
-    pcall(function()
-        LocalPlayer.CameraMinZoomDistance = 0.5
-        LocalPlayer.CameraMaxZoomDistance = 100000
-    end)
-
     local cam = workspace.CurrentCamera
     if cam then
-        pcall(function()
-            cam.CameraType = Enum.CameraType.Custom
-        end)
+        cam:Destroy() 
+    end
+    
+    task.wait(0.1)
+    
+    local char = LocalPlayer.Character
+    if not char then
+        repeat task.wait() until LocalPlayer.Character
+        char = LocalPlayer.Character
+    end
+    
+    cam = workspace.CurrentCamera
+    if cam and char then
+        local hum = char:FindFirstChildWhichIsA("Humanoid")
+        if hum then
+            cam.CameraSubject = hum
+        end
+        cam.CameraType = Enum.CameraType.Custom
+    end
+    
+    LocalPlayer.CameraMinZoomDistance = 0.5
+    LocalPlayer.CameraMaxZoomDistance = 100000 
+    LocalPlayer.CameraMode = Enum.CameraMode.Classic
+    
+    if char and char:FindFirstChild("Head") then
+        char.Head.Anchored = false
     end
 
-    
+    RunService:BindToRenderStep("StarCrow_UnlockCam_Force", Enum.RenderPriority.Camera.Value + 99, function()
+        pcall(function()
+            if LocalPlayer.CameraMode ~= Enum.CameraMode.Classic then
+                LocalPlayer.CameraMode = Enum.CameraMode.Classic
+            end
+            
+            local currentCam = workspace.CurrentCamera
+            if currentCam and currentCam.CameraType ~= Enum.CameraType.Custom then
+                currentCam.CameraType = Enum.CameraType.Custom
+            end
+        end)
+    end)
 end)
+
+
 do
     local mobileShiftLockEnabled = false
     local mobileShiftLockActive = false
