@@ -4969,9 +4969,6 @@ end
     end
 end)
     end)
-
-    
-
     do
     local deleteDivider = Instance.new("Frame")
     deleteDivider.Parent = panel10
