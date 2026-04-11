@@ -194,6 +194,33 @@ local function isAlive(character)
     return humanoid and humanoid.Health > 0
 end
 
+--  FLOAT STROKE ANIMATION HELPER
+
+local function setFloatStrokeActive(stroke, isActive)
+    if not stroke then return end
+    local TweenService = game:GetService("TweenService")
+    local old = stroke:FindFirstChildOfClass("UIGradient")
+    if old then old:Destroy() end
+    if isActive then
+        stroke.Color = Color3.fromRGB(255, 255, 255)
+        stroke.Thickness = 2.2
+        local grad = Instance.new("UIGradient")
+        grad.Color = ColorSequence.new({
+            ColorSequenceKeypoint.new(0,   Color3.fromRGB(170, 70, 255)),
+            ColorSequenceKeypoint.new(0.5, Color3.fromRGB(0, 180, 255)),
+            ColorSequenceKeypoint.new(1,   Color3.fromRGB(170, 70, 255)),
+        })
+        grad.Rotation = 0
+        grad.Parent = stroke
+        task.spawn(function()
+            TweenService:Create(grad, TweenInfo.new(3, Enum.EasingStyle.Linear, Enum.EasingDirection.InOut, -1), { Rotation = 360 }):Play()
+        end)
+    else
+        stroke.Color = Color3.fromRGB(62, 62, 62)
+        stroke.Thickness = 1.8
+    end
+end
+
 --  INVISIBILITY 
 
 local function playInvisSound()
@@ -237,8 +264,7 @@ local function toggleInvisibility()
 end
 
 if S.invisFloatStroke then
-    S.invisFloatStroke.Color = Color3.fromRGB(50, 200, 120)
-    S.invisFloatStroke.Thickness = 2.2
+    setFloatStrokeActive(S.invisFloatStroke, true)
 end
         
     else
@@ -258,8 +284,7 @@ end
 end
 
 if S.invisFloatStroke then
-    S.invisFloatStroke.Color = Color3.fromRGB(62, 62, 62)
-    S.invisFloatStroke.Thickness = 1.8
+    setFloatStrokeActive(S.invisFloatStroke, false)
 end
         
     end
@@ -2640,16 +2665,8 @@ end
 
 local function updateNoclipFloatVisual()
     if not S.noclipFloatBtn or not S.noclipFloatStroke then return end
-
-    if S.noclipEnabled then
-        S.noclipFloatStroke.Color = Color3.fromRGB(50, 200, 120)
-        S.noclipFloatStroke.Thickness = 2.2
-        S.noclipFloatBtn.Text = "Noclip"
-    else
-        S.noclipFloatStroke.Color = Color3.fromRGB(62, 62, 62)
-        S.noclipFloatStroke.Thickness = 1.8
-        S.noclipFloatBtn.Text = "Noclip"
-    end
+    setFloatStrokeActive(S.noclipFloatStroke, S.noclipEnabled)
+    S.noclipFloatBtn.Text = "Noclip"
 end
 
 local function destroyNoclipFloat()
@@ -2726,16 +2743,8 @@ end
 
 local function updateInvisFloatVisual()
     if not S.invisFloatBtn or not S.invisFloatStroke then return end
-
-    if S.isInvisible then
-        S.invisFloatStroke.Color = Color3.fromRGB(50, 200, 120)
-        S.invisFloatStroke.Thickness = 2.2
-        S.invisFloatBtn.Text = "Invisible"
-    else
-        S.invisFloatStroke.Color = Color3.fromRGB(62, 62, 62)
-        S.invisFloatStroke.Thickness = 1.8
-        S.invisFloatBtn.Text = "Invisible"
-    end
+    setFloatStrokeActive(S.invisFloatStroke, S.isInvisible)
+    S.invisFloatBtn.Text = "Invisible"
 end
 
 local function destroyInvisFloat()
@@ -2793,16 +2802,8 @@ local function createInvisFloat()
 end
 local function updateFlyFloatVisual()
     if not S.flyFloatBtn or not S.flyFloatStroke then return end
-
-    if S.flyEnabled then
-        S.flyFloatStroke.Color = Color3.fromRGB(50, 200, 120)
-        S.flyFloatStroke.Thickness = 2.2
-        S.flyFloatBtn.Text = "Fly"
-    else
-        S.flyFloatStroke.Color = Color3.fromRGB(62, 62, 62)
-        S.flyFloatStroke.Thickness = 1.8
-        S.flyFloatBtn.Text = "Fly"
-    end
+    setFloatStrokeActive(S.flyFloatStroke, S.flyEnabled)
+    S.flyFloatBtn.Text = "Fly"
 end
 
 local function destroyFlyFloat()
@@ -2896,7 +2897,9 @@ local function createAuraFloat()
     S.auraFloatBtn.BorderSizePixel = 0
     S.auraFloatBtn.Text = "Aura"
     S.auraFloatBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-    S.auraFloatBtn.TextScaled = true
+    S.auraFloatBtn.TextScaled = false
+    S.auraFloatBtn.TextSize = math.max(14, math.floor(S.floatBtnSize * 0.25))
+    S.auraFloatBtn.TextWrapped = true
     S.auraFloatBtn.Font = Enum.Font.GothamBold
     S.auraFloatBtn.TextStrokeTransparency = 1
     S.auraFloatBtn.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
@@ -2914,6 +2917,7 @@ local function createAuraFloat()
     s.Thickness = 1.8
     s.Transparency = 0
     s.Parent = S.auraFloatBtn
+    setFloatStrokeActive(s, true)
 
     local getWasMoved, clearMoved = makeDraggableFloat(S.auraFloatBtn)
 
@@ -2947,7 +2951,9 @@ local function createDropFloat()
     S.dropFloatBtn.BorderSizePixel = 0
     S.dropFloatBtn.Text = "Drop\nTool"
     S.dropFloatBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-    S.dropFloatBtn.TextScaled = true
+    S.dropFloatBtn.TextScaled = false
+    S.dropFloatBtn.TextSize = math.max(14, math.floor(S.floatBtnSize * 0.25))
+    S.dropFloatBtn.TextWrapped = true
     S.dropFloatBtn.Font = Enum.Font.GothamBold
     S.dropFloatBtn.TextStrokeTransparency = 1
     S.dropFloatBtn.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
@@ -2965,6 +2971,7 @@ local function createDropFloat()
     s.Thickness = 1.8
     s.Transparency = 0
     s.Parent = S.dropFloatBtn
+    setFloatStrokeActive(s, true)
 
     local getWasMoved, clearMoved = makeDraggableFloat(S.dropFloatBtn)
 
@@ -2999,7 +3006,9 @@ local function createEquipAllFloat()
     S.equipAllFloatBtn.BorderSizePixel = 0
     S.equipAllFloatBtn.Text = "Equip\nAll"
     S.equipAllFloatBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-    S.equipAllFloatBtn.TextScaled = true
+    S.equipAllFloatBtn.TextScaled = false
+    S.equipAllFloatBtn.TextSize = math.max(14, math.floor(S.floatBtnSize * 0.25))
+    S.equipAllFloatBtn.TextWrapped = true
     S.equipAllFloatBtn.Font = Enum.Font.GothamBold
     S.equipAllFloatBtn.TextStrokeTransparency = 1
     S.equipAllFloatBtn.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
@@ -3017,6 +3026,7 @@ local function createEquipAllFloat()
     s.Thickness = 1.8
     s.Transparency = 0
     s.Parent = S.equipAllFloatBtn
+    setFloatStrokeActive(s, true)
 
     local getWasMoved, clearMoved = makeDraggableFloat(S.equipAllFloatBtn)
 
@@ -3101,7 +3111,9 @@ local function createUseFloat()
     S.useFloatBtn.BorderSizePixel = 0
     S.useFloatBtn.Text = "USE"
     S.useFloatBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-    S.useFloatBtn.TextScaled = true
+    S.useFloatBtn.TextScaled = false
+    S.useFloatBtn.TextSize = math.max(14, math.floor(S.floatBtnSize * 0.25))
+    S.useFloatBtn.TextWrapped = true
     S.useFloatBtn.Font = Enum.Font.GothamBold
     S.useFloatBtn.TextStrokeTransparency = 1
     S.useFloatBtn.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
@@ -3119,6 +3131,7 @@ local function createUseFloat()
     s.Thickness = 1.8
     s.Transparency = 0
     s.Parent = S.useFloatBtn
+    setFloatStrokeActive(s, true)
 
     local getWasMoved, clearMoved = makeDraggableFloat(S.useFloatBtn)
 
@@ -4314,9 +4327,9 @@ task.spawn(function()
 
         local loadTime = tick() - scriptStartTime
         showCustomNotif(string.format(
-            "Script has been successfully loaded in the game, Took %.2f seconds to load",
+            "StarCrow Says:\n\n   Script has been successfully loaded in the game, Took %.2f seconds to load",
             loadTime
-        ), 3.5)
+        ), 3.5, true)
 
     else
         showCustomNotif("No config found!", 3)
