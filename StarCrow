@@ -296,6 +296,15 @@ end
 
 --  HELPERS 
 
+local function _playClick()
+    local s = Instance.new("Sound")
+    s.SoundId = "rbxassetid://116394299154002"
+    s.Volume = 0.5
+    s.Parent = game:GetService("SoundService")
+    s:Play()
+    game:GetService("Debris"):AddItem(s, 2)
+end
+
 local function tableCount(t)
     local n = 0
     for _ in t do n = n + 1 end
@@ -3052,7 +3061,7 @@ local function createNoclipFloat()
 
     S.noclipFloatBtn.MouseButton1Click:Connect(function()
         if getWasMoved() then clearMoved(); return end
-
+        _playClick()
         S.noclipEnabled = not S.noclipEnabled
 
         if S.btnRefs.noclipToggle then
@@ -3128,6 +3137,7 @@ local function createInvisFloat()
 
     S.invisFloatBtn.MouseButton1Click:Connect(function()
         if getWasMoved() then clearMoved(); return end
+        _playClick()
         toggleInvisibility()
     end)
 
@@ -3188,7 +3198,7 @@ S.flyFloatBtn.Font = Enum.Font.GothamBold
 
     S.flyFloatBtn.MouseButton1Click:Connect(function()
         if getWasMoved() then clearMoved(); return end
-
+        _playClick()
         S.flySpeed = tonumber(flySpeedInput.Text) or S.flySpeed or 2
         S.flyEnabled = not S.flyEnabled
 
@@ -3256,6 +3266,7 @@ local function createAuraFloat()
 
     S.auraFloatBtn.MouseButton1Click:Connect(function()
         if getWasMoved() then clearMoved(); return end
+        _playClick()
         flashButton(S.auraFloatBtn)
         runToolAura()
     end)
@@ -3310,6 +3321,7 @@ local function createDropFloat()
 
     S.dropFloatBtn.MouseButton1Click:Connect(function()
         if getWasMoved() then clearMoved(); return end
+        _playClick()
         flashButton(S.dropFloatBtn)
         local char = LocalPlayer.Character
         if not char then return end
@@ -3368,7 +3380,7 @@ local function createEquipAllFloat()
             clearMoved()
             return
         end
-
+        _playClick()
         flashButton(S.equipAllFloatBtn)
         runEquipAllTools()
     end)
@@ -3470,6 +3482,7 @@ local function createUseFloat()
 
     S.useFloatBtn.MouseButton1Click:Connect(function()
         if getWasMoved() then clearMoved(); return end
+        _playClick()
         flashButton(S.useFloatBtn)
         doUseTool()
     end)
@@ -6767,12 +6780,14 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
 
     -- Invisible keybind
     if input.KeyCode == (S.invisKeyCode or INVIS_CONFIG.TOGGLE_KEY) then
+        _playClick()
         toggleInvisibility()
         return
     end
 
         -- Fly keybind
     if input.KeyCode == (S.flyKeyCode or Enum.KeyCode.F) then
+        _playClick()
         S.flySpeed = tonumber(S.btnRefs.flySpeedInput and S.btnRefs.flySpeedInput.Text) or S.flySpeed or 2
         S.flyEnabled = not S.flyEnabled
 
@@ -6796,6 +6811,7 @@ end
 
     -- Noclip keybind
     if input.KeyCode == (S.noclipKeyCode or Enum.KeyCode.J) then
+        _playClick()
         S.noclipEnabled = not S.noclipEnabled
 
         if S.btnRefs.noclipToggle then
