@@ -2485,14 +2485,116 @@ do
 end
 local flySpeedInput = createTransparentInput("Fly Speed", "5", panel2)
 S.btnRefs.flySpeedInput = flySpeedInput
+
+
 S.flyToggle = createTransparentButton("Fly: OFF", Color3.fromRGB(38, 38, 38), panel2)
 S.flyToggle.BackgroundTransparency = 0.35
 S.flyToggle.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
 S.btnRefs.flyToggle = S.flyToggle
+
+S.vehicleFlyEnabled = false
+S.vehicleFlyBtn = createTransparentButton("Vehicle Fly: OFF", Color3.fromRGB(38, 38, 38), panel2)
+S.vehicleFlyBtn.BackgroundTransparency = 0.35
+S.vehicleFlyBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
+S.btnRefs.vehicleFlyBtn = S.vehicleFlyBtn
+
+S.stopVehicleFly = function()
+    if S.vFlyConnection then S.vFlyConnection:Disconnect(); S.vFlyConnection = nil end
+    if S.vFlyBV then S.vFlyBV:Destroy(); S.vFlyBV = nil end
+    if S.vFlyBG then S.vFlyBG:Destroy(); S.vFlyBG = nil end
+end
+
+S.startVehicleFly = function()
+    S.stopVehicleFly()
+    
+    local char = LocalPlayer.Character
+    if not char then return end
+    local hum = char:FindFirstChildWhichIsA("Humanoid")
+    if not hum or not hum.SeatPart then return end
+    
+    local vehicle = hum.SeatPart:FindFirstAncestorWhichIsA("Model") or hum.SeatPart.Parent
+    local primary = vehicle.PrimaryPart or hum.SeatPart
+
+    S.vFlyBV = Instance.new("BodyVelocity")
+    S.vFlyBV.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
+    S.vFlyBV.Velocity = Vector3.zero
+    S.vFlyBV.Parent = primary
+
+    S.vFlyBG = Instance.new("BodyGyro")
+    S.vFlyBG.MaxTorque = Vector3.new(math.huge, math.huge, math.huge)
+    S.vFlyBG.P = 9e9
+    S.vFlyBG.D = 9e9
+    S.vFlyBG.CFrame = primary.CFrame
+    S.vFlyBG.Parent = primary
+    
+    S.vFlyConnection = game:GetService("RunService").Heartbeat:Connect(function()
+        local cam = workspace.CurrentCamera
+        local move = Vector3.zero
+        local moveVec = Vector3.zero
+        local uis = game:GetService("UserInputService")
+        
+        -- Đọc trục Joystick của Mobile cho Xe
+        pcall(function()
+            moveVec = require(LocalPlayer.PlayerScripts.PlayerModule):GetControls():GetMoveVector()
+        end)
+
+        if moveVec.Magnitude > 0 then
+            move += cam.CFrame.LookVector * -moveVec.Z
+            move += cam.CFrame.RightVector * moveVec.X
+        else
+            if uis:IsKeyDown(Enum.KeyCode.W) then move += cam.CFrame.LookVector end
+            if uis:IsKeyDown(Enum.KeyCode.S) then move -= cam.CFrame.LookVector end
+            if uis:IsKeyDown(Enum.KeyCode.A) then move -= cam.CFrame.RightVector end
+            if uis:IsKeyDown(Enum.KeyCode.D) then move += cam.CFrame.RightVector end
+        end
+
+        if uis:IsKeyDown(Enum.KeyCode.Space) then move += Vector3.new(0, 1, 0) end
+        if uis:IsKeyDown(Enum.KeyCode.LeftControl) or uis:IsKeyDown(Enum.KeyCode.LeftShift) then move -= Vector3.new(0, 1, 0) end
+
+        if move.Magnitude > 0 then move = move.Unit end
+
+        local speed = tonumber(S.btnRefs.flySpeedInput and S.btnRefs.flySpeedInput.Text) or S.flySpeed or 2
+        
+        if S.vFlyBV and S.vFlyBG and primary then
+            S.vFlyBV.Velocity = move * speed * 50
+            primary.AssemblyAngularVelocity = Vector3.zero
+            primary.RotVelocity = Vector3.zero
+            
+            local flatLook = Vector3.new(cam.CFrame.LookVector.X, 0, cam.CFrame.LookVector.Z)
+            if flatLook.Magnitude > 0.001 then
+                S.vFlyBG.CFrame = CFrame.lookAt(primary.Position, primary.Position + flatLook)
+            end
+        end
+    end)
+end
+
+S.vehicleFlyBtn.MouseButton1Click:Connect(function()
+    S.vehicleFlyEnabled = not S.vehicleFlyEnabled
+    S.vehicleFlyBtn.Text = S.vehicleFlyEnabled and "Vehicle Fly: ON" or "Vehicle Fly: OFF"
+    S.vehicleFlyBtn.BackgroundColor3 = S.vehicleFlyEnabled and Color3.fromRGB(50, 200, 120) or Color3.fromRGB(38, 38, 38)
+    S.vehicleFlyBtn.BackgroundTransparency = S.vehicleFlyEnabled and 0 or 0.35
+    
+    if S.vehicleFlyEnabled then
+        S.startVehicleFly()
+    else
+        S.stopVehicleFly()
+    end
+end)
+
 local flyFloatToggleBtn = createTransparentButton("Fly Float: OFF", Color3.fromRGB(38, 38, 38), panel2)
 flyFloatToggleBtn.BackgroundTransparency = 0.35
 flyFloatToggleBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
 S.btnRefs.flyFloatToggleBtn = flyFloatToggleBtn
+
+do
+    S.flyFloatDiv = Instance.new("Frame")
+    S.flyFloatDiv.Parent = panel2
+    S.flyFloatDiv.Size = UDim2.new(1, 0, 0, 2)
+    S.flyFloatDiv.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
+    S.flyFloatDiv.BackgroundTransparency = 0.2
+    S.flyFloatDiv.BorderSizePixel = 0
+end
+
 local infJumpToggle = createTransparentButton("Inf Jump: OFF", Color3.fromRGB(38, 38, 38), panel2)
 infJumpToggle.BackgroundTransparency = 0.35
 infJumpToggle.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
