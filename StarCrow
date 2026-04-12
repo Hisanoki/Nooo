@@ -373,6 +373,7 @@ local function setFloatStrokeActive(stroke, isActive)
     local old = stroke:FindFirstChildOfClass("UIGradient")
     if old then old:Destroy() end
     if isActive then
+        -- ON: tím→cyan sáng xoay nhanh
         stroke.Color = Color3.fromRGB(255, 255, 255)
         stroke.Thickness = 2.2
         local grad = Instance.new("UIGradient")
@@ -387,8 +388,19 @@ local function setFloatStrokeActive(stroke, isActive)
             TweenService:Create(grad, TweenInfo.new(3, Enum.EasingStyle.Linear, Enum.EasingDirection.InOut, -1), { Rotation = 360 }):Play()
         end)
     else
-        stroke.Color = Color3.fromRGB(62, 62, 62)
+        stroke.Color = Color3.fromRGB(255, 255, 255)
         stroke.Thickness = 1.8
+        local grad = Instance.new("UIGradient")
+        grad.Color = ColorSequence.new({
+            ColorSequenceKeypoint.new(0,   Color3.fromRGB(60, 0, 120)),
+            ColorSequenceKeypoint.new(0.5, Color3.fromRGB(0, 100, 200)),
+            ColorSequenceKeypoint.new(1,   Color3.fromRGB(60, 0, 120)),
+        })
+        grad.Rotation = 0
+        grad.Parent = stroke
+        task.spawn(function()
+            TweenService:Create(grad, TweenInfo.new(3, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true), { Rotation = 180 }):Play()
+        end)
     end
 end
 
@@ -3390,7 +3402,7 @@ local function createAuraFloat()
     s.Thickness = 1.8
     s.Transparency = 0
     s.Parent = S.auraFloatBtn
-    setFloatStrokeActive(s, true)
+    setFloatStrokeActive(s, false)
 
     local getWasMoved, clearMoved = makeDraggableFloat(S.auraFloatBtn)
 
@@ -3445,7 +3457,7 @@ local function createDropFloat()
     s.Thickness = 1.8
     s.Transparency = 0
     s.Parent = S.dropFloatBtn
-    setFloatStrokeActive(s, true)
+    setFloatStrokeActive(s, false)
 
     local getWasMoved, clearMoved = makeDraggableFloat(S.dropFloatBtn)
 
@@ -3501,7 +3513,7 @@ local function createEquipAllFloat()
     s.Thickness = 1.8
     s.Transparency = 0
     s.Parent = S.equipAllFloatBtn
-    setFloatStrokeActive(s, true)
+    setFloatStrokeActive(s, false)
 
     local getWasMoved, clearMoved = makeDraggableFloat(S.equipAllFloatBtn)
 
@@ -3606,7 +3618,7 @@ local function createUseFloat()
     s.Thickness = 1.8
     s.Transparency = 0
     s.Parent = S.useFloatBtn
-    setFloatStrokeActive(s, true)
+    setFloatStrokeActive(s, false)
 
     local getWasMoved, clearMoved = makeDraggableFloat(S.useFloatBtn)
 
