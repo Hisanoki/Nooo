@@ -3039,36 +3039,72 @@ do
     _lbl.TextSize = 14
 end
 
--- TOOL AURA function
+-- Tool Aura
 local function runToolAura()
+    
+    if S.isAuraRunning then return end 
+    S.isAuraRunning = true
+
     local char = LocalPlayer.Character
-    if not char then return end
-    local root = char:FindFirstChild("HumanoidRootPart")
-    if not root then return end
-    local function stealOne(tool)
-        if not tool or not tool:IsA("Tool") then return end
-        local handle = tool:FindFirstChild("Handle")
-        if handle then
-            local ok = pcall(function() firetouchinterest(root, handle, 0) end)
-            if ok then
-                task.wait(0.04)
-                pcall(function() firetouchinterest(root, handle, 1) end)
-                return
-            end
-        end
-        pcall(function() tool.Parent = LocalPlayer.Backpack end)
+    if not char then 
+        S.isAuraRunning = false
+        return 
     end
-    for _, obj in pairs(workspace:GetDescendants()) do
-        if obj:IsA("Tool") then
-            local owned = false
-            for _, p in pairs(Players:GetPlayers()) do
-                if (p.Character and obj:IsDescendantOf(p.Character)) or (p.Backpack and obj:IsDescendantOf(p.Backpack)) then
-                    owned = true; break
+    
+    local root = char:FindFirstChild("HumanoidRootPart")
+    if not root then 
+        S.isAuraRunning = false
+        return 
+    end
+
+    local RunService = game:GetService("RunService")
+
+    task.spawn(function()
+        local count = 0
+        local objectsToScan = {workspace} 
+        local currentIndex = 1
+
+        while currentIndex <= #objectsToScan do
+            local currentParent = objectsToScan[currentIndex]
+            currentIndex = currentIndex + 1
+
+            local children = currentParent:GetChildren()
+            
+            for i = 1, #children do
+                local obj = children[i]
+                count = count + 1
+                
+                
+                if count % 1000 == 0 then
+                    RunService.Heartbeat:Wait()
+                end
+
+                
+                if not (obj:IsA("Model") and obj:FindFirstChildOfClass("Humanoid")) then
+                    
+                    if obj:IsA("Tool") then
+                        local handle = obj:FindFirstChild("Handle") or obj:FindFirstChildWhichIsA("BasePart")
+                        
+                        if handle then
+                            task.spawn(function()
+                                if pcall(function() firetouchinterest(root, handle, 0) end) then
+                                    task.wait()
+                                    pcall(function() firetouchinterest(root, handle, 1) end)
+                                end
+                            end)
+                        else
+                            pcall(function() obj.Parent = LocalPlayer.Backpack end)
+                        end
+                    else
+                        table.insert(objectsToScan, obj)
+                    end
                 end
             end
-            if not owned then stealOne(obj); task.wait(0.04) end
         end
-    end
+
+       
+        S.isAuraRunning = false
+    end)
 end
 local function runEquipAllTools()
     local char = LocalPlayer.Character
