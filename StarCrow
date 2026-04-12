@@ -414,12 +414,21 @@ local function toggleInvisibility()
     S.isInvisible = not S.isInvisible
     playInvisSound()
 
+    local cam = workspace.CurrentCamera
+
     if S.isInvisible then
         local hrp = getHumanoidRootPart()
-        if not hrp then warn("HumanoidRootPart not found") return end
+        if not hrp then return end
+        
         local savedCFrame = hrp.CFrame
+        local savedCamCFrame = cam.CFrame
+        
+        cam.CameraType = Enum.CameraType.Scriptable
+        cam.CFrame = savedCamCFrame
+
+        
         LocalPlayer.Character:MoveTo(INVIS_CONFIG.INVISIBILITY_POSITION)
-        task.wait(0.15)
+        task.wait(0.1) 
 
         local seat = Instance.new("Seat")
         seat.Name = "invischair"
@@ -436,19 +445,32 @@ local function toggleInvisibility()
         weld.Parent = seat
 
         task.wait()
-        seat.CFrame = savedCFrame
+
+        
+        task.defer(function()
+            if seat and seat.Parent then
+                seat.CFrame = savedCFrame
+            end
+        end)
+
+        cam.CameraType = Enum.CameraType.Custom
+        local humanoid = LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+        if humanoid then
+            cam.CameraSubject = humanoid
+        end
 
         setCharacterTransparency(LocalPlayer.Character, 0.5)
         hrp.Transparency = 1
+        
         if S.invisButton then
-    S.invisButton.BackgroundColor3 = Color3.fromRGB(50, 200, 120)
-    S.invisButton.BackgroundTransparency = 0
-    S.invisButton.Text = "Invisible: ON"
-end
+            S.invisButton.BackgroundColor3 = Color3.fromRGB(50, 200, 120)
+            S.invisButton.BackgroundTransparency = 0
+            S.invisButton.Text = "Invisible: ON"
+        end
 
-if S.invisFloatStroke then
-    setFloatStrokeActive(S.invisFloatStroke, true)
-end
+        if S.invisFloatStroke then
+            setFloatStrokeActive(S.invisFloatStroke, true)
+        end
         
     else
         local chair = workspace:FindFirstChild("invischair")
@@ -458,18 +480,22 @@ end
             setCharacterTransparency(LocalPlayer.Character, 0)
             local hrp = LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
             if hrp then hrp.Transparency = 1 end
+            
+            local humanoid = LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+            if humanoid then
+                cam.CameraSubject = humanoid
+            end
         end
 
         if S.invisButton then
-    S.invisButton.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
-    S.invisButton.BackgroundTransparency = 0.35
-    S.invisButton.Text = "Invisible: OFF"
-end
+            S.invisButton.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
+            S.invisButton.BackgroundTransparency = 0.35
+            S.invisButton.Text = "Invisible: OFF"
+        end
 
-if S.invisFloatStroke then
-    setFloatStrokeActive(S.invisFloatStroke, false)
-end
-        
+        if S.invisFloatStroke then
+            setFloatStrokeActive(S.invisFloatStroke, false)
+        end
     end
 end
 --  BOX ESP 
