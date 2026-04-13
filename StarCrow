@@ -373,7 +373,6 @@ local function setFloatStrokeActive(stroke, isActive)
     local old = stroke:FindFirstChildOfClass("UIGradient")
     if old then old:Destroy() end
     if isActive then
-        -- ON: tím→cyan sáng xoay nhanh
         stroke.Color = Color3.fromRGB(255, 255, 255)
         stroke.Thickness = 2.2
         local grad = Instance.new("UIGradient")
@@ -389,7 +388,7 @@ local function setFloatStrokeActive(stroke, isActive)
         end)
     else
         stroke.Color = Color3.fromRGB(255, 255, 255)
-        stroke.Thickness = 1.8
+        stroke.Thickness = 1.6
         local grad = Instance.new("UIGradient")
         grad.Color = ColorSequence.new({
             ColorSequenceKeypoint.new(0,   Color3.fromRGB(60, 0, 120)),
@@ -401,6 +400,16 @@ local function setFloatStrokeActive(stroke, isActive)
         task.spawn(function()
             TweenService:Create(grad, TweenInfo.new(3, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true), { Rotation = 180 }):Play()
         end)
+    end
+end
+
+-- TOGGLE STATE HELPER
+local function setToggleState(btn, isOn)
+    if not btn then return end
+    local track = btn:FindFirstChild("ToggleTrack")
+    if track then
+        track.BackgroundColor3 = isOn and Color3.fromRGB(50, 200, 120) or Color3.fromRGB(38, 38, 38)
+        track.BackgroundTransparency = isOn and 0 or 0.35
     end
 end
 
@@ -463,8 +472,7 @@ local function toggleInvisibility()
         hrp.Transparency = 1
         
         if S.invisButton then
-            S.invisButton.BackgroundColor3 = Color3.fromRGB(50, 200, 120)
-            S.invisButton.BackgroundTransparency = 0
+            setToggleState(S.invisButton, true)
             S.invisButton.Text = "Invisible: ON"
         end
 
@@ -488,8 +496,7 @@ local function toggleInvisibility()
         end
 
         if S.invisButton then
-            S.invisButton.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
-            S.invisButton.BackgroundTransparency = 0.35
+            setToggleState(S.invisButton, false)
             S.invisButton.Text = "Invisible: OFF"
         end
 
@@ -1006,7 +1013,7 @@ local function createTransparentButton(text, color, parent)
     local btn = Instance.new("TextButton")
     btn.Size = UDim2.new(1, 0, 0, 36)
     btn.BackgroundColor3 = color
-    btn.BackgroundTransparency = isToggle and 0 or 0.05
+    btn.BackgroundTransparency = 0.35
     btn.BorderSizePixel = 0
     btn.Font = Enum.Font.Gotham
     btn.TextSize = 14
@@ -1041,7 +1048,7 @@ local function createTransparentButton(text, color, parent)
         nameLabel.Position = UDim2.new(0, 12, 0, 0)
         nameLabel.BackgroundTransparency = 1
         nameLabel.Text = cleanName
-        nameLabel.TextColor3 = Color3.fromRGB(200, 185, 235)
+        nameLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
         nameLabel.Font = Enum.Font.GothamSemibold
         nameLabel.TextSize = 13
         nameLabel.TextXAlignment = Enum.TextXAlignment.Left
@@ -1054,7 +1061,8 @@ local function createTransparentButton(text, color, parent)
         track.Name = "ToggleTrack"
         track.Size = UDim2.new(0, 42, 0, 22)
         track.Position = UDim2.new(1, -50, 0.5, -11)
-        track.BackgroundColor3 = Color3.fromRGB(45, 40, 65)
+        track.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
+        track.BackgroundTransparency = 0.35
         track.BorderSizePixel = 0
         track.ZIndex = btn.ZIndex + 2
         track.Parent = btn
@@ -1067,7 +1075,7 @@ local function createTransparentButton(text, color, parent)
         knob.Name = "ToggleKnob"
         knob.Size = UDim2.new(0, 18, 0, 18)
         knob.Position = UDim2.new(0, 2, 0.5, -9)
-        knob.BackgroundColor3 = Color3.fromRGB(120, 100, 180)
+        knob.BackgroundColor3 = Color3.fromRGB(190, 190, 190)
         knob.BorderSizePixel = 0
         knob.ZIndex = btn.ZIndex + 3
         knob.Parent = track
@@ -1077,32 +1085,56 @@ local function createTransparentButton(text, color, parent)
 
         local TS = game:GetService("TweenService")
         local GREEN = Color3.fromRGB(50, 200, 120)
+        local BTN_DEFAULT_COLOR = color
+        local BTN_DEFAULT_TRANS = 0.35
+        local _ignoreColorChange = false
 
         local function syncToggle()
-            local isOn = btn.BackgroundColor3 == GREEN
+            local isOn = btn.Text:find(": ON") ~= nil
+            TS:Create(track, TweenInfo.new(0.15, Enum.EasingStyle.Quad), {
+                BackgroundColor3 = isOn and GREEN or Color3.fromRGB(38, 38, 38),
+                BackgroundTransparency = isOn and 0 or 0.35,
+            }):Play()
             TS:Create(knob, TweenInfo.new(0.15, Enum.EasingStyle.Quad), {
                 Position = isOn and UDim2.new(0, 22, 0.5, -9) or UDim2.new(0, 2, 0.5, -9),
-                BackgroundColor3 = isOn and Color3.fromRGB(255, 255, 255) or Color3.fromRGB(120, 100, 180),
+                BackgroundColor3 = isOn and Color3.fromRGB(255, 255, 255) or Color3.fromRGB(190, 190, 190),
             }):Play()
-            TS:Create(track, TweenInfo.new(0.15, Enum.EasingStyle.Quad), {
-                BackgroundColor3 = isOn and Color3.fromRGB(40, 180, 100) or Color3.fromRGB(45, 40, 65),
-            }):Play()
-            nameLabel.TextColor3 = isOn
-                and Color3.fromRGB(255, 255, 255)
-                or  Color3.fromRGB(180, 165, 215)
+            nameLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
         end
 
-        btn:GetPropertyChangedSignal("BackgroundColor3"):Connect(syncToggle)
+        btn:GetPropertyChangedSignal("BackgroundColor3"):Connect(function()
+            if _ignoreColorChange then return end
+            local c = btn.BackgroundColor3
+            if c == GREEN or (c.R > 0.15 and c.G > 0.7 and c.B < 0.6) then
+                _ignoreColorChange = true
+                btn.BackgroundColor3 = BTN_DEFAULT_COLOR
+                btn.BackgroundTransparency = BTN_DEFAULT_TRANS
+                _ignoreColorChange = false
+            end
+        end)
+
         btn:GetPropertyChangedSignal("Text"):Connect(function()
             local t = btn.Text
             local n = t:gsub("%s*:?%s*O[NF][F]?%s*$", "")
             if n ~= "" then nameLabel.Text = n end
+            syncToggle()
         end)
         syncToggle()
     else
-        -- nút action thường
-        btn.Text = text
-        btn.TextColor3 = Color3.new(1, 1, 1)
+        
+        btn.Text = ""
+        
+        
+        local nameLabel = Instance.new("TextLabel")
+        nameLabel.Size = UDim2.new(1, 0, 1, 0)
+        nameLabel.BackgroundTransparency = 1
+        nameLabel.Text = text
+        nameLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+        nameLabel.Font = Enum.Font.GothamSemibold
+        nameLabel.TextSize = 13 
+        nameLabel.TextXAlignment = Enum.TextXAlignment.Center
+        nameLabel.ZIndex = btn.ZIndex + 2
+        nameLabel.Parent = btn
     end
 
     btn.MouseButton1Click:Connect(function()
@@ -1123,8 +1155,9 @@ local function createTransparentInput(placeholder, text, parent)
     input.Text = text
     input.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
     input.BackgroundTransparency = 0.7
-    input.TextColor3 = Color3.new(1, 1, 1)
-    input.Font = Enum.Font.Gotham
+    input.TextColor3 = Color3.fromRGB(255, 255, 255)
+    input.PlaceholderColor3 = Color3.fromRGB(180, 180, 180) 
+    input.Font = Enum.Font.GothamSemibold
     input.TextSize = 14
     input.BorderSizePixel = 0
     input.Parent = parent
@@ -2330,7 +2363,7 @@ icon.Parent = btn
         label.Position = UDim2.new(0, 26, 0, 0)
         label.Size = UDim2.new(1, -28, 1, 0)
         label.Text = tabNames[i]
-        label.TextColor3 = Color3.fromRGB(200, 170, 255)
+        label.TextColor3 = Color3.fromRGB(255, 255, 255)
         label.Font = Enum.Font.GothamBold
         label.TextSize = 11
         label.TextXAlignment = Enum.TextXAlignment.Left
@@ -2374,15 +2407,15 @@ local function makeScrollPanel()
 end
 
 
-local panel2 = makeScrollPanel() -- Player
-local panel3 = makeScrollPanel() -- ESP
-local panel4 = makeScrollPanel() -- Teleport
-local panel5 = makeScrollPanel() -- Troll
-local panel6 = makeScrollPanel() -- Misc   
-local panel7 = makeScrollPanel() -- Server 
-local panel8 = makeScrollPanel() -- Tools
-local panel9 = makeScrollPanel() -- Aimbot
-local panel10 = makeScrollPanel() -- SaveSettings
+panel2 = makeScrollPanel() -- Player
+panel3 = makeScrollPanel() -- ESP
+panel4 = makeScrollPanel() -- Teleport
+panel5 = makeScrollPanel() -- Troll
+panel6 = makeScrollPanel() -- Misc   
+panel7 = makeScrollPanel() -- Server 
+panel8 = makeScrollPanel() -- Tools
+panel9 = makeScrollPanel() -- Aimbot
+panel10 = makeScrollPanel() -- SaveSettings
 --  PANEL 2: Player
 
 do
@@ -2393,15 +2426,13 @@ do
 end
 
 S.sizeInput = createTransparentInput("Size (e.g. 15)", tostring(DEFAULT_HITBOX_SIZE), panel2)
-local autoToggle = createTransparentButton("Head Hit Box: OFF", Color3.fromRGB(38, 38, 38), panel2)
-autoToggle.BackgroundColor3 = Color3.fromRGB(38,38,38)
-autoToggle.BackgroundTransparency = 0.35
+autoToggle = createTransparentButton("Head Hit Box: OFF", Color3.fromRGB(38, 38, 38), panel2)
+setToggleState(autoToggle, false)
 S.btnRefs.autoToggle = autoToggle
-local bodyToggle = createTransparentButton("Body Hit Box: OFF", Color3.fromRGB(38, 38, 38), panel2)
-bodyToggle.BackgroundColor3 = Color3.fromRGB(38,38,38)
-bodyToggle.BackgroundTransparency = 0.35
+bodyToggle = createTransparentButton("Body Hit Box: OFF", Color3.fromRGB(38, 38, 38), panel2)
+setToggleState(bodyToggle, false)
 S.btnRefs.bodyToggle = bodyToggle
-local removeAllBtn = createTransparentButton("Remove All Hitboxes", Color3.fromRGB(38, 38, 38), panel2)
+removeAllBtn = createTransparentButton("Remove All Hitboxes", Color3.fromRGB(38, 38, 38), panel2)
 removeAllBtn.BackgroundColor3 = Color3.fromRGB(38,38,38)
 removeAllBtn.BackgroundTransparency = 0.35
 S.statusLabel = createTransparentLabel("Processing: 0 Players", panel2)
@@ -2502,16 +2533,13 @@ end
 S.loopspeedInput = createTransparentInput("Speed (e.g. 30)", "30", panel2)
 
 S.loopspeedToggle = createTransparentButton("Loopspeed: OFF", Color3.fromRGB(38, 38, 38), panel2)
-S.loopspeedToggle.BackgroundTransparency = 0.35
-S.loopspeedToggle.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
+setToggleState(S.loopspeedToggle, false)
 S.btnRefs.loopspeedToggle = S.loopspeedToggle
 
 S.invisButton = createTransparentButton("Invisible: OFF", Color3.fromRGB(38, 38, 38), panel2)
-S.invisButton.BackgroundTransparency = 0.35
-S.invisButton.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
+setToggleState(S.invisButton, false)
 local invisFloatToggleBtn = createTransparentButton("Invisible Float: OFF", Color3.fromRGB(38, 38, 38), panel2)
-invisFloatToggleBtn.BackgroundTransparency = 0.35
-invisFloatToggleBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
+setToggleState(invisFloatToggleBtn, false)
 S.btnRefs.invisFloatToggleBtn = invisFloatToggleBtn
 S.invisSound = Instance.new("Sound")
 S.invisSound.SoundId = INVIS_CONFIG.SOUND_ID
@@ -2544,20 +2572,17 @@ do
     end)
 end
 
-local autoNameESP = createTransparentButton("ESP Name: OFF", Color3.fromRGB(38, 38, 38), panel3)
-autoNameESP.BackgroundTransparency = 0.35
-autoNameESP.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
+autoNameESP = createTransparentButton("ESP Name: OFF", Color3.fromRGB(38, 38, 38), panel3)
+setToggleState(autoNameESP, false)
 S.btnRefs.autoNameESP = autoNameESP
 
-local espNameAllBtn = createTransparentButton("ESP Name All: OFF", Color3.fromRGB(38, 38, 38), panel3)
-espNameAllBtn.BackgroundTransparency = 0.35
-espNameAllBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
+espNameAllBtn = createTransparentButton("ESP Name All: OFF", Color3.fromRGB(38, 38, 38), panel3)
+setToggleState(espNameAllBtn, false)
 S.btnRefs.espNameAllBtn = espNameAllBtn
 
 local chamsToggle = createTransparentButton("Esp Chams: OFF", Color3.fromRGB(38, 38, 38), panel3)
 
-chamsToggle.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
-chamsToggle.BackgroundTransparency = 0.35
+setToggleState(chamsToggle, false)
 S.btnRefs.chamsToggle = chamsToggle
 
 chamsToggle.MouseButton1Click:Connect(function()
@@ -2569,9 +2594,7 @@ chamsToggle.MouseButton1Click:Connect(function()
     
     if S.chamsEnabled then
         chamsToggle.Text = "Esp Chams: ON"
-        chamsToggle.BackgroundColor3 = Color3.fromRGB(50, 200, 120)
-        chamsToggle.BackgroundTransparency = 0
-        
+        setToggleState(chamsToggle, true)
         for _, p in pairs(game.Players:GetPlayers()) do
             if p ~= game.Players.LocalPlayer and p.Character and isAlive(p.Character) then
                 addChams(p.Character, getTeamColor(p))
@@ -2579,9 +2602,7 @@ chamsToggle.MouseButton1Click:Connect(function()
         end
     else
         chamsToggle.Text = "Esp Chams: OFF"
-        chamsToggle.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
-        chamsToggle.BackgroundTransparency = 0.35
-        
+        setToggleState(chamsToggle, false)
         for _, p in pairs(game.Players:GetPlayers()) do
             if p.Character then
                 removeChams(p.Character)
@@ -2591,8 +2612,7 @@ chamsToggle.MouseButton1Click:Connect(function()
 end)
 local tracerToggle = createTransparentButton("Esp Tracer: OFF", Color3.fromRGB(38, 38, 38), panel3)
 
-tracerToggle.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
-tracerToggle.BackgroundTransparency = 0.35
+setToggleState(tracerToggle, false)
 S.btnRefs.tracerToggle = tracerToggle
 
 tracerToggle.MouseButton1Click:Connect(function()
@@ -2600,9 +2620,7 @@ tracerToggle.MouseButton1Click:Connect(function()
 
     if S.tracerESPEnabled then
         tracerToggle.Text = "Esp Tracer: ON"
-        tracerToggle.BackgroundColor3 = Color3.fromRGB(50, 200, 120)
-        tracerToggle.BackgroundTransparency = 0
-
+        setToggleState(tracerToggle, true)
         for _, p in pairs(game.Players:GetPlayers()) do
             if p ~= game.Players.LocalPlayer then
                 createTracerESP(p)
@@ -2610,9 +2628,7 @@ tracerToggle.MouseButton1Click:Connect(function()
         end
     else
         tracerToggle.Text = "Esp Tracer: OFF"
-        tracerToggle.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
-        tracerToggle.BackgroundTransparency = 0.35
-
+        setToggleState(tracerToggle, false)
         for _, p in pairs(game.Players:GetPlayers()) do
             removeTracerESP(p)
         end
@@ -2627,14 +2643,12 @@ S.btnRefs.flySpeedInput = flySpeedInput
 
 
 S.flyToggle = createTransparentButton("Fly: OFF", Color3.fromRGB(38, 38, 38), panel2)
-S.flyToggle.BackgroundTransparency = 0.35
-S.flyToggle.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
+setToggleState(S.flyToggle, false)
 S.btnRefs.flyToggle = S.flyToggle
 
 S.vehicleFlyEnabled = false
 S.vehicleFlyBtn = createTransparentButton("Vehicle Fly: OFF", Color3.fromRGB(38, 38, 38), panel2)
-S.vehicleFlyBtn.BackgroundTransparency = 0.35
-S.vehicleFlyBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
+setToggleState(S.vehicleFlyBtn, false)
 S.btnRefs.vehicleFlyBtn = S.vehicleFlyBtn
 
 S.stopVehicleFly = function()
@@ -2710,8 +2724,8 @@ end
 S.vehicleFlyBtn.MouseButton1Click:Connect(function()
     S.vehicleFlyEnabled = not S.vehicleFlyEnabled
     S.vehicleFlyBtn.Text = S.vehicleFlyEnabled and "Vehicle Fly: ON" or "Vehicle Fly: OFF"
-    S.vehicleFlyBtn.BackgroundColor3 = S.vehicleFlyEnabled and Color3.fromRGB(50, 200, 120) or Color3.fromRGB(38, 38, 38)
-    S.vehicleFlyBtn.BackgroundTransparency = S.vehicleFlyEnabled and 0 or 0.35
+    setToggleState(S.vehicleFlyBtn, S.vehicleFlyEnabled)
+
     
     if S.vehicleFlyEnabled then
         S.startVehicleFly()
@@ -2721,8 +2735,7 @@ S.vehicleFlyBtn.MouseButton1Click:Connect(function()
 end)
 
 local flyFloatToggleBtn = createTransparentButton("Fly Float: OFF", Color3.fromRGB(38, 38, 38), panel2)
-flyFloatToggleBtn.BackgroundTransparency = 0.35
-flyFloatToggleBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
+setToggleState(flyFloatToggleBtn, false)
 S.btnRefs.flyFloatToggleBtn = flyFloatToggleBtn
 
 do
@@ -2735,17 +2748,14 @@ do
 end
 
 local infJumpToggle = createTransparentButton("Inf Jump: OFF", Color3.fromRGB(38, 38, 38), panel2)
-infJumpToggle.BackgroundTransparency = 0.35
-infJumpToggle.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
+setToggleState(infJumpToggle, false)
 S.btnRefs.infJumpToggle = infJumpToggle
 
 local noclipToggle = createTransparentButton("Noclip: OFF", Color3.fromRGB(38, 38, 38), panel2)
-noclipToggle.BackgroundTransparency = 0.35
-noclipToggle.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
+setToggleState(noclipToggle, false)
 S.btnRefs.noclipToggle = noclipToggle
 local noclipFloatToggleBtn = createTransparentButton("Noclip Float: OFF", Color3.fromRGB(38, 38, 38), panel2)
-noclipFloatToggleBtn.BackgroundTransparency = 0.35
-noclipFloatToggleBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
+setToggleState(noclipFloatToggleBtn, false)
 S.btnRefs.noclipFloatToggleBtn = noclipFloatToggleBtn
 --  PANEL 4: TELEPORT 
 
@@ -2773,9 +2783,7 @@ do
 end
 
 S.autoTPBtn = createTransparentButton("Auto TP: OFF", Color3.fromRGB(38, 38, 38), panel4)
-S.autoTPBtn.BackgroundTransparency = 0.35
-S.autoTPBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
-
+setToggleState(S.autoTPBtn, false)
 local teleportBtn = createTransparentButton("TP", Color3.fromRGB(38, 38, 38), panel4)
 teleportBtn.BackgroundTransparency = 0.35
 teleportBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
@@ -2785,8 +2793,7 @@ tpToolBtn.BackgroundTransparency = 0.35
 tpToolBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
 
 local ctrlClickTPBtn = createTransparentButton("Ctrl Click TP: OFF", Color3.fromRGB(38, 38, 38), panel4)
-ctrlClickTPBtn.BackgroundTransparency = 0.35
-ctrlClickTPBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
+setToggleState(ctrlClickTPBtn, false)
 S.btnRefs.ctrlClickTPBtn = ctrlClickTPBtn
 --  PANEL 5: TROLL (FLING) 
 
@@ -2851,19 +2858,16 @@ do
     _lbl.TextSize = 14
 end
 
-local antiFlingBtn = createTransparentButton("Anti Fling: OFF", Color3.fromRGB(38, 38, 38), panel6)
-antiFlingBtn.BackgroundTransparency = 0.35
-antiFlingBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
+antiFlingBtn = createTransparentButton("Anti Fling: OFF", Color3.fromRGB(38, 38, 38), panel6)
+setToggleState(antiFlingBtn, false)
 S.btnRefs.antiFlingBtn = antiFlingBtn
 
-local antiVoidBtn = createTransparentButton("Anti Void: OFF", Color3.fromRGB(38, 38, 38), panel6)
-antiVoidBtn.BackgroundTransparency = 0.35
-antiVoidBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
+antiVoidBtn = createTransparentButton("Anti Void: OFF", Color3.fromRGB(38, 38, 38), panel6)
+setToggleState(antiVoidBtn, false)
 S.btnRefs.antiVoidBtn = antiVoidBtn
 
-local antiAfkBtn = createTransparentButton("Anti AFK: OFF", Color3.fromRGB(38, 38, 38), panel6)
-antiAfkBtn.BackgroundTransparency = 0.35
-antiAfkBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
+antiAfkBtn = createTransparentButton("Anti AFK: OFF", Color3.fromRGB(38, 38, 38), panel6)
+setToggleState(antiAfkBtn, false)
 S.btnRefs.antiAfkBtn = antiAfkBtn
 
 local loopFBBtn = createTransparentButton("LoopFullBright: OFF", Color3.fromRGB(38, 38, 38), panel6)
@@ -2925,8 +2929,7 @@ mobileShiftLockBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
 S.btnRefs.mobileShiftLockBtn = mobileShiftLockBtn
 
 local autoClickBtn = createTransparentButton("Auto Click: OFF", Color3.fromRGB(38, 38, 38), panel6)
-autoClickBtn.BackgroundTransparency = 0.35
-autoClickBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
+setToggleState(autoClickBtn, false)
 S.btnRefs.autoClickBtn = autoClickBtn
 
 
@@ -3002,30 +3005,22 @@ autoClickBtn.MouseButton1Click:Connect(function()
     if S.autoClickEnabled then
         stopAutoClick()
         autoClickBtn.Text = "Auto Click: OFF"
-        autoClickBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
-        autoClickBtn.BackgroundTransparency = 0.35
-        
+        setToggleState(autoClickBtn, false)
         return
     end
 
     startAutoClick()
     autoClickBtn.Text = "Auto Click: ON"
-    autoClickBtn.BackgroundColor3 = Color3.fromRGB(50, 200, 120)
-    autoClickBtn.BackgroundTransparency = 0
-    
+    setToggleState(autoClickBtn, true)
 end)
 antiAfkBtn.MouseButton1Click:Connect(function()
     S.antiAfkEnabled = not S.antiAfkEnabled
     antiAfkBtn.Text = "Anti AFK: "..(S.antiAfkEnabled and "ON" or "OFF")
 
     if S.antiAfkEnabled then
-        antiAfkBtn.BackgroundColor3 = Color3.fromRGB(50, 200, 120)
-        antiAfkBtn.BackgroundTransparency = 0
-        
+        setToggleState(antiAfkBtn, true)
     else
-        antiAfkBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
-        antiAfkBtn.BackgroundTransparency = 0.35
-        
+        setToggleState(antiAfkBtn, false)
     end
 end)
 
@@ -3045,13 +3040,9 @@ do
         antiVoidEnabled = state
         antiVoidBtn.Text = "Anti Void: "..(antiVoidEnabled and "ON" or "OFF")
         if antiVoidEnabled then
-            antiVoidBtn.BackgroundColor3 = Color3.fromRGB(50, 200, 120)
-            antiVoidBtn.BackgroundTransparency = 0
-            
+            setToggleState(antiVoidBtn, true)
         else
-            antiVoidBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
-            antiVoidBtn.BackgroundTransparency = 0.35
-            
+            setToggleState(antiVoidBtn, false)
         end
     end
 
@@ -3371,8 +3362,8 @@ local function createNoclipFloat()
 
         if S.btnRefs.noclipToggle then
             S.btnRefs.noclipToggle.Text = S.noclipEnabled and "Noclip: ON" or "Noclip: OFF"
-            S.btnRefs.noclipToggle.BackgroundColor3 = S.noclipEnabled and Color3.fromRGB(50, 200, 120) or Color3.fromRGB(38, 38, 38)
-            S.btnRefs.noclipToggle.BackgroundTransparency = S.noclipEnabled and 0 or 0.35
+            setToggleState(S.btnRefs.noclipToggle, S.noclipEnabled)
+
         end
 
         if S.noclipEnabled then
@@ -3508,8 +3499,8 @@ S.flyFloatBtn.Font = Enum.Font.GothamBold
         S.flyEnabled = not S.flyEnabled
 
         S.flyToggle.Text = S.flyEnabled and "Fly: ON" or "Fly: OFF"
-        S.flyToggle.BackgroundColor3 = S.flyEnabled and Color3.fromRGB(50, 200, 120) or Color3.fromRGB(38, 38, 38)
-        S.flyToggle.BackgroundTransparency = S.flyEnabled and 0 or 0.35
+        setToggleState(S.flyToggle, S.flyEnabled)
+
 
         if S.flyEnabled then
             startFly()
@@ -3806,8 +3797,7 @@ end)
 
 -- Aura Float toggle
 local feAuraFloatBtn = createTransparentButton("Aura Float: OFF", Color3.fromRGB(38, 38, 38), panel8)
-feAuraFloatBtn.BackgroundTransparency = 0.35
-feAuraFloatBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
+setToggleState(feAuraFloatBtn, false)
 S.btnRefs.feAuraFloatBtn = feAuraFloatBtn
 
 feAuraFloatBtn.MouseButton1Click:Connect(function()
@@ -3815,13 +3805,11 @@ feAuraFloatBtn.MouseButton1Click:Connect(function()
 
     if S.auraFloatEnabled then
         feAuraFloatBtn.Text = "Aura Float: ON"
-        feAuraFloatBtn.BackgroundColor3 = Color3.fromRGB(50, 200, 120)
-        feAuraFloatBtn.BackgroundTransparency = 0
+        setToggleState(feAuraFloatBtn, true)
         createAuraFloat()
     else
         feAuraFloatBtn.Text = "Aura Float: OFF"
-        feAuraFloatBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
-        feAuraFloatBtn.BackgroundTransparency = 0.35
+        setToggleState(feAuraFloatBtn, false)
         destroyAuraFloat()
     end
 end)
@@ -3842,8 +3830,7 @@ end)
 
 -- Drop Float toggle
 local feDropFloatBtn = createTransparentButton("Drop Float: OFF", Color3.fromRGB(38, 38, 38), panel8)
-feDropFloatBtn.BackgroundTransparency = 0.35
-feDropFloatBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
+setToggleState(feDropFloatBtn, false)
 S.btnRefs.feDropFloatBtn = feDropFloatBtn
 
 feDropFloatBtn.MouseButton1Click:Connect(function()
@@ -3851,13 +3838,11 @@ feDropFloatBtn.MouseButton1Click:Connect(function()
 
     if S.dropFloatEnabled then
         feDropFloatBtn.Text = "Drop Float: ON"
-        feDropFloatBtn.BackgroundColor3 = Color3.fromRGB(50, 200, 120)
-        feDropFloatBtn.BackgroundTransparency = 0
+        setToggleState(feDropFloatBtn, true)
         createDropFloat()
     else
         feDropFloatBtn.Text = "Drop Float: OFF"
-        feDropFloatBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
-        feDropFloatBtn.BackgroundTransparency = 0.35
+        setToggleState(feDropFloatBtn, false)
         destroyDropFloat()
     end
 end)
@@ -3873,8 +3858,7 @@ end)
 
 -- Equip All Float toggle
 local feEquipAllFloatToggleBtn = createTransparentButton("Equip All Float: OFF", Color3.fromRGB(38, 38, 38), panel8)
-feEquipAllFloatToggleBtn.BackgroundTransparency = 0.35
-feEquipAllFloatToggleBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
+setToggleState(feEquipAllFloatToggleBtn, false)
 S.btnRefs.feEquipAllFloatToggleBtn = feEquipAllFloatToggleBtn
 
 feEquipAllFloatToggleBtn.MouseButton1Click:Connect(function()
@@ -3882,13 +3866,11 @@ feEquipAllFloatToggleBtn.MouseButton1Click:Connect(function()
 
     if S.equipAllFloatEnabled then
         feEquipAllFloatToggleBtn.Text = "Equip All Float: ON"
-        feEquipAllFloatToggleBtn.BackgroundColor3 = Color3.fromRGB(50, 200, 120)
-        feEquipAllFloatToggleBtn.BackgroundTransparency = 0
+        setToggleState(feEquipAllFloatToggleBtn, true)
         createEquipAllFloat()
     else
         feEquipAllFloatToggleBtn.Text = "Equip All Float: OFF"
-        feEquipAllFloatToggleBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
-        feEquipAllFloatToggleBtn.BackgroundTransparency = 0.35
+        setToggleState(feEquipAllFloatToggleBtn, false)
         destroyEquipAllFloat()
     end
 end)
@@ -3910,21 +3892,18 @@ feUseBtn.MouseButton1Click:Connect(function()
 end)
 
 local feUseFloatToggleBtn = createTransparentButton("Use Float: OFF", Color3.fromRGB(38, 38, 38), panel8)
-feUseFloatToggleBtn.BackgroundTransparency = 0.35
-feUseFloatToggleBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
+setToggleState(feUseFloatToggleBtn, false)
 S.btnRefs.feUseFloatToggleBtn = feUseFloatToggleBtn
 
 feUseFloatToggleBtn.MouseButton1Click:Connect(function()
     S.useFloatEnabled = not S.useFloatEnabled
     if S.useFloatEnabled then
         feUseFloatToggleBtn.Text = "Use Float: ON"
-        feUseFloatToggleBtn.BackgroundColor3 = Color3.fromRGB(50, 200, 120)
-        feUseFloatToggleBtn.BackgroundTransparency = 0
+        setToggleState(feUseFloatToggleBtn, true)
         createUseFloat()
     else
         feUseFloatToggleBtn.Text = "Use Float: OFF"
-        feUseFloatToggleBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
-        feUseFloatToggleBtn.BackgroundTransparency = 0.35
+        setToggleState(feUseFloatToggleBtn, false)
         destroyUseFloat()
     end
 end)
@@ -4178,14 +4157,9 @@ do
 
     -- Helper style button
     local function aimStyle(btn, state)
-    if state then
-        btn.BackgroundColor3 = Color3.fromRGB(50, 200, 120)
-        btn.BackgroundTransparency = 0
-    else
-        btn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
-        btn.BackgroundTransparency = 0.35
+        
+        setToggleState(btn, state)
     end
-end
 
     --  Toggle buttons 
     local aimToggleBtn = createTransparentButton("Aimbot: OFF", AIM_OFF, panel9)
@@ -4701,8 +4675,7 @@ end
     local function syncBtn(btn, isOn, textOn, textOff)
         if not btn then return end
         btn.Text = isOn and textOn or textOff
-        btn.BackgroundColor3 = isOn and Color3.fromRGB(50, 200, 120) or Color3.fromRGB(38, 38, 38)
-        btn.BackgroundTransparency = isOn and 0 or 0.35
+        setToggleState(btn, isOn)
     end
 
     local function applyConfig(cfg)
@@ -5003,12 +4976,10 @@ end)
         if S.btnRefs.keybindsBtn then
             if S.keybindsEnabled then
                 S.btnRefs.keybindsBtn.Text = "Disable Keybinds: OFF"
-                S.btnRefs.keybindsBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
-                S.btnRefs.keybindsBtn.BackgroundTransparency = 0.35
+                setToggleState(S.btnRefs.keybindsBtn, false)
             else
                 S.btnRefs.keybindsBtn.Text = "Disable Keybinds: ON"
-                S.btnRefs.keybindsBtn.BackgroundColor3 = Color3.fromRGB(50, 200, 120)
-                S.btnRefs.keybindsBtn.BackgroundTransparency = 0
+                setToggleState(S.btnRefs.keybindsBtn, true)
             end
         end
     end
@@ -5020,12 +4991,10 @@ pcall(function()
         if S.btnRefs.floatDragLockBtn then
             if S.floatDragLocked then
                 S.btnRefs.floatDragLockBtn.Text = "Undraggable Float Buttons: ON"
-                S.btnRefs.floatDragLockBtn.BackgroundColor3 = Color3.fromRGB(50, 200, 120)
-                S.btnRefs.floatDragLockBtn.BackgroundTransparency = 0
+                setToggleState(S.btnRefs.floatDragLockBtn, true)
             else
                 S.btnRefs.floatDragLockBtn.Text = "Undraggable Float Buttons: OFF"
-                S.btnRefs.floatDragLockBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
-                S.btnRefs.floatDragLockBtn.BackgroundTransparency = 0.35
+                setToggleState(S.btnRefs.floatDragLockBtn, false)
             end
         end
     end
@@ -5175,8 +5144,7 @@ do
     _lbl.TextSize = 14
 end
 local keybindsBtn = createTransparentButton("Disable Keybinds: OFF", Color3.fromRGB(38, 38, 38), panel10)
-keybindsBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
-keybindsBtn.BackgroundTransparency = 0.35
+setToggleState(keybindsBtn, false)
 keybindsBtn.TextSize = 13
 keybindsBtn.Size = UDim2.new(1, 0, 0, 36)
 
@@ -5187,12 +5155,10 @@ local function updateKeybindsBtn()
 
     if S.keybindsEnabled then
         keybindsBtn.Text = "Disable Keybinds: OFF"
-        keybindsBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
-        keybindsBtn.BackgroundTransparency = 0.35
+        setToggleState(keybindsBtn, false)
     else
         keybindsBtn.Text = "Disable Keybinds: ON"
-       keybindsBtn.BackgroundColor3 = Color3.fromRGB(50, 200, 120)
-keybindsBtn.BackgroundTransparency = 0
+       setToggleState(keybindsBtn, true)
     end
 end
 
@@ -5218,9 +5184,9 @@ local function setBindButtonWaiting(btn)
     s:Play()
     game:GetService("Debris"):AddItem(s, 2)
 
-    btn.Text = "..."
-    btn.BackgroundColor3 = Color3.fromRGB(50, 200, 120)
-    btn.BackgroundTransparency = 0
+    btn.Text = "Press key..."
+    btn.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+    btn.BackgroundTransparency = 0.1
 end
 
 local function setBindButtonNormal(btn, keyCode)
@@ -5229,8 +5195,7 @@ local function setBindButtonNormal(btn, keyCode)
     btn.BackgroundTransparency = 0.35
 end
 local floatDragLockBtn = createTransparentButton("Undraggable Float Buttons: OFF", Color3.fromRGB(38, 38, 38), panel10)
-floatDragLockBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
-floatDragLockBtn.BackgroundTransparency = 0.35
+setToggleState(floatDragLockBtn, false)
 floatDragLockBtn.TextSize = 13
 floatDragLockBtn.TextScaled = false
 floatDragLockBtn.TextWrapped = false
@@ -5243,12 +5208,10 @@ local function updateFloatDragLockBtn()
 
     if S.floatDragLocked then
         floatDragLockBtn.Text = "Undraggable Float Buttons: ON"
-        floatDragLockBtn.BackgroundColor3 = Color3.fromRGB(50, 200, 120)
-        floatDragLockBtn.BackgroundTransparency = 0
+        setToggleState(floatDragLockBtn, true)
     else
         floatDragLockBtn.Text = "Undraggable Float Buttons: OFF"
-        floatDragLockBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
-        floatDragLockBtn.BackgroundTransparency = 0.35
+        setToggleState(floatDragLockBtn, false)
     end
 end
 
@@ -5434,8 +5397,10 @@ invisBindBtn.TextColor3 = Color3.new(1,1,1)
 invisBindBtn.Font = Enum.Font.Gotham
 invisBindBtn.TextSize = 13
 invisBindBtn.Parent = invisBindRow
-
-S.btnRefs.invisBindBtn = invisBindBtn
+do
+    local c = Instance.new("UICorner"); c.CornerRadius = UDim.new(0, 4); c.Parent = invisBindBtn
+    local s = Instance.new("UIStroke"); s.Thickness = 1; s.Color = Color3.fromRGB(70, 70, 70); s.Parent = invisBindBtn
+end
 
 invisBindBtn.MouseButton1Click:Connect(function()
     S.waitingForKeybind = "Invisible"
@@ -5472,8 +5437,10 @@ flyBindBtn.TextColor3 = Color3.new(1,1,1)
 flyBindBtn.Font = Enum.Font.Gotham
 flyBindBtn.TextSize = 13
 flyBindBtn.Parent = flyBindRow
-
-S.btnRefs.flyBindBtn = flyBindBtn
+do
+    local c = Instance.new("UICorner"); c.CornerRadius = UDim.new(0, 4); c.Parent = flyBindBtn
+    local s = Instance.new("UIStroke"); s.Thickness = 1; s.Color = Color3.fromRGB(70, 70, 70); s.Parent = flyBindBtn
+end
 
 flyBindBtn.MouseButton1Click:Connect(function()
     S.waitingForKeybind = "Fly"
@@ -5509,8 +5476,10 @@ noclipBindBtn.TextColor3 = Color3.new(1,1,1)
 noclipBindBtn.Font = Enum.Font.Gotham
 noclipBindBtn.TextSize = 13
 noclipBindBtn.Parent = noclipBindRow
-
-S.btnRefs.noclipBindBtn = noclipBindBtn
+do
+    local c = Instance.new("UICorner"); c.CornerRadius = UDim.new(0, 4); c.Parent = noclipBindBtn
+    local s = Instance.new("UIStroke"); s.Thickness = 1; s.Color = Color3.fromRGB(70, 70, 70); s.Parent = noclipBindBtn
+end
 
 noclipBindBtn.MouseButton1Click:Connect(function()
     S.waitingForKeybind = "Noclip"
@@ -5546,8 +5515,16 @@ menuBindBtn.TextColor3 = Color3.new(1,1,1)
 menuBindBtn.Font = Enum.Font.Gotham
 menuBindBtn.TextSize = 13
 menuBindBtn.Parent = menuBindRow
+do
+    local c = Instance.new("UICorner"); c.CornerRadius = UDim.new(0, 4); c.Parent = menuBindBtn
+    local s = Instance.new("UIStroke"); s.Thickness = 1; s.Color = Color3.fromRGB(70, 70, 70); s.Parent = menuBindBtn
+end
 
+S.btnRefs.invisBindBtn = invisBindBtn
+S.btnRefs.flyBindBtn = flyBindBtn
+S.btnRefs.noclipBindBtn = noclipBindBtn
 S.btnRefs.menuBindBtn = menuBindBtn
+
 
 menuBindBtn.MouseButton1Click:Connect(function()
     S.waitingForKeybind = "Menu"
@@ -5818,8 +5795,7 @@ S.walkFlingBtn.MouseButton1Click:Connect(function()
             S.antiFlingEnabled = true
             walkFlingAutoEnabledAntiFling = true
             antiFlingBtn.Text = "Anti Fling: ON"
-            antiFlingBtn.BackgroundColor3 = Color3.fromRGB(50, 200, 120)
-            antiFlingBtn.BackgroundTransparency = 0
+            setToggleState(antiFlingBtn, true)
             enableAntiFling()
         else
             if antiFlingWasManuallyEnabled then
@@ -5835,8 +5811,7 @@ S.walkFlingBtn.MouseButton1Click:Connect(function()
             S.antiFlingEnabled = false
             walkFlingAutoEnabledAntiFling = false
             antiFlingBtn.Text = "Anti-Fling: OFF"
-            antiFlingBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
-            antiFlingBtn.BackgroundTransparency = 0.35
+            setToggleState(antiFlingBtn, false)
             disableAntiFling()
         end
 
@@ -6006,13 +5981,11 @@ antiFlingBtn.MouseButton1Click:Connect(function()
     S.antiFlingEnabled = not S.antiFlingEnabled
     if S.antiFlingEnabled then
         antiFlingBtn.Text = "Anti Fling: ON"
-        antiFlingBtn.BackgroundColor3 = Color3.fromRGB(50, 200, 120)
-        antiFlingBtn.BackgroundTransparency = 0
+        setToggleState(antiFlingBtn, true)
         enableAntiFling()
     else
         antiFlingBtn.Text = "Anti Fling: OFF"
-        antiFlingBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
-        antiFlingBtn.BackgroundTransparency = 0.35
+        setToggleState(antiFlingBtn, false)
         disableAntiFling()
     end
 end)
@@ -6024,8 +5997,7 @@ do
         loopFullBright = state
         if loopFullBright then
             loopFBBtn.Text = "LoopFullBright: ON"
-            loopFBBtn.BackgroundColor3 = Color3.fromRGB(50, 200, 120)
-            loopFBBtn.BackgroundTransparency = 0
+            setToggleState(loopFBBtn, true)
             
             if fbConnection then fbConnection:Disconnect() end
             fbConnection = RunService.RenderStepped:Connect(function()
@@ -6038,8 +6010,7 @@ do
             end)
         else
             loopFBBtn.Text = "LoopFullBright: OFF"
-            loopFBBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
-            loopFBBtn.BackgroundTransparency = 0.35
+            setToggleState(loopFBBtn, false)
             
             if fbConnection then fbConnection:Disconnect(); fbConnection = nil end
         end
@@ -6135,8 +6106,7 @@ do
         instantBuyEnabled = state
 
         instantBuyBtn.Text = instantBuyEnabled and "Instant Interact: ON" or "Instant Interact: OFF"
-        instantBuyBtn.BackgroundColor3 = instantBuyEnabled and Color3.fromRGB(50, 200, 120) or Color3.fromRGB(38, 38, 38)
-        instantBuyBtn.BackgroundTransparency = instantBuyEnabled and 0 or 0.35
+        setToggleState(instantBuyBtn, instantBuyEnabled)
 
         clearInstantBuyConnections()
 
@@ -6365,8 +6335,7 @@ end
         mobileShiftLockEnabled = state
 
         mobileShiftLockBtn.Text = "Mobile ShiftLock: " .. (mobileShiftLockEnabled and "ON" or "OFF")
-        mobileShiftLockBtn.BackgroundColor3 = mobileShiftLockEnabled and Color3.fromRGB(50, 200, 120) or Color3.fromRGB(38, 38, 38)
-        mobileShiftLockBtn.BackgroundTransparency = mobileShiftLockEnabled and 0 or 0.35
+        setToggleState(mobileShiftLockBtn, mobileShiftLockEnabled)
 
         if mobileShiftLockEnabled and isMobileDevice() then
             createMobileShiftLockButton()
@@ -6404,8 +6373,8 @@ do
     local function setLoopspeedEnabled(state)
         loopspeedEnabled = state
         S.loopspeedToggle.Text = loopspeedEnabled and "Loopspeed: ON" or "Loopspeed: OFF"
-        S.loopspeedToggle.BackgroundColor3 = loopspeedEnabled and Color3.fromRGB(50, 200, 120) or Color3.fromRGB(38, 38, 38)
-        S.loopspeedToggle.BackgroundTransparency = loopspeedEnabled and 0 or 0.35
+        setToggleState(S.loopspeedToggle, loopspeedEnabled)
+
 
         if loopspeedConnection then
             loopspeedConnection:Disconnect()
@@ -6542,9 +6511,7 @@ if not S.autoHitboxEnabled then
     if S.autoBodyHitboxEnabled then
         S.autoBodyHitboxEnabled = false
         bodyToggle.Text = "Body Hit Box: OFF"
-        bodyToggle.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
-        bodyToggle.BackgroundTransparency = 0.35
-
+        setToggleState(bodyToggle, false)
         for _, player in pairs(Players:GetPlayers()) do
             if player ~= LocalPlayer and player.Character then
                 resetBodyHitbox(player.Character)
@@ -6555,9 +6522,7 @@ if not S.autoHitboxEnabled then
     if S.chamsEnabled then
         S.chamsEnabled = false
         chamsToggle.Text = "Esp Chams: OFF"
-        chamsToggle.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
-        chamsToggle.BackgroundTransparency = 0.35
-
+        setToggleState(chamsToggle, false)
         for _, player in pairs(Players:GetPlayers()) do
             if player ~= LocalPlayer and player.Character then
                 removeChams(player.Character)
@@ -6570,11 +6535,9 @@ end
     autoToggle.Text = S.autoHitboxEnabled and "Head Hit Box: ON" or "Head Hit Box: OFF"
 
     if S.autoHitboxEnabled then
-        autoToggle.BackgroundColor3 = Color3.fromRGB(50, 200, 120)
-        autoToggle.BackgroundTransparency = 0
+        setToggleState(autoToggle, true)
     else
-        autoToggle.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
-        autoToggle.BackgroundTransparency = 0.35
+        setToggleState(autoToggle, false)
     end
 
     local size = tonumber(S.sizeInput.Text) or DEFAULT_HITBOX_SIZE
@@ -6615,9 +6578,7 @@ if not S.autoBodyHitboxEnabled then
     if S.autoHitboxEnabled then
         S.autoHitboxEnabled = false
         autoToggle.Text = "Head Hit Box: OFF"
-        autoToggle.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
-        autoToggle.BackgroundTransparency = 0.35
-
+        setToggleState(autoToggle, false)
         for _, player in pairs(Players:GetPlayers()) do
             if player ~= LocalPlayer and player.Character then
                 resetHeadHitbox(player.Character)
@@ -6628,9 +6589,7 @@ if not S.autoBodyHitboxEnabled then
     if S.chamsEnabled then
         S.chamsEnabled = false
         chamsToggle.Text = "Esp Chams: OFF"
-        chamsToggle.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
-        chamsToggle.BackgroundTransparency = 0.35
-
+        setToggleState(chamsToggle, false)
         for _, player in pairs(Players:GetPlayers()) do
             if player ~= LocalPlayer and player.Character then
                 removeChams(player.Character)
@@ -6643,11 +6602,9 @@ end
     bodyToggle.Text = S.autoBodyHitboxEnabled and "Body Hit Box: ON" or "Body Hit Box: OFF"
 
     if S.autoBodyHitboxEnabled then
-        bodyToggle.BackgroundColor3 = Color3.fromRGB(50, 200, 120)
-        bodyToggle.BackgroundTransparency = 0
+        setToggleState(bodyToggle, true)
     else
-        bodyToggle.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
-        bodyToggle.BackgroundTransparency = 0.35
+        setToggleState(bodyToggle, false)
     end
 
     local size = tonumber(S.sizeInput.Text) or DEFAULT_HITBOX_SIZE
@@ -6687,12 +6644,9 @@ removeAllBtn.MouseButton1Click:Connect(function()
     S.autoHitboxEnabled = false
     S.autoBodyHitboxEnabled = false
     autoToggle.Text = "Head Hit Box: OFF"
-    autoToggle.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
-    autoToggle.BackgroundTransparency = 0.35
+    setToggleState(autoToggle, false)
     bodyToggle.Text = "Body Hit Box: OFF"
-    bodyToggle.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
-    bodyToggle.BackgroundTransparency = 0.35
-
+    setToggleState(bodyToggle, false)
     S.statusLabel.Text = "Processing: 0 Players"
 
     task.delay(0.2, function()
@@ -6708,12 +6662,10 @@ autoNameESP.MouseButton1Click:Connect(function()
 
     if S.nameESPEnabled then
         autoNameESP.Text = "ESP Name: ON"
-        autoNameESP.BackgroundColor3 = Color3.fromRGB(50, 200, 120)
-        autoNameESP.BackgroundTransparency = 0
+        setToggleState(autoNameESP, true)
     else
         autoNameESP.Text = "ESP Name: OFF"
-        autoNameESP.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
-        autoNameESP.BackgroundTransparency = 0.35
+        setToggleState(autoNameESP, false)
     end
 
     if not S.nameESPEnabled then
@@ -6735,12 +6687,10 @@ espNameAllBtn.MouseButton1Click:Connect(function()
 
     if S.espNameAllState then
         espNameAllBtn.Text = "ESP Name All: ON"
-        espNameAllBtn.BackgroundColor3 = Color3.fromRGB(50, 200, 120)
-        espNameAllBtn.BackgroundTransparency = 0
+        setToggleState(espNameAllBtn, true)
     else
         espNameAllBtn.Text = "ESP Name All: OFF"
-        espNameAllBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
-        espNameAllBtn.BackgroundTransparency = 0.35
+        setToggleState(espNameAllBtn, false)
     end
 
     for _, player in pairs(Players:GetPlayers()) do
@@ -6764,21 +6714,19 @@ invisFloatToggleBtn.MouseButton1Click:Connect(function()
 
     if S.invisFloatEnabled then
         invisFloatToggleBtn.Text = "Invisible Float: ON"
-        invisFloatToggleBtn.BackgroundColor3 = Color3.fromRGB(50, 200, 120)
-        invisFloatToggleBtn.BackgroundTransparency = 0
+        setToggleState(invisFloatToggleBtn, true)
         createInvisFloat()
     else
         invisFloatToggleBtn.Text = "Invisible Float: OFF"
-        invisFloatToggleBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
-        invisFloatToggleBtn.BackgroundTransparency = 0.35
+        setToggleState(invisFloatToggleBtn, false)
         destroyInvisFloat()
     end
 end)
 infJumpToggle.MouseButton1Click:Connect(function()
     S.infJumpEnabled = not S.infJumpEnabled
     infJumpToggle.Text = S.infJumpEnabled and "Inf Jump: ON" or "Inf Jump: OFF"
-    infJumpToggle.BackgroundColor3 = S.infJumpEnabled and Color3.fromRGB(50, 200, 120) or Color3.fromRGB(38, 38, 38)
-infJumpToggle.BackgroundTransparency = S.infJumpEnabled and 0 or 0.35
+    setToggleState(infJumpToggle, S.infJumpEnabled)
+
 
     if S.infJumpEnabled then
     startInfJump()
@@ -6793,8 +6741,8 @@ noclipToggle.MouseButton1Click:Connect(function()
     S.noclipEnabled = not S.noclipEnabled
 
     noclipToggle.Text = S.noclipEnabled and "Noclip: ON" or "Noclip: OFF"
-    noclipToggle.BackgroundColor3 = S.noclipEnabled and Color3.fromRGB(50, 200, 120) or Color3.fromRGB(38, 38, 38)
-    noclipToggle.BackgroundTransparency = S.noclipEnabled and 0 or 0.35
+    setToggleState(noclipToggle, S.noclipEnabled)
+
 
     if S.noclipEnabled then
         startNoclip()
@@ -6812,13 +6760,11 @@ noclipFloatToggleBtn.MouseButton1Click:Connect(function()
 
     if S.noclipFloatEnabled then
         noclipFloatToggleBtn.Text = "Noclip Float: ON"
-        noclipFloatToggleBtn.BackgroundColor3 = Color3.fromRGB(50, 200, 120)
-        noclipFloatToggleBtn.BackgroundTransparency = 0
+        setToggleState(noclipFloatToggleBtn, true)
         createNoclipFloat()
     else
         noclipFloatToggleBtn.Text = "Noclip Float: OFF"
-        noclipFloatToggleBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
-        noclipFloatToggleBtn.BackgroundTransparency = 0.35
+        setToggleState(noclipFloatToggleBtn, false)
         destroyNoclipFloat()
     end
 end)
@@ -6827,8 +6773,8 @@ S.flyToggle.MouseButton1Click:Connect(function()
     S.flyEnabled = not S.flyEnabled
 
     S.flyToggle.Text = S.flyEnabled and "Fly: ON" or "Fly: OFF"
-    S.flyToggle.BackgroundColor3 = S.flyEnabled and Color3.fromRGB(50, 200, 120) or Color3.fromRGB(38, 38, 38)
-    S.flyToggle.BackgroundTransparency = S.flyEnabled and 0 or 0.35
+    setToggleState(S.flyToggle, S.flyEnabled)
+
 
     if S.flyEnabled then
         startFly()
@@ -6855,13 +6801,11 @@ flyFloatToggleBtn.MouseButton1Click:Connect(function()
 
     if S.flyFloatEnabled then
         flyFloatToggleBtn.Text = "Fly Float: ON"
-        flyFloatToggleBtn.BackgroundColor3 = Color3.fromRGB(50, 200, 120)
-        flyFloatToggleBtn.BackgroundTransparency = 0
+        setToggleState(flyFloatToggleBtn, true)
         createFlyFloat()
     else
         flyFloatToggleBtn.Text = "Fly Float: OFF"
-        flyFloatToggleBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
-        flyFloatToggleBtn.BackgroundTransparency = 0.35
+        setToggleState(flyFloatToggleBtn, false)
         destroyFlyFloat()
     end
 end)
@@ -7035,12 +6979,10 @@ S.autoTPBtn.MouseButton1Click:Connect(function()
 
     if S.autoTPEnabled then
         S.autoTPBtn.Text = "Auto TP: ON"
-        S.autoTPBtn.BackgroundColor3 = Color3.fromRGB(50, 200, 120)
-        S.autoTPBtn.BackgroundTransparency = 0
+        setToggleState(S.autoTPBtn, true)
     else
         S.autoTPBtn.Text = "Auto TP: OFF"
-        S.autoTPBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
-        S.autoTPBtn.BackgroundTransparency = 0.35
+        setToggleState(S.autoTPBtn, false)
     end
 
     if S.autoTPConnection then
@@ -7162,14 +7104,10 @@ ctrlClickTPBtn.MouseButton1Click:Connect(function()
 
     if S.ctrlClickTPEnabled then
         ctrlClickTPBtn.Text = "Ctrl Click TP: ON"
-        ctrlClickTPBtn.BackgroundColor3 = Color3.fromRGB(50, 200, 120)
-        ctrlClickTPBtn.BackgroundTransparency = 0
-        
+        setToggleState(ctrlClickTPBtn, true)
     else
         ctrlClickTPBtn.Text = "Ctrl Click TP: OFF"
-        ctrlClickTPBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
-        ctrlClickTPBtn.BackgroundTransparency = 0.35
-        
+        setToggleState(ctrlClickTPBtn, false)
     end
 end)
 
@@ -7184,8 +7122,10 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
     end
 
     if input.KeyCode == (S.menuKeyCode or Enum.KeyCode.RightControl) then
-        toggleMenu()
-        return
+        if not S.waitingForKeybind then 
+            toggleMenu()
+            return
+        end
     end
 
     if S.waitingForKeybind then
@@ -7266,8 +7206,8 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
 
         if S.flyToggle then
             S.flyToggle.Text = S.flyEnabled and "Fly: ON" or "Fly: OFF"
-            S.flyToggle.BackgroundColor3 = S.flyEnabled and Color3.fromRGB(50, 200, 120) or Color3.fromRGB(38, 38, 38)
-            S.flyToggle.BackgroundTransparency = S.flyEnabled and 0 or 0.35
+            setToggleState(S.flyToggle, S.flyEnabled)
+    
         end
 
         if S.flyEnabled then
@@ -7289,8 +7229,8 @@ end
 
         if S.btnRefs.noclipToggle then
             S.btnRefs.noclipToggle.Text = S.noclipEnabled and "Noclip: ON" or "Noclip: OFF"
-            S.btnRefs.noclipToggle.BackgroundColor3 = S.noclipEnabled and Color3.fromRGB(50, 200, 120) or Color3.fromRGB(38, 38, 38)
-            S.btnRefs.noclipToggle.BackgroundTransparency = S.noclipEnabled and 0 or 0.35
+            setToggleState(S.btnRefs.noclipToggle, S.noclipEnabled)
+
         end
 
         if S.noclipEnabled then
@@ -7344,8 +7284,7 @@ LocalPlayer.CharacterAdded:Connect(function(character)
     stopFly()
    if S.flyToggle then
     S.flyToggle.Text = "Fly: OFF"
-    S.flyToggle.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
-    S.flyToggle.BackgroundTransparency = 0.35
+    setToggleState(S.flyToggle, false)
 end
 if S.flyFloatEnabled then
     if not S.flyFloatBtn then
@@ -7356,8 +7295,7 @@ if S.flyFloatEnabled then
 end
     S.isInvisible = false
 if S.invisButton then
-    S.invisButton.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
-    S.invisButton.BackgroundTransparency = 0.35
+    setToggleState(S.invisButton, false)
     S.invisButton.Text = "Invisible: OFF"
 end
 
