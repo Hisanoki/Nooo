@@ -5369,170 +5369,61 @@ UserInputService.InputChanged:Connect(function(input)
 end)
 end
 -- Invisible row
-local invisBindRow = Instance.new("Frame")
-invisBindRow.Size = UDim2.new(1, 0, 0, 36)
-invisBindRow.BackgroundTransparency = 1
-invisBindRow.Parent = panel10
+local function createUnifiedBind(labelTitle, currentKey, bindName)
+    local row = Instance.new("Frame")
+    row.Size = UDim2.new(1, 0, 0, 36)
+    row.BackgroundColor3 = Color3.fromRGB(32, 32, 40)
+    row.BackgroundTransparency = 0.4
+    row.BorderSizePixel = 0
+    row.Parent = panel10
 
-local invisBindLabel = Instance.new("TextLabel")
-invisBindLabel.Size = UDim2.new(0.6, -4, 1, 0)
-invisBindLabel.Position = UDim2.new(0, 0, 0, 0)
-invisBindLabel.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
-invisBindLabel.BackgroundTransparency = 0.35
-invisBindLabel.BorderSizePixel = 0
-invisBindLabel.Text = "Invisible"
-invisBindLabel.TextColor3 = Color3.new(1,1,1)
-invisBindLabel.Font = Enum.Font.Gotham
-invisBindLabel.TextSize = 13
-invisBindLabel.Parent = invisBindRow
+    local rowCorner = Instance.new("UICorner")
+    rowCorner.CornerRadius = UDim.new(0, 6)
+    rowCorner.Parent = row
 
-local invisBindBtn = Instance.new("TextButton")
-invisBindBtn.Size = UDim2.new(0.4, 0, 1, 0)
-invisBindBtn.Position = UDim2.new(0.6, 0, 0, 0)
-invisBindBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
-invisBindBtn.BackgroundTransparency = 0.35
-invisBindBtn.BorderSizePixel = 0
-invisBindBtn.Text = keyCodeToText(S.invisKeyCode)
-invisBindBtn.TextColor3 = Color3.new(1,1,1)
-invisBindBtn.Font = Enum.Font.Gotham
-invisBindBtn.TextSize = 13
-invisBindBtn.Parent = invisBindRow
-do
-    local c = Instance.new("UICorner"); c.CornerRadius = UDim.new(0, 4); c.Parent = invisBindBtn
-    local s = Instance.new("UIStroke"); s.Thickness = 1; s.Color = Color3.fromRGB(70, 70, 70); s.Parent = invisBindBtn
+    local title = Instance.new("TextLabel")
+    title.Size = UDim2.new(0.6, 0, 1, 0)
+    title.Position = UDim2.new(0, 12, 0, 0)
+    title.BackgroundTransparency = 1
+    title.Text = labelTitle
+    title.TextColor3 = Color3.fromRGB(230, 230, 230)
+    title.Font = Enum.Font.GothamSemibold
+    title.TextSize = 13
+    title.TextXAlignment = Enum.TextXAlignment.Left
+    title.Parent = row
+
+    local btn = Instance.new("TextButton")
+    btn.Size = UDim2.new(0, 70, 0, 20)
+    btn.Position = UDim2.new(1, -6, 0.5, 0)
+    btn.AnchorPoint = Vector2.new(1, 0.5)
+    btn.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
+    btn.BackgroundTransparency = 0.2
+    btn.BorderSizePixel = 0
+    btn.Text = keyCodeToText(currentKey)
+    
+    
+    btn.TextColor3 = Color3.fromRGB(230, 230, 230) 
+    btn.Font = Enum.Font.Gotham 
+    btn.TextSize = 13
+    btn.Parent = row
+
+    local btnCorner = Instance.new("UICorner")
+    btnCorner.CornerRadius = UDim.new(0, 4)
+    btnCorner.Parent = btn
+
+    btn.MouseButton1Click:Connect(function()
+        S.waitingForKeybind = bindName
+        setBindButtonWaiting(btn)
+    end)
+
+    return btn
 end
 
-invisBindBtn.MouseButton1Click:Connect(function()
-    S.waitingForKeybind = "Invisible"
-    setBindButtonWaiting(invisBindBtn)
-    
-end)
+S.btnRefs.invisBindBtn = createUnifiedBind("Invisible", S.invisKeyCode, "Invisible")
+S.btnRefs.flyBindBtn = createUnifiedBind("Fly", S.flyKeyCode, "Fly")
+S.btnRefs.noclipBindBtn = createUnifiedBind("Noclip", S.noclipKeyCode or Enum.KeyCode.J, "Noclip")
+S.btnRefs.menuBindBtn = createUnifiedBind("Menu", S.menuKeybind, "Menu")
 
--- Fly row
-local flyBindRow = Instance.new("Frame")
-flyBindRow.Size = UDim2.new(1, 0, 0, 36)
-flyBindRow.BackgroundTransparency = 1
-flyBindRow.Parent = panel10
-
-local flyBindLabel = Instance.new("TextLabel")
-flyBindLabel.Size = UDim2.new(0.6, -4, 1, 0)
-flyBindLabel.Position = UDim2.new(0, 0, 0, 0)
-flyBindLabel.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
-flyBindLabel.BackgroundTransparency = 0.35
-flyBindLabel.BorderSizePixel = 0
-flyBindLabel.Text = "Fly"
-flyBindLabel.TextColor3 = Color3.new(1,1,1)
-flyBindLabel.Font = Enum.Font.Gotham
-flyBindLabel.TextSize = 13
-flyBindLabel.Parent = flyBindRow
-
-local flyBindBtn = Instance.new("TextButton")
-flyBindBtn.Size = UDim2.new(0.4, 0, 1, 0)
-flyBindBtn.Position = UDim2.new(0.6, 0, 0, 0)
-flyBindBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
-flyBindBtn.BackgroundTransparency = 0.35
-flyBindBtn.BorderSizePixel = 0
-flyBindBtn.Text = keyCodeToText(S.flyKeyCode)
-flyBindBtn.TextColor3 = Color3.new(1,1,1)
-flyBindBtn.Font = Enum.Font.Gotham
-flyBindBtn.TextSize = 13
-flyBindBtn.Parent = flyBindRow
-do
-    local c = Instance.new("UICorner"); c.CornerRadius = UDim.new(0, 4); c.Parent = flyBindBtn
-    local s = Instance.new("UIStroke"); s.Thickness = 1; s.Color = Color3.fromRGB(70, 70, 70); s.Parent = flyBindBtn
-end
-
-flyBindBtn.MouseButton1Click:Connect(function()
-    S.waitingForKeybind = "Fly"
-    setBindButtonWaiting(flyBindBtn)
-   
-end)
-
-local noclipBindRow = Instance.new("Frame")
-noclipBindRow.Size = UDim2.new(1, 0, 0, 36)
-noclipBindRow.BackgroundTransparency = 1
-noclipBindRow.Parent = panel10
-
-local noclipBindLabel = Instance.new("TextLabel")
-noclipBindLabel.Size = UDim2.new(0.6, -4, 1, 0)
-noclipBindLabel.Position = UDim2.new(0, 0, 0, 0)
-noclipBindLabel.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
-noclipBindLabel.BackgroundTransparency = 0.35
-noclipBindLabel.BorderSizePixel = 0
-noclipBindLabel.Text = "Noclip"
-noclipBindLabel.TextColor3 = Color3.new(1,1,1)
-noclipBindLabel.Font = Enum.Font.Gotham
-noclipBindLabel.TextSize = 13
-noclipBindLabel.Parent = noclipBindRow
-
-local noclipBindBtn = Instance.new("TextButton")
-noclipBindBtn.Size = UDim2.new(0.4, 0, 1, 0)
-noclipBindBtn.Position = UDim2.new(0.6, 0, 0, 0)
-noclipBindBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
-noclipBindBtn.BackgroundTransparency = 0.35
-noclipBindBtn.BorderSizePixel = 0
-noclipBindBtn.Text = keyCodeToText(S.noclipKeyCode or Enum.KeyCode.J)
-noclipBindBtn.TextColor3 = Color3.new(1,1,1)
-noclipBindBtn.Font = Enum.Font.Gotham
-noclipBindBtn.TextSize = 13
-noclipBindBtn.Parent = noclipBindRow
-do
-    local c = Instance.new("UICorner"); c.CornerRadius = UDim.new(0, 4); c.Parent = noclipBindBtn
-    local s = Instance.new("UIStroke"); s.Thickness = 1; s.Color = Color3.fromRGB(70, 70, 70); s.Parent = noclipBindBtn
-end
-
-noclipBindBtn.MouseButton1Click:Connect(function()
-    S.waitingForKeybind = "Noclip"
-    setBindButtonWaiting(noclipBindBtn)
-    
-end)
-
-local menuBindRow = Instance.new("Frame")
-menuBindRow.Size = UDim2.new(1, 0, 0, 36)
-menuBindRow.BackgroundTransparency = 1
-menuBindRow.Parent = panel10
-
-local menuBindLabel = Instance.new("TextLabel")
-menuBindLabel.Size = UDim2.new(0.6, -4, 1, 0)
-menuBindLabel.Position = UDim2.new(0, 0, 0, 0)
-menuBindLabel.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
-menuBindLabel.BackgroundTransparency = 0.35
-menuBindLabel.BorderSizePixel = 0
-menuBindLabel.Text = "Menu"
-menuBindLabel.TextColor3 = Color3.new(1,1,1)
-menuBindLabel.Font = Enum.Font.Gotham
-menuBindLabel.TextSize = 13
-menuBindLabel.Parent = menuBindRow
-
-local menuBindBtn = Instance.new("TextButton")
-menuBindBtn.Size = UDim2.new(0.4, 0, 1, 0)
-menuBindBtn.Position = UDim2.new(0.6, 0, 0, 0)
-menuBindBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
-menuBindBtn.BackgroundTransparency = 0.35
-menuBindBtn.BorderSizePixel = 0
-menuBindBtn.Text = keyCodeToText(S.menuKeybind)
-menuBindBtn.TextColor3 = Color3.new(1,1,1)
-menuBindBtn.Font = Enum.Font.Gotham
-menuBindBtn.TextSize = 13
-menuBindBtn.Parent = menuBindRow
-do
-    local c = Instance.new("UICorner"); c.CornerRadius = UDim.new(0, 4); c.Parent = menuBindBtn
-    local s = Instance.new("UIStroke"); s.Thickness = 1; s.Color = Color3.fromRGB(70, 70, 70); s.Parent = menuBindBtn
-end
-
-S.btnRefs.invisBindBtn = invisBindBtn
-S.btnRefs.flyBindBtn = flyBindBtn
-S.btnRefs.noclipBindBtn = noclipBindBtn
-S.btnRefs.menuBindBtn = menuBindBtn
-
-
-menuBindBtn.MouseButton1Click:Connect(function()
-    S.waitingForKeybind = "Menu"
-    setBindButtonWaiting(menuBindBtn)
-    
-end)
-
-    
 end
 
 local function CountFlingTargets()
