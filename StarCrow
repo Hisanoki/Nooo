@@ -5577,8 +5577,7 @@ local function StopFling()
     UpdateFlingStatus()
     if S.flingStartBtn then
         S.flingStartBtn.Text = "FLING PLAYER : OFF"
-        S.flingStartBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
-        S.flingStartBtn.BackgroundTransparency = 0.35
+        
     end
     showCustomNotif("StarCrow Says:\n\n   Fling has been stopped", 2, true)
 end
@@ -5594,8 +5593,7 @@ S.flingStartBtn.MouseButton1Click:Connect(function()
             return
         end
         S.flingStartBtn.Text = "FLING PLAYER : ON"
-        S.flingStartBtn.BackgroundColor3 = Color3.fromRGB(50, 200, 120)
-        S.flingStartBtn.BackgroundTransparency = 0
+        
         StartFling()
     end
 
@@ -5609,12 +5607,10 @@ S.bangBtn.MouseButton1Click:Connect(function()
 
     if S.BangActive then
         S.bangBtn.Text = "BANG PLAYER : ON"
-        S.bangBtn.BackgroundColor3 = Color3.fromRGB(50, 200, 120)
-        S.bangBtn.BackgroundTransparency = 0
+        
     else
         S.bangBtn.Text = "BANG PLAYER : OFF"
-        S.bangBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
-        S.bangBtn.BackgroundTransparency = 0.35
+       
         if bangTrack then
             bangTrack:Stop()
         end
@@ -5695,8 +5691,7 @@ S.walkFlingBtn.MouseButton1Click:Connect(function()
         end
 
         S.walkFlingBtn.Text = "WALK FLING : ON"
-        S.walkFlingBtn.BackgroundColor3 = Color3.fromRGB(50, 200, 120)
-        S.walkFlingBtn.BackgroundTransparency = 0
+       
     else
         if walkFlingAutoEnabledAntiFling and S.antiFlingEnabled then
             S.antiFlingEnabled = false
@@ -5707,8 +5702,7 @@ S.walkFlingBtn.MouseButton1Click:Connect(function()
         end
 
         S.walkFlingBtn.Text = "WALK FLING : OFF"
-        S.walkFlingBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
-        S.walkFlingBtn.BackgroundTransparency = 0.35
+        
     end
 end)
 S.loopBringBtn.MouseButton1Click:Connect(function()
@@ -5719,8 +5713,7 @@ S.loopBringBtn.MouseButton1Click:Connect(function()
         if CountFlingTargets() == 0 then
             S.loopBringActive = false
             S.loopBringBtn.Text = "LOOP BRING PLAYER : OFF"
-            S.loopBringBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
-            S.loopBringBtn.BackgroundTransparency = 0.35
+            
             S.flingStatusLabel.Text = "No targets selected for LoopBring!"
             task.delay(1.5, function()
                 UpdateFlingStatus()
@@ -5729,8 +5722,7 @@ S.loopBringBtn.MouseButton1Click:Connect(function()
         end
 
         S.loopBringBtn.Text = "LOOP BRING PLAYER : ON"
-        S.loopBringBtn.BackgroundColor3 = Color3.fromRGB(50, 200, 120)
-        S.loopBringBtn.BackgroundTransparency = 0
+        
 
         task.spawn(function()
             while S.loopBringActive do
