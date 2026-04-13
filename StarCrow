@@ -1000,19 +1000,111 @@ end
 --  UI HELPERS 
 
 local function createTransparentButton(text, color, parent)
+    local isToggle = text:match(": OFF$") or text:match(": ON$")
+                  or text:match(" : OFF$") or text:match(" : ON$")
+
     local btn = Instance.new("TextButton")
-    btn.Size = UDim2.new(1, 0, 0, 32)
-    btn.Text = text
+    btn.Size = UDim2.new(1, 0, 0, 36)
     btn.BackgroundColor3 = color
-    btn.BackgroundTransparency = 0.7
-    btn.TextColor3 = Color3.new(1, 1, 1)
+    btn.BackgroundTransparency = isToggle and 0 or 0.05
+    btn.BorderSizePixel = 0
     btn.Font = Enum.Font.Gotham
     btn.TextSize = 14
-    btn.BorderSizePixel = 0
     btn.Parent = parent
+
     local c = Instance.new("UICorner")
-    c.CornerRadius = UDim.new(0, 4)
+    c.CornerRadius = UDim.new(0, 8)
     c.Parent = btn
+
+    -- gradient nền nhẹ
+    local bgGrad = Instance.new("UIGradient")
+    bgGrad.Color = ColorSequence.new({
+        ColorSequenceKeypoint.new(0, Color3.fromRGB(255,255,255)),
+        ColorSequenceKeypoint.new(1, Color3.fromRGB(200,200,255)),
+    })
+    bgGrad.Transparency = NumberSequence.new({
+        NumberSequenceKeypoint.new(0, 0.1),
+        NumberSequenceKeypoint.new(1, 0.25),
+    })
+    bgGrad.Rotation = 90
+    bgGrad.Parent = btn
+
+    if isToggle then
+        -- ẩn text gốc
+        btn.Text = text
+        btn.TextTransparency = 1
+
+        -- label tên feature (bỏ ": OFF"/": ON")
+        local cleanName = text:gsub("%s*:?%s*O[NF][F]?%s*$", "")
+        local nameLabel = Instance.new("TextLabel")
+        nameLabel.Size = UDim2.new(1, -58, 1, 0)
+        nameLabel.Position = UDim2.new(0, 12, 0, 0)
+        nameLabel.BackgroundTransparency = 1
+        nameLabel.Text = cleanName
+        nameLabel.TextColor3 = Color3.fromRGB(200, 185, 235)
+        nameLabel.Font = Enum.Font.GothamSemibold
+        nameLabel.TextSize = 13
+        nameLabel.TextXAlignment = Enum.TextXAlignment.Left
+        nameLabel.TextYAlignment = Enum.TextYAlignment.Center
+        nameLabel.ZIndex = btn.ZIndex + 2
+        nameLabel.Parent = btn
+
+        -- track nền toggle
+        local track = Instance.new("Frame")
+        track.Name = "ToggleTrack"
+        track.Size = UDim2.new(0, 42, 0, 22)
+        track.Position = UDim2.new(1, -50, 0.5, -11)
+        track.BackgroundColor3 = Color3.fromRGB(45, 40, 65)
+        track.BorderSizePixel = 0
+        track.ZIndex = btn.ZIndex + 2
+        track.Parent = btn
+        local tc = Instance.new("UICorner")
+        tc.CornerRadius = UDim.new(1, 0)
+        tc.Parent = track
+
+        -- knob
+        local knob = Instance.new("Frame")
+        knob.Name = "ToggleKnob"
+        knob.Size = UDim2.new(0, 18, 0, 18)
+        knob.Position = UDim2.new(0, 2, 0.5, -9)
+        knob.BackgroundColor3 = Color3.fromRGB(120, 100, 180)
+        knob.BorderSizePixel = 0
+        knob.ZIndex = btn.ZIndex + 3
+        knob.Parent = track
+        local kc = Instance.new("UICorner")
+        kc.CornerRadius = UDim.new(1, 0)
+        kc.Parent = knob
+
+        local TS = game:GetService("TweenService")
+        local GREEN = Color3.fromRGB(50, 200, 120)
+
+        local function syncToggle()
+            local isOn = btn.BackgroundColor3 == GREEN
+            TS:Create(knob, TweenInfo.new(0.15, Enum.EasingStyle.Quad), {
+                Position = isOn and UDim2.new(0, 22, 0.5, -9) or UDim2.new(0, 2, 0.5, -9),
+                BackgroundColor3 = isOn and Color3.fromRGB(255, 255, 255) or Color3.fromRGB(120, 100, 180),
+            }):Play()
+            TS:Create(track, TweenInfo.new(0.15, Enum.EasingStyle.Quad), {
+                BackgroundColor3 = isOn and Color3.fromRGB(40, 180, 100) or Color3.fromRGB(45, 40, 65),
+            }):Play()
+            nameLabel.TextColor3 = isOn
+                and Color3.fromRGB(255, 255, 255)
+                or  Color3.fromRGB(180, 165, 215)
+        end
+
+        btn:GetPropertyChangedSignal("BackgroundColor3"):Connect(syncToggle)
+        btn:GetPropertyChangedSignal("Text"):Connect(function()
+            local t = btn.Text
+            local n = t:gsub("%s*:?%s*O[NF][F]?%s*$", "")
+            if n ~= "" then nameLabel.Text = n end
+        end)
+        syncToggle()
+    else
+        -- nút action thường
+        btn.Text = text
+        btn.TextColor3 = Color3.new(1, 1, 1)
+    end
+
     btn.MouseButton1Click:Connect(function()
         local s = Instance.new("Sound")
         s.SoundId = "rbxassetid://116394299154002"
@@ -2201,8 +2293,8 @@ do
     for i = 1, 9 do
         local btn = Instance.new("TextButton")
         btn.Size = UDim2.new(1, 0, 0, 30)
-        btn.BackgroundColor3 = tabColors[i]
-        btn.BackgroundTransparency = 0.6
+        btn.BackgroundColor3 = Color3.fromRGB(35, 15, 65)
+        btn.BackgroundTransparency = 0.35
         btn.BorderSizePixel = 0
         btn.Text = ""
         btn.LayoutOrder = i
@@ -2211,6 +2303,15 @@ do
         local bc = Instance.new("UICorner")
         bc.CornerRadius = UDim.new(0,6)
         bc.Parent = btn
+
+        -- gradient nền tím→navy cho mỗi tab
+        local tabGrad = Instance.new("UIGradient")
+        tabGrad.Color = ColorSequence.new({
+            ColorSequenceKeypoint.new(0,   Color3.fromRGB(55, 15, 100)),
+            ColorSequenceKeypoint.new(1,   Color3.fromRGB(15, 20, 60)),
+        })
+        tabGrad.Rotation = 135
+        tabGrad.Parent = btn
 
         -- icon
         local icon = Instance.new("ImageLabel")
@@ -2229,7 +2330,7 @@ icon.Parent = btn
         label.Position = UDim2.new(0, 26, 0, 0)
         label.Size = UDim2.new(1, -28, 1, 0)
         label.Text = tabNames[i]
-        label.TextColor3 = Color3.fromRGB(255,255,255)
+        label.TextColor3 = Color3.fromRGB(200, 170, 255)
         label.Font = Enum.Font.GothamBold
         label.TextSize = 11
         label.TextXAlignment = Enum.TextXAlignment.Left
@@ -4388,8 +4489,24 @@ local function switchTab(idx)
     end
     for i, btn in ipairs(tabBtns) do
         local isActive = i == idx
-        btn.BackgroundTransparency = isActive and 0.05 or 0.65
-        btn.BackgroundColor3 = isActive and Color3.fromRGB(60, 20, 90) or Color3.fromRGB(25, 25, 25)
+        btn.BackgroundTransparency = isActive and 0.0 or 0.35
+        btn.BackgroundColor3 = isActive and Color3.fromRGB(90, 20, 160) or Color3.fromRGB(35, 15, 65)
+
+        -- update gradient bên trong
+        local tabGrad = btn:FindFirstChildOfClass("UIGradient")
+        if tabGrad then
+            if isActive then
+                tabGrad.Color = ColorSequence.new({
+                    ColorSequenceKeypoint.new(0, Color3.fromRGB(140, 40, 255)),
+                    ColorSequenceKeypoint.new(1, Color3.fromRGB(60, 10, 140)),
+                })
+            else
+                tabGrad.Color = ColorSequence.new({
+                    ColorSequenceKeypoint.new(0, Color3.fromRGB(55, 15, 100)),
+                    ColorSequenceKeypoint.new(1, Color3.fromRGB(15, 20, 60)),
+                })
+            end
+        end
 
         -- accent bar bên trái gradient
         local bar = btn:FindFirstChild("AccentBar")
@@ -4417,11 +4534,11 @@ local function switchTab(idx)
         -- icon sáng hơn khi active
         local icon = btn:FindFirstChild("TabIcon")
         if icon then
-            icon.ImageColor3 = isActive and Color3.fromRGB(180, 120, 255) or Color3.fromRGB(200, 200, 200)
+            icon.ImageColor3 = isActive and Color3.fromRGB(220, 160, 255) or Color3.fromRGB(170, 140, 210)
         end
         local lbl = btn:FindFirstChild("TabLabel")
         if lbl then
-            lbl.TextColor3 = isActive and Color3.fromRGB(220, 180, 255) or Color3.fromRGB(200, 200, 200)
+            lbl.TextColor3 = isActive and Color3.fromRGB(255, 210, 255) or Color3.fromRGB(180, 150, 220)
         end
     end
 end
