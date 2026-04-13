@@ -1970,7 +1970,7 @@ mainFrame.BackgroundTransparency = 0.7
 mainFrame.BorderSizePixel = 0
 mainFrame.Visible = false
 mainFrame.Active = true
-mainFrame.Draggable = true
+mainFrame.Draggable = false
 mainFrame.Parent = gui
 _mkCorner(8, mainFrame)
 
@@ -2038,8 +2038,47 @@ titleBar.Size = UDim2.new(1, 0, 0, 28)
 titleBar.BackgroundColor3 = Color3.fromRGB(20, 20, 30)
 titleBar.BackgroundTransparency = 0.2
 titleBar.BorderSizePixel = 0
+titleBar.Active = true
 titleBar.Parent = mainFrame
 _mkCorner(8, titleBar)
+
+-- Custom drag: only titleBar moves the menu (sliders won't bleed through)
+do
+    local _mfDragging = false
+    local _mfDragStart = nil
+    local _mfStartPos = nil
+    titleBar.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1
+        or input.UserInputType == Enum.UserInputType.Touch then
+            _mfDragging = true
+            _mfDragStart = input.Position
+            _mfStartPos  = mainFrame.Position
+            input.Changed:Connect(function()
+                if input.UserInputState == Enum.UserInputState.End then
+                    _mfDragging = false
+                end
+            end)
+        end
+    end)
+    UserInputService.InputChanged:Connect(function(input)
+        if _mfDragging and (
+            input.UserInputType == Enum.UserInputType.MouseMovement or
+            input.UserInputType == Enum.UserInputType.Touch
+        ) then
+            local delta = input.Position - _mfDragStart
+            mainFrame.Position = UDim2.new(
+                _mfStartPos.X.Scale, _mfStartPos.X.Offset + delta.X,
+                _mfStartPos.Y.Scale, _mfStartPos.Y.Offset + delta.Y
+            )
+        end
+    end)
+    UserInputService.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1
+        or input.UserInputType == Enum.UserInputType.Touch then
+            _mfDragging = false
+        end
+    end)
+end
 
 
 do
@@ -4185,109 +4224,270 @@ do
     
 
 
-    -- Aim Part label + row
+    -- Aim Part label + dropdown list
     do
-        local _aplbl = createTransparentLabel("Aim Part:", panel9)
+        local _aplbl = createTransparentLabel("Target Aimpart", panel9)
         _aplbl.TextColor3 = Color3.fromRGB(255, 255, 255)
     end
     do
-        local aimPartRow = Instance.new("Frame")
-        aimPartRow.BackgroundTransparency = 1
-        aimPartRow.Size   = UDim2.new(1, 0, 0, 32)
-        aimPartRow.Parent = panel9
+        local AIM_PARTS = {
+            { label = "Head", value = "Head"             },
+            { label = "Body", value = "HumanoidRootPart" },
+        }
 
-        local headBtn = Instance.new("TextButton")
-        headBtn.Size                   = UDim2.new(0.48, 0, 1, 0)
-        headBtn.Text                   = "Head"
-        headBtn.BackgroundColor3       = AIM_ON
-        headBtn.BackgroundTransparency = 0
-        headBtn.TextColor3             = Color3.new(1,1,1)
-        headBtn.Font                   = Enum.Font.GothamBold
-        headBtn.TextSize               = 13
-        headBtn.BorderSizePixel        = 0
-        headBtn.Parent                 = aimPartRow
-        Instance.new("UICorner", headBtn).CornerRadius = UDim.new(0, 4)
+        local LIST_BG   = Color3.fromRGB(45, 45, 45)
+        local SEL_BG    = Color3.fromRGB(65, 65, 65)
+        local ITEM_H    = 28
+        local LIST_W    = 180
 
-        local bodyBtn = Instance.new("TextButton")
-        bodyBtn.Size                   = UDim2.new(0.48, 0, 1, 0)
-        bodyBtn.Position               = UDim2.new(0.52, 0, 0, 0)
-        bodyBtn.Text                   = "Body"
-        bodyBtn.BackgroundColor3       = AIM_OFF
-        bodyBtn.BackgroundTransparency = 0.35
-        bodyBtn.TextColor3             = Color3.new(1,1,1)
-        bodyBtn.Font                   = Enum.Font.GothamBold
-        bodyBtn.TextSize               = 13
-        bodyBtn.BorderSizePixel        = 0
-        bodyBtn.Parent                 = aimPartRow
-        Instance.new("UICorner", bodyBtn).CornerRadius = UDim.new(0, 4)
+        -- Header (selected display + arrow)
+        local headerFrame = Instance.new("Frame")
+        headerFrame.Size                = UDim2.new(1, 0, 0, 30)
+        headerFrame.BackgroundColor3    = LIST_BG
+        headerFrame.BackgroundTransparency = 0.25
+        headerFrame.BorderSizePixel     = 0
+        headerFrame.Parent              = panel9
+        Instance.new("UICorner", headerFrame).CornerRadius = UDim.new(0, 5)
 
-        headBtn.MouseButton1Click:Connect(function()
-            AimSettings.AimPart            = "Head"
-            headBtn.BackgroundColor3       = AIM_ON;  headBtn.BackgroundTransparency = 0
-            bodyBtn.BackgroundColor3       = AIM_OFF; bodyBtn.BackgroundTransparency = 0.35
-        end)
-        bodyBtn.MouseButton1Click:Connect(function()
-            AimSettings.AimPart            = "HumanoidRootPart"
-            bodyBtn.BackgroundColor3       = AIM_ON;  bodyBtn.BackgroundTransparency = 0
-            headBtn.BackgroundColor3       = AIM_OFF; headBtn.BackgroundTransparency = 0.35
+        local headerBtn = Instance.new("TextButton")
+        headerBtn.Size                  = UDim2.new(1, 0, 1, 0)
+        headerBtn.BackgroundTransparency= 1
+        headerBtn.TextColor3            = Color3.fromRGB(220, 220, 220)
+        headerBtn.Font                  = Enum.Font.Gotham
+        headerBtn.TextSize              = 13
+        headerBtn.TextXAlignment        = Enum.TextXAlignment.Left
+        headerBtn.Text                  = "  " .. AIM_PARTS[1].label
+        headerBtn.BorderSizePixel       = 0
+        headerBtn.Parent                = headerFrame
+
+        local arrowLbl = Instance.new("TextLabel")
+        arrowLbl.Size                   = UDim2.new(0, 20, 1, 0)
+        arrowLbl.Position               = UDim2.new(1, -22, 0, 0)
+        arrowLbl.BackgroundTransparency = 1
+        arrowLbl.TextColor3             = Color3.fromRGB(180, 180, 180)
+        arrowLbl.Font                   = Enum.Font.Gotham
+        arrowLbl.TextSize               = 11
+        arrowLbl.Text                   = "▼"
+        arrowLbl.Parent                 = headerFrame
+
+        -- Dropdown container (hidden by default, parented to panel9 so it flows in list)
+        local dropContainer = Instance.new("Frame")
+        dropContainer.Size              = UDim2.new(1, 0, 0, #AIM_PARTS * ITEM_H + 4)
+        dropContainer.BackgroundColor3  = Color3.fromRGB(35, 35, 35)
+        dropContainer.BackgroundTransparency = 0.1
+        dropContainer.BorderSizePixel   = 0
+        dropContainer.ClipsDescendants  = true
+        dropContainer.Visible           = false
+        dropContainer.Parent            = panel9
+        Instance.new("UICorner", dropContainer).CornerRadius = UDim.new(0, 5)
+
+        local listLayout = Instance.new("UIListLayout")
+        listLayout.SortOrder            = Enum.SortOrder.LayoutOrder
+        listLayout.Padding              = UDim.new(0, 0)
+        listLayout.Parent               = dropContainer
+
+        local UIPad = Instance.new("UIPadding")
+        UIPad.PaddingTop                = UDim.new(0, 2)
+        UIPad.PaddingBottom             = UDim.new(0, 2)
+        UIPad.PaddingLeft               = UDim.new(0, 4)
+        UIPad.PaddingRight              = UDim.new(0, 4)
+        UIPad.Parent                    = dropContainer
+
+        local isOpen = false
+
+        local function closeDropdown()
+            isOpen = false
+            dropContainer.Visible = false
+            arrowLbl.Text = "▼"
+        end
+
+        local function selectPart(idx)
+            AimSettings.AimPart = AIM_PARTS[idx].value
+            headerBtn.Text      = "  " .. AIM_PARTS[idx].label
+            closeDropdown()
+        end
+
+        -- Build items
+        for i, part in ipairs(AIM_PARTS) do
+            local item = Instance.new("TextButton")
+            item.Size                   = UDim2.new(1, 0, 0, ITEM_H)
+            item.BackgroundColor3       = (i == 1) and SEL_BG or LIST_BG
+            item.BackgroundTransparency = 0.35
+            item.TextColor3             = (i == 1) and Color3.fromRGB(255,255,255) or Color3.fromRGB(180,180,180)
+            item.Font                   = Enum.Font.Gotham
+            item.TextSize               = 13
+            item.TextXAlignment         = Enum.TextXAlignment.Left
+            item.Text                   = "   " .. part.label
+            item.BorderSizePixel        = 0
+            item.LayoutOrder            = i
+            item.Parent                 = dropContainer
+            Instance.new("UICorner", item).CornerRadius = UDim.new(0, 4)
+
+            item.MouseButton1Click:Connect(function()
+                -- reset all items
+                for _, child in pairs(dropContainer:GetChildren()) do
+                    if child:IsA("TextButton") then
+                        child.BackgroundColor3       = LIST_BG
+                        child.BackgroundTransparency = 0.35
+                        child.TextColor3             = Color3.fromRGB(180, 180, 180)
+                    end
+                end
+                item.BackgroundColor3       = SEL_BG
+                item.BackgroundTransparency = 0.35
+                item.TextColor3             = Color3.fromRGB(255, 255, 255)
+                selectPart(i)
+            end)
+        end
+
+        -- Toggle dropdown open/close
+        headerBtn.MouseButton1Click:Connect(function()
+            isOpen = not isOpen
+            dropContainer.Visible = isOpen
+            arrowLbl.Text = isOpen and "▲" or "▼"
         end)
     end
 
-    -- FOV +/- row
+    -- FOV Slider
     do
-        local fovRow = Instance.new("Frame")
-        fovRow.BackgroundTransparency = 1
-        fovRow.Size   = UDim2.new(1, 0, 0, 32)
-        fovRow.Parent = panel9
+        local FOV_MIN = 20
+        local FOV_MAX = 300
+        local UIS2 = game:GetService("UserInputService")
+        local TS2  = game:GetService("TweenService")
 
-        local fovMinus = Instance.new("TextButton")
-        fovMinus.Size                   = UDim2.new(0.3, 0, 1, 0)
-        fovMinus.Text                   = "FOV -"
-        fovMinus.BackgroundColor3       = AIM_OFF
-        fovMinus.BackgroundTransparency = 0.35
-        fovMinus.TextColor3             = Color3.new(1,1,1)
-        fovMinus.Font                   = Enum.Font.GothamBold
-        fovMinus.TextSize               = 13
-        fovMinus.BorderSizePixel        = 0
-        fovMinus.Parent                 = fovRow
-        Instance.new("UICorner", fovMinus).CornerRadius = UDim.new(0, 4)
+        -- Label row
+        local fovLabelRow = Instance.new("Frame")
+        fovLabelRow.BackgroundTransparency = 1
+        fovLabelRow.Size   = UDim2.new(1, 0, 0, 16)
+        fovLabelRow.Parent = panel9
 
-        local fovDisplay = Instance.new("TextLabel")
-        fovDisplay.Size                   = UDim2.new(0.4, 0, 1, 0)
-        fovDisplay.Position               = UDim2.new(0.3, 0, 0, 0)
-        fovDisplay.BackgroundTransparency = 1
-        fovDisplay.Text                   = tostring(AimSettings.FOV)
-        fovDisplay.TextColor3             = Color3.fromRGB(255, 255, 255)
-        fovDisplay.Font                   = Enum.Font.GothamBold
-        fovDisplay.TextSize               = 14
-        fovDisplay.Parent                 = fovRow
+        local fovLbl = Instance.new("TextLabel")
+        fovLbl.Size                   = UDim2.new(0.5, 0, 1, 0)
+        fovLbl.BackgroundTransparency = 1
+        fovLbl.Text                   = "FOV"
+        fovLbl.TextColor3             = Color3.fromRGB(180, 180, 180)
+        fovLbl.Font                   = Enum.Font.Gotham
+        fovLbl.TextSize               = 12
+        fovLbl.TextXAlignment         = Enum.TextXAlignment.Left
+        fovLbl.Parent                 = fovLabelRow
 
-        local fovPlus = Instance.new("TextButton")
-        fovPlus.Size                   = UDim2.new(0.3, 0, 1, 0)
-        fovPlus.Position               = UDim2.new(0.7, 0, 0, 0)
-        fovPlus.Text                   = "FOV +"
-        fovPlus.BackgroundColor3       = AIM_OFF
-        fovPlus.BackgroundTransparency = 0.35
-        fovPlus.TextColor3             = Color3.new(1,1,1)
-        fovPlus.Font                   = Enum.Font.GothamBold
-        fovPlus.TextSize               = 13
-        fovPlus.BorderSizePixel        = 0
-        fovPlus.Parent                 = fovRow
-        Instance.new("UICorner", fovPlus).CornerRadius = UDim.new(0, 4)
+        local fovValLbl = Instance.new("TextLabel")
+        fovValLbl.Size                   = UDim2.new(0.5, 0, 1, 0)
+        fovValLbl.Position               = UDim2.new(0.5, 0, 0, 0)
+        fovValLbl.BackgroundTransparency = 1
+        fovValLbl.Text                   = tostring(AimSettings.FOV)
+        fovValLbl.TextColor3             = Color3.fromRGB(200, 200, 200)
+        fovValLbl.Font                   = Enum.Font.GothamBold
+        fovValLbl.TextSize               = 12
+        fovValLbl.TextXAlignment         = Enum.TextXAlignment.Right
+        fovValLbl.Parent                 = fovLabelRow
 
-        local function _updateFOVDisplay()
-            fovDisplay.Text  = tostring(AimSettings.FOV)
+        -- Outer wrapper (captures input to block menu drag)
+        local sliderWrapper = Instance.new("Frame")
+        sliderWrapper.Size                   = UDim2.new(1, 0, 0, 20)
+        sliderWrapper.BackgroundTransparency = 1
+        sliderWrapper.BorderSizePixel        = 0
+        sliderWrapper.Active                 = true   -- blocks input sinking to mainFrame
+        sliderWrapper.Parent                 = panel9
+
+        -- Track background
+        local trackBg = Instance.new("Frame")
+        trackBg.Size                   = UDim2.new(1, 0, 0, 6)
+        trackBg.Position               = UDim2.new(0, 0, 0.5, -3)
+        trackBg.BackgroundColor3       = Color3.fromRGB(55, 55, 60)
+        trackBg.BackgroundTransparency = 0
+        trackBg.BorderSizePixel        = 0
+        trackBg.Active                 = true
+        trackBg.Parent                 = sliderWrapper
+        Instance.new("UICorner", trackBg).CornerRadius = UDim.new(1, 0)
+
+        -- Glow gradient on track
+        local trackGrad = Instance.new("UIGradient")
+        trackGrad.Color = ColorSequence.new({
+            ColorSequenceKeypoint.new(0, Color3.fromRGB(35,35,38)),
+            ColorSequenceKeypoint.new(1, Color3.fromRGB(70,70,75)),
+        })
+        trackGrad.Rotation = 0
+        trackGrad.Parent   = trackBg
+
+        -- Fill
+        local trackFill = Instance.new("Frame")
+        trackFill.Size                = UDim2.new(0, 0, 1, 0)
+        trackFill.BackgroundColor3    = Color3.fromRGB(160, 160, 170)
+        trackFill.BackgroundTransparency = 0
+        trackFill.BorderSizePixel     = 0
+        trackFill.ZIndex              = 2
+        trackFill.Parent              = trackBg
+        Instance.new("UICorner", trackFill).CornerRadius = UDim.new(1, 0)
+
+        -- Knob
+        local knob = Instance.new("Frame")
+        knob.Size                   = UDim2.new(0, 14, 0, 14)
+        knob.AnchorPoint            = Vector2.new(0.5, 0.5)
+        knob.Position               = UDim2.new(0, 0, 0.5, 0)
+        knob.BackgroundColor3       = Color3.fromRGB(255, 255, 255)
+        knob.BackgroundTransparency = 0
+        knob.BorderSizePixel        = 0
+        knob.ZIndex                 = 10
+        knob.Active                 = true
+        knob.Parent                 = trackBg
+        Instance.new("UICorner", knob).CornerRadius = UDim.new(1, 0)
+
+        local fovDragging = false
+
+        local function _setFOV(val)
+            AimSettings.FOV = math.clamp(math.round(val), FOV_MIN, FOV_MAX)
+            local pct = (AimSettings.FOV - FOV_MIN) / (FOV_MAX - FOV_MIN)
+            trackFill.Size   = UDim2.new(pct, 0, 1, 0)
+            knob.Position    = UDim2.new(pct, 0, 0.5, 0)
+            fovValLbl.Text   = tostring(AimSettings.FOV)
             FOVCircleAim.Size = UDim2.new(0, AimSettings.FOV * 2, 0, AimSettings.FOV * 2)
         end
-        _updateFOVDisplay()
+        _setFOV(AimSettings.FOV)
 
-        fovMinus.MouseButton1Click:Connect(function()
-            AimSettings.FOV = math.clamp(AimSettings.FOV - 10, 20, 300)
-            _updateFOVDisplay()
+        local function _calcFOVFromX(inputX)
+            local absPos  = trackBg.AbsolutePosition.X
+            local absSize = trackBg.AbsoluteSize.X
+            local relX    = math.clamp(inputX - absPos, 0, absSize)
+            _setFOV(FOV_MIN + (relX / absSize) * (FOV_MAX - FOV_MIN))
+        end
+
+        -- Use sliderWrapper.InputBegan so it intercepts before mainFrame.Draggable
+        sliderWrapper.InputBegan:Connect(function(input)
+            if input.UserInputType == Enum.UserInputType.MouseButton1
+            or input.UserInputType == Enum.UserInputType.Touch then
+                fovDragging = true
+                _calcFOVFromX(input.Position.X)
+                -- Scale knob up slightly for feedback
+                TS2:Create(knob, TweenInfo.new(0.08), { Size = UDim2.new(0, 17, 0, 17) }):Play()
+            end
         end)
-        fovPlus.MouseButton1Click:Connect(function()
-            AimSettings.FOV = math.clamp(AimSettings.FOV + 10, 20, 300)
-            _updateFOVDisplay()
+
+        trackBg.InputBegan:Connect(function(input)
+            if input.UserInputType == Enum.UserInputType.MouseButton1
+            or input.UserInputType == Enum.UserInputType.Touch then
+                fovDragging = true
+                _calcFOVFromX(input.Position.X)
+                TS2:Create(knob, TweenInfo.new(0.08), { Size = UDim2.new(0, 17, 0, 17) }):Play()
+            end
+        end)
+
+        UIS2.InputChanged:Connect(function(input)
+            if fovDragging and (
+                input.UserInputType == Enum.UserInputType.MouseMovement or
+                input.UserInputType == Enum.UserInputType.Touch
+            ) then
+                _calcFOVFromX(input.Position.X)
+            end
+        end)
+
+        UIS2.InputEnded:Connect(function(input)
+            if fovDragging and (
+                input.UserInputType == Enum.UserInputType.MouseButton1 or
+                input.UserInputType == Enum.UserInputType.Touch
+            ) then
+                fovDragging = false
+                TS2:Create(knob, TweenInfo.new(0.08), { Size = UDim2.new(0, 14, 0, 14) }):Play()
+            end
         end)
     end
 
@@ -4429,6 +4629,24 @@ end
  local currentAimTarget = nil
 local lastAimScan = 0
 local AIM_SCAN_INTERVAL = 0.05
+-- Target lock: khoảng cách tối thiểu cần kéo chuột để chuyển mục tiêu (pixel)
+local SWITCH_THRESHOLD = 40
+
+local function _isTargetValid(part)
+    if not part or not part.Parent then return false end
+    local char = part.Parent
+    if not _aimAlive(char) then return false end
+    if _aimHasFF(char) then return false end
+    local hum = char:FindFirstChildOfClass("Humanoid")
+    if not hum or (AimSettings.HPCheck and hum.Health <= 0) then return false end
+    if not _aimCanSee(part, char) then return false end
+    local sp, onScreen = Camera:WorldToViewportPoint(part.Position)
+    if not onScreen then return false end
+    local cx = Camera.ViewportSize.X / 2 + AimSettings.FOVOffsetX
+    local cy = Camera.ViewportSize.Y / 2 + AimSettings.FOVOffsetY
+    local d = (Vector2.new(sp.X, sp.Y) - Vector2.new(cx, cy)).Magnitude
+    return d < AimSettings.FOV
+end
 
 RunService.RenderStepped:Connect(function()
     local vs = Camera.ViewportSize
@@ -4446,7 +4664,31 @@ RunService.RenderStepped:Connect(function()
 
     if tick() - lastAimScan >= AIM_SCAN_INTERVAL then
         lastAimScan = tick()
-        currentAimTarget = _getClosest()
+
+        -- Nếu đang lock target còn valid thì giữ nguyên,
+        -- chỉ chuyển khi target mất hiệu lực HOẶC có target khác gần tâm hơn >= SWITCH_THRESHOLD
+        if currentAimTarget and _isTargetValid(currentAimTarget) then
+            local sp_cur = Camera:WorldToViewportPoint(currentAimTarget.Position)
+            local cx = Camera.ViewportSize.X / 2 + AimSettings.FOVOffsetX
+            local cy = Camera.ViewportSize.Y / 2 + AimSettings.FOVOffsetY
+            local curDist = (Vector2.new(sp_cur.X, sp_cur.Y) - Vector2.new(cx, cy)).Magnitude
+
+            -- Tìm target gần nhất
+            local newTarget, newDist = _getClosest(), math.huge
+            if newTarget then
+                local sp_new = Camera:WorldToViewportPoint(newTarget.Position)
+                newDist = (Vector2.new(sp_new.X, sp_new.Y) - Vector2.new(cx, cy)).Magnitude
+            end
+
+            -- Chỉ chuyển target nếu target mới gần hơn đủ ngưỡng SWITCH_THRESHOLD
+            if newTarget and newTarget ~= currentAimTarget and (curDist - newDist) >= SWITCH_THRESHOLD then
+                currentAimTarget = newTarget
+            end
+            -- else: giữ nguyên currentAimTarget
+        else
+            -- Target cũ mất hiệu lực, scan mới
+            currentAimTarget = _getClosest()
+        end
     end
 
     _aimAt(currentAimTarget)
@@ -5165,6 +5407,54 @@ end
 keybindsBtn.MouseButton1Click:Connect(function()
     S.keybindsEnabled = not S.keybindsEnabled
     updateKeybindsBtn()
+    -- Flash animation
+    local TS = game:GetService("TweenService")
+    local flashColor = S.keybindsEnabled and Color3.fromRGB(50, 200, 120) or Color3.fromRGB(200, 60, 60)
+    -- Ripple burst
+    local rip = Instance.new("Frame")
+    rip.Size = UDim2.new(0, 0, 0, 0)
+    rip.Position = UDim2.new(0.5, 0, 0.5, 0)
+    rip.AnchorPoint = Vector2.new(0.5, 0.5)
+    rip.BackgroundColor3 = flashColor
+    rip.BackgroundTransparency = 0.3
+    rip.BorderSizePixel = 0
+    rip.ZIndex = keybindsBtn.ZIndex + 5
+    rip.Parent = keybindsBtn
+    Instance.new("UICorner", rip).CornerRadius = UDim.new(1, 0)
+    TS:Create(rip, TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+        Size = UDim2.new(2, 0, 3, 0),
+        BackgroundTransparency = 1,
+    }):Play()
+    game:GetService("Debris"):AddItem(rip, 0.45)
+    -- Shimmer sweep
+    local shine = Instance.new("Frame")
+    shine.Size = UDim2.new(0, 24, 1, 0)
+    shine.Position = UDim2.new(-0.1, 0, 0, 0)
+    shine.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    shine.BackgroundTransparency = 0.6
+    shine.BorderSizePixel = 0
+    shine.ZIndex = keybindsBtn.ZIndex + 4
+    shine.Parent = keybindsBtn
+    local sg = Instance.new("UIGradient")
+    sg.Transparency = NumberSequence.new({
+        NumberSequenceKeypoint.new(0, 1),
+        NumberSequenceKeypoint.new(0.5, 0.45),
+        NumberSequenceKeypoint.new(1, 1),
+    })
+    sg.Parent = shine
+    TS:Create(shine, TweenInfo.new(0.32, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+        Position = UDim2.new(1.1, 0, 0, 0),
+    }):Play()
+    game:GetService("Debris"):AddItem(shine, 0.37)
+    -- Bounce
+    TS:Create(keybindsBtn, TweenInfo.new(0.07, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+        Size = UDim2.new(0.96, 0, 0, 33),
+    }):Play()
+    task.delay(0.07, function()
+        TS:Create(keybindsBtn, TweenInfo.new(0.18, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+            Size = UDim2.new(1, 0, 0, 36),
+        }):Play()
+    end)
 end)
 local function keyCodeToText(keyCode)
     if not keyCode then
@@ -6292,11 +6582,15 @@ mainFrame.Visible = false
 
 local function openMenu()
     local TS = game:GetService("TweenService")
-    mainFrame.Position = UDim2.new(0.5, -160, 0.5, -210)
-    mainFrame.BackgroundTransparency = 0.95
-    mainFrame.Visible = true
-    toggleBtn.Visible = false
-    TS:Create(mainFrame, TweenInfo.new(0.22, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+    -- Bắt đầu từ nhỏ + mờ, zoom in + fade in đồng thời
+    mainFrame.Size               = UDim2.new(0, 260, 0, 310)
+    mainFrame.Position           = UDim2.new(0.5, -130, 0.5, -175)
+    mainFrame.BackgroundTransparency = 1
+    mainFrame.Visible            = true
+    toggleBtn.Visible            = false
+    -- Zoom in với elastic
+    TS:Create(mainFrame, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+        Size     = UDim2.new(0, 320, 0, 380),
         Position = UDim2.new(0.5, -160, 0.5, -190),
         BackgroundTransparency = 0.7,
     }):Play()
@@ -6335,57 +6629,104 @@ end
 
 toggleBtn.MouseButton1Click:Connect(function()
     if _tbMoved then _tbMoved = false; return end
-    -- bounce press
     local TS = game:GetService("TweenService")
-    TS:Create(toggleBtn, TweenInfo.new(0.07, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
-        Size = UDim2.new(0, 178, 0, 34),
+
+    -- === PARTICLE BURST: các mảnh tỏa ra từ nút ===
+    local particleColors = {
+        Color3.fromRGB(160, 60, 255),
+        Color3.fromRGB(0, 180, 255),
+        Color3.fromRGB(220, 100, 255),
+        Color3.fromRGB(80, 220, 255),
+    }
+    for i = 1, 12 do
+        local angle = (i / 12) * math.pi * 2
+        local dist  = 38 + math.random(0, 24)
+        local sz    = math.random(3, 7)
+        local p = Instance.new("Frame")
+        p.Size            = UDim2.new(0, sz, 0, sz)
+        p.AnchorPoint     = Vector2.new(0.5, 0.5)
+        p.Position        = UDim2.new(0.5, 0, 0.5, 0)
+        p.BackgroundColor3= particleColors[(i % #particleColors) + 1]
+        p.BackgroundTransparency = 0
+        p.BorderSizePixel = 0
+        p.ZIndex          = toggleBtn.ZIndex + 8
+        p.Parent          = toggleBtn
+        Instance.new("UICorner", p).CornerRadius = UDim.new(1, 0)
+        local tx = math.cos(angle) * dist
+        local ty = math.sin(angle) * dist
+        TS:Create(p, TweenInfo.new(0.45, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+            Position             = UDim2.new(0.5, tx, 0.5, ty),
+            BackgroundTransparency = 1,
+            Size                 = UDim2.new(0, sz * 0.4, 0, sz * 0.4),
+        }):Play()
+        game:GetService("Debris"):AddItem(p, 0.5)
+    end
+
+    -- === GLOW RING tỏa ra ===
+    local ring = Instance.new("Frame")
+    ring.Size             = UDim2.new(0, 10, 0, 10)
+    ring.AnchorPoint      = Vector2.new(0.5, 0.5)
+    ring.Position         = UDim2.new(0.5, 0, 0.5, 0)
+    ring.BackgroundTransparency = 1
+    ring.BorderSizePixel  = 0
+    ring.ZIndex           = toggleBtn.ZIndex + 7
+    ring.Parent           = toggleBtn
+    Instance.new("UICorner", ring).CornerRadius = UDim.new(1, 0)
+    local ringStroke = Instance.new("UIStroke", ring)
+    ringStroke.Thickness      = 2.5
+    ringStroke.Transparency   = 0
+    ringStroke.Color          = Color3.fromRGB(180, 80, 255)
+    ringStroke.ApplyStrokeMode= Enum.ApplyStrokeMode.Border
+    TS:Create(ring, TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+        Size = UDim2.new(2.2, 0, 5, 0),
     }):Play()
-    -- ripple
-    local ripple = Instance.new("Frame")
-    ripple.Size = UDim2.new(0, 0, 0, 0)
-    ripple.Position = UDim2.new(0.5, 0, 0.5, 0)
-    ripple.AnchorPoint = Vector2.new(0.5, 0.5)
-    ripple.BackgroundColor3 = Color3.fromRGB(180, 100, 255)
-    ripple.BackgroundTransparency = 0.4
-    ripple.BorderSizePixel = 0
-    ripple.ZIndex = toggleBtn.ZIndex + 5
-    ripple.Parent = toggleBtn
-    local rc = Instance.new("UICorner"); rc.CornerRadius = UDim.new(1,0); rc.Parent = ripple
-    TS:Create(ripple, TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
-        Size = UDim2.new(2, 0, 4, 0),
-        BackgroundTransparency = 1,
+    TS:Create(ringStroke, TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+        Transparency = 1,
     }):Play()
-    game:GetService("Debris"):AddItem(ripple, 0.45)
-    -- shimmer sweep
-    local shine = Instance.new("Frame")
-    shine.Size = UDim2.new(0, 18, 1, 0)
-    shine.Position = UDim2.new(-0.15, 0, 0, 0)
-    shine.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-    shine.BackgroundTransparency = 0.65
-    shine.BorderSizePixel = 0
-    shine.ZIndex = toggleBtn.ZIndex + 4
-    shine.Parent = toggleBtn
-    local sg = Instance.new("UIGradient")
-    sg.Transparency = NumberSequence.new({
-        NumberSequenceKeypoint.new(0, 1),
-        NumberSequenceKeypoint.new(0.5, 0.5),
-        NumberSequenceKeypoint.new(1, 1),
-    })
-    sg.Parent = shine
-    TS:Create(shine, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
-        Position = UDim2.new(1.15, 0, 0, 0),
+    game:GetService("Debris"):AddItem(ring, 0.45)
+
+    -- === NÚT SQUISH: nén ngang rồi bật ra ===
+    TS:Create(toggleBtn, TweenInfo.new(0.08, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+        Size = UDim2.new(0, 210, 0, 32),
     }):Play()
-    game:GetService("Debris"):AddItem(shine, 0.35)
-    task.delay(0.07, function()
-        TS:Create(toggleBtn, TweenInfo.new(0.18, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+    task.delay(0.08, function()
+        TS:Create(toggleBtn, TweenInfo.new(0.22, Enum.EasingStyle.Elastic, Enum.EasingDirection.Out), {
             Size = UDim2.new(0, 190, 0, 38),
         }):Play()
     end)
+
     toggleMenu()
 end)
 
 closeButton.MouseButton1Click:Connect(function()
     _playClick()
+    local TS = game:GetService("TweenService")
+    -- Bounce shrink → expand
+    TS:Create(closeButton, TweenInfo.new(0.07, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+        Size = UDim2.new(0, 22, 0, 20),
+    }):Play()
+    -- Ripple
+    local rip = Instance.new("Frame")
+    rip.Size = UDim2.new(0, 0, 0, 0)
+    rip.Position = UDim2.new(0.5, 0, 0.5, 0)
+    rip.AnchorPoint = Vector2.new(0.5, 0.5)
+    rip.BackgroundColor3 = Color3.fromRGB(255, 80, 80)
+    rip.BackgroundTransparency = 0.35
+    rip.BorderSizePixel = 0
+    rip.ZIndex = closeButton.ZIndex + 5
+    rip.ClipsDescendants = false
+    rip.Parent = closeButton
+    Instance.new("UICorner", rip).CornerRadius = UDim.new(1, 0)
+    TS:Create(rip, TweenInfo.new(0.35, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+        Size = UDim2.new(3, 0, 3, 0),
+        BackgroundTransparency = 1,
+    }):Play()
+    game:GetService("Debris"):AddItem(rip, 0.4)
+    task.delay(0.07, function()
+        TS:Create(closeButton, TweenInfo.new(0.15, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+            Size = UDim2.new(0, 28, 0, 24),
+        }):Play()
+    end)
     closeMenu()
 end)
 
