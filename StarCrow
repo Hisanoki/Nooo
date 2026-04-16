@@ -5407,54 +5407,6 @@ end
 keybindsBtn.MouseButton1Click:Connect(function()
     S.keybindsEnabled = not S.keybindsEnabled
     updateKeybindsBtn()
-    -- Flash animation
-    local TS = game:GetService("TweenService")
-    local flashColor = S.keybindsEnabled and Color3.fromRGB(50, 200, 120) or Color3.fromRGB(200, 60, 60)
-    -- Ripple burst
-    local rip = Instance.new("Frame")
-    rip.Size = UDim2.new(0, 0, 0, 0)
-    rip.Position = UDim2.new(0.5, 0, 0.5, 0)
-    rip.AnchorPoint = Vector2.new(0.5, 0.5)
-    rip.BackgroundColor3 = flashColor
-    rip.BackgroundTransparency = 0.3
-    rip.BorderSizePixel = 0
-    rip.ZIndex = keybindsBtn.ZIndex + 5
-    rip.Parent = keybindsBtn
-    Instance.new("UICorner", rip).CornerRadius = UDim.new(1, 0)
-    TS:Create(rip, TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
-        Size = UDim2.new(2, 0, 3, 0),
-        BackgroundTransparency = 1,
-    }):Play()
-    game:GetService("Debris"):AddItem(rip, 0.45)
-    -- Shimmer sweep
-    local shine = Instance.new("Frame")
-    shine.Size = UDim2.new(0, 24, 1, 0)
-    shine.Position = UDim2.new(-0.1, 0, 0, 0)
-    shine.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-    shine.BackgroundTransparency = 0.6
-    shine.BorderSizePixel = 0
-    shine.ZIndex = keybindsBtn.ZIndex + 4
-    shine.Parent = keybindsBtn
-    local sg = Instance.new("UIGradient")
-    sg.Transparency = NumberSequence.new({
-        NumberSequenceKeypoint.new(0, 1),
-        NumberSequenceKeypoint.new(0.5, 0.45),
-        NumberSequenceKeypoint.new(1, 1),
-    })
-    sg.Parent = shine
-    TS:Create(shine, TweenInfo.new(0.32, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
-        Position = UDim2.new(1.1, 0, 0, 0),
-    }):Play()
-    game:GetService("Debris"):AddItem(shine, 0.37)
-    -- Bounce
-    TS:Create(keybindsBtn, TweenInfo.new(0.07, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
-        Size = UDim2.new(0.96, 0, 0, 33),
-    }):Play()
-    task.delay(0.07, function()
-        TS:Create(keybindsBtn, TweenInfo.new(0.18, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
-            Size = UDim2.new(1, 0, 0, 36),
-        }):Play()
-    end)
 end)
 local function keyCodeToText(keyCode)
     if not keyCode then
