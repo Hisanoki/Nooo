@@ -4934,6 +4934,7 @@ do
             autoClickEnabled    = S.autoClickEnabled,
             antiVoidEnabled     = S.btnRefs.antiVoidBtn and S.btnRefs.antiVoidBtn.Text:find("ON") ~= nil,
             ctrlClickTPEnabled  = S.ctrlClickTPEnabled,
+            freezeBodyEnabled   = S.freezeBodyEnabled,
             -- FeTool tab
             auraFloatEnabled    = S.auraFloatEnabled,
 dropFloatEnabled    = S.dropFloatEnabled,
@@ -5061,6 +5062,14 @@ end
                 S.noclipEnabled = true
                 startNoclip()
                 syncBtn(S.btnRefs.noclipToggle, true, "Noclip: ON", "Noclip: OFF")
+            end
+        end)
+
+        pcall(function()
+            if cfg.freezeBodyEnabled and not S.freezeBodyEnabled then
+                S.freezeBodyEnabled = true
+                startFreezeBody()
+                syncBtn(S.btnRefs.freezeBodyBtn, true, "Freeze Body: ON", "Freeze Body: OFF")
             end
         end)
 
