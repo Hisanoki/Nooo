@@ -17,6 +17,7 @@ local S = {
     autoTPEnabled=false, autoTPConnection=nil,
     ctrlClickTPEnabled=false,
     noclipEnabled=false, noclipLoop=nil,
+    freezeBodyEnabled=false, freezeBodyConnection=nil, freezeBodyPrevSpeed=16, freezeBodyPrevJump=50,
     noclipFloatEnabled=false, noclipFloatBtn=nil, noclipFloatStroke=nil, noclipFloatPos=nil,
     autoHitboxEnabled=false, autoBodyHitboxEnabled=false,
     nameESPEnabled=false, boxESPEnabled=false, espNameAllState=false, tracerESPEnabled=false,
@@ -1349,6 +1350,60 @@ end
 
 local function stopNoclip()
     if S.noclipLoop then S.noclipLoop:Disconnect(); S.noclipLoop = nil end
+end
+
+--  FREEZE BODY 
+
+local function startFreezeBody()
+    local char = LocalPlayer.Character
+    if not char then return end
+    local humanoid = char:FindFirstChildOfClass("Humanoid")
+    if humanoid then
+        S.freezeBodyPrevSpeed = humanoid.WalkSpeed
+        S.freezeBodyPrevJump  = humanoid.JumpPower
+        humanoid.WalkSpeed  = 0
+        humanoid.JumpPower  = 0
+    end
+    for _, part in pairs(char:GetDescendants()) do
+        if part:IsA("BasePart") then
+            part.Anchored = true
+        end
+    end
+    -- giữ freeze khi character respawn
+    S.freezeBodyConnection = RunService.Heartbeat:Connect(function()
+        if not S.freezeBodyEnabled then return end
+        local c = LocalPlayer.Character
+        if not c then return end
+        local hum = c:FindFirstChildOfClass("Humanoid")
+        if hum then
+            hum.WalkSpeed = 0
+            hum.JumpPower = 0
+        end
+        for _, part in pairs(c:GetDescendants()) do
+            if part:IsA("BasePart") then
+                part.Anchored = true
+            end
+        end
+    end)
+end
+
+local function stopFreezeBody()
+    if S.freezeBodyConnection then
+        S.freezeBodyConnection:Disconnect()
+        S.freezeBodyConnection = nil
+    end
+    local char = LocalPlayer.Character
+    if not char then return end
+    local humanoid = char:FindFirstChildOfClass("Humanoid")
+    if humanoid then
+        humanoid.WalkSpeed = S.freezeBodyPrevSpeed
+        humanoid.JumpPower = S.freezeBodyPrevJump
+    end
+    for _, part in pairs(char:GetDescendants()) do
+        if part:IsA("BasePart") then
+            part.Anchored = false
+        end
+    end
 end
 
 --  FLING LOGIC 
@@ -2796,6 +2851,10 @@ S.btnRefs.noclipToggle = noclipToggle
 local noclipFloatToggleBtn = createTransparentButton("Noclip Float: OFF", Color3.fromRGB(38, 38, 38), panel2)
 setToggleState(noclipFloatToggleBtn, false)
 S.btnRefs.noclipFloatToggleBtn = noclipFloatToggleBtn
+
+local freezeBodyBtn = createTransparentButton("Freeze Body: OFF", Color3.fromRGB(38, 38, 38), panel2)
+setToggleState(freezeBodyBtn, false)
+S.btnRefs.freezeBodyBtn = freezeBodyBtn
 --  PANEL 4: TELEPORT 
 
 do
@@ -6942,6 +7001,19 @@ noclipFloatToggleBtn.MouseButton1Click:Connect(function()
         noclipFloatToggleBtn.Text = "Noclip Float: OFF"
         setToggleState(noclipFloatToggleBtn, false)
         destroyNoclipFloat()
+    end
+end)
+
+freezeBodyBtn.MouseButton1Click:Connect(function()
+    S.freezeBodyEnabled = not S.freezeBodyEnabled
+    if S.freezeBodyEnabled then
+        freezeBodyBtn.Text = "Freeze Body: ON"
+        setToggleState(freezeBodyBtn, true)
+        startFreezeBody()
+    else
+        freezeBodyBtn.Text = "Freeze Body: OFF"
+        setToggleState(freezeBodyBtn, false)
+        stopFreezeBody()
     end
 end)
 S.flyToggle.MouseButton1Click:Connect(function()
