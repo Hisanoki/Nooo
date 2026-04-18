@@ -19,7 +19,7 @@ local S = {
     noclipEnabled=false, noclipLoop=nil,
     freezeBodyEnabled=false, freezeBodyConnection=nil, freezeBodyPrevSpeed=16, freezeBodyPrevJump=50,
     noclipFloatEnabled=false, noclipFloatBtn=nil, noclipFloatStroke=nil, noclipFloatPos=nil,
-    autoHitboxEnabled=false, autoBodyHitboxEnabled=false,
+    autoHitboxEnabled=false, autoBodyHitboxEnabled=false, bodyHitboxChars={},
     nameESPEnabled=false, boxESPEnabled=false, espNameAllState=false, tracerESPEnabled=false,
 selectedPlayers={}, selectedTPPlayers={}, boxESPObjects={}, nameESPObjects={}, tracerESPObjects={},
     processedChars={}, playerConnections={}, manualPositionCFrame=nil,
@@ -804,6 +804,8 @@ end
 
 local function applyBodyHitbox(character, size)
     if not character then return end
+    local humanoid = character:FindFirstChildOfClass("Humanoid")
+    if not humanoid or humanoid.Health <= 0 then return end
     local hrp = character:FindFirstChild("HumanoidRootPart")
     if not hrp then return end
     pcall(function()
@@ -811,7 +813,13 @@ local function applyBodyHitbox(character, size)
         hrp.CanCollide = false
         hrp.Transparency = 0.5
         hrp.Material = Enum.Material.ForceField
+        for _, part in pairs(character:GetDescendants()) do
+            if part:IsA("BasePart") and part ~= hrp then
+                part.CanCollide = false
+            end
+        end
     end)
+    S.bodyHitboxChars[character] = true
     addOutlineChams(character)
 end
 
@@ -825,6 +833,7 @@ local function resetBodyHitbox(character)
         hrp.CanCollide = false
         hrp.Material = Enum.Material.Plastic
     end)
+    S.bodyHitboxChars[character] = nil
     removeOutlineChams(character)
 end
 
@@ -960,6 +969,12 @@ local function onCharacterReady(player, character)
         removeNameESP(player)
         removeChams(character)
         removeTracerESP(player)
+        task.spawn(function()
+            while character and character.Parent do
+                pcall(resetBodyHitbox, character)
+                task.wait(0.5)
+            end
+        end)
     end)
     character.AncestryChanged:Connect(function(_, parent)
         if not parent then
@@ -7688,6 +7703,13 @@ task.spawn(function()
                 if player ~= LocalPlayer and player.Character and isAlive(player.Character) then
                     applyBodyHitbox(player.Character, size)
                     count = count + 1
+                end
+            end
+            -- cleanup: reset hitbox trên những character đã chết hoặc bị xóa
+            for char, _ in pairs(S.bodyHitboxChars) do
+                local humanoid = char:FindFirstChildOfClass("Humanoid")
+                if not char.Parent or not humanoid or humanoid.Health <= 0 then
+                    pcall(resetBodyHitbox, char)
                 end
             end
             S.statusLabel.Text = "Processing: " .. count .. " Players"
