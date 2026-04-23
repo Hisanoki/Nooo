@@ -1,11 +1,22 @@
 -- SERVICES
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
-local Camera = workspace.CurrentCamera
-local mouse = LocalPlayer:GetMouse()
 local RunService = game:GetService("RunService")
 local StarterGui = game:GetService("StarterGui")
 local UserInputService = game:GetService("UserInputService")
+
+-- Chờ game load xong + character spawn vào sân trước khi chạy script
+-- Fix lỗi server hop: script chạy quá sớm khi PC lag hoặc mobile load chậm
+if not game:IsLoaded() then
+    game.Loaded:Wait()
+end
+repeat task.wait(0.5) until LocalPlayer.Character
+    and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+    and LocalPlayer.Character:FindFirstChild("Humanoid")
+    and LocalPlayer.Character.Humanoid.Health > 0
+
+local Camera = workspace.CurrentCamera
+local mouse = LocalPlayer:GetMouse()
 
 --  STATE TABLE
 local S = {
