@@ -10,10 +10,13 @@ local UserInputService = game:GetService("UserInputService")
 if not game:IsLoaded() then
     game.Loaded:Wait()
 end
-repeat task.wait(0.5) until LocalPlayer.Character
+repeat task.wait(0.1) until LocalPlayer.Character
     and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
     and LocalPlayer.Character:FindFirstChild("Humanoid")
     and LocalPlayer.Character.Humanoid.Health > 0
+    and LocalPlayer:FindFirstChildOfClass("PlayerGui")
+    and workspace.CurrentCamera
+    and workspace.CurrentCamera.CameraType ~= nil
 
 local Camera = workspace.CurrentCamera
 local mouse = LocalPlayer:GetMouse()
