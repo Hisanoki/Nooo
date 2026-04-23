@@ -5,8 +5,7 @@ local RunService = game:GetService("RunService")
 local StarterGui = game:GetService("StarterGui")
 local UserInputService = game:GetService("UserInputService")
 
--- Chờ game load xong + character spawn vào sân trước khi chạy script
--- Fix lỗi server hop: script chạy quá sớm khi PC lag hoặc mobile load chậm
+
 if not game:IsLoaded() then
     game.Loaded:Wait()
 end
@@ -237,7 +236,7 @@ do
                 TweenService:Create(gradient, TweenInfo.new(4, Enum.EasingStyle.Linear, Enum.EasingDirection.InOut, -1), { Rotation = 360 }):Play()
             end)
 
-            -- icon đỏ
+            
             local icon = Instance.new("ImageLabel")
             icon.Size = UDim2.new(0, 28, 0, 28)
             icon.Position = UDim2.new(0, 10, 0, 6)
@@ -246,7 +245,7 @@ do
             icon.ZIndex = 2
             icon.Parent = nf
 
-            -- title
+            
             local title = Instance.new("TextLabel")
             title.Size = UDim2.new(1, -44, 0, 24)
             title.Position = UDim2.new(0, 40, 0, 7)
@@ -259,7 +258,7 @@ do
             title.ZIndex = 2
             title.Parent = nf
 
-            -- body
+            
             local body = Instance.new("TextLabel")
             body.Size = UDim2.new(1, -20, 0, 28)
             body.Position = UDim2.new(0, 14, 0, 36)
@@ -380,7 +379,7 @@ local function isAlive(character)
     return humanoid and humanoid.Health > 0
 end
 
---  FLOAT STROKE ANIMATION HELPER
+
 
 local function setFloatStrokeActive(stroke, isActive)
     if not stroke then return end
@@ -1053,7 +1052,7 @@ local function createTransparentButton(text, color, parent)
     c.CornerRadius = UDim.new(0, 8)
     c.Parent = btn
 
-    -- gradient nền nhẹ
+    
     local bgGrad = Instance.new("UIGradient")
     bgGrad.Color = ColorSequence.new({
         ColorSequenceKeypoint.new(0, Color3.fromRGB(255,255,255)),
@@ -1067,11 +1066,11 @@ local function createTransparentButton(text, color, parent)
     bgGrad.Parent = btn
 
     if isToggle then
-        -- ẩn text gốc
+        
         btn.Text = text
         btn.TextTransparency = 1
 
-        -- label tên feature (bỏ ": OFF"/": ON")
+        
         local cleanName = text:gsub("%s*:?%s*O[NF][F]?%s*$", "")
         local nameLabel = Instance.new("TextLabel")
         nameLabel.Size = UDim2.new(1, -58, 1, 0)
@@ -1086,7 +1085,7 @@ local function createTransparentButton(text, color, parent)
         nameLabel.ZIndex = btn.ZIndex + 2
         nameLabel.Parent = btn
 
-        -- track nền toggle
+        
         local track = Instance.new("Frame")
         track.Name = "ToggleTrack"
         track.Size = UDim2.new(0, 42, 0, 22)
@@ -1100,7 +1099,7 @@ local function createTransparentButton(text, color, parent)
         tc.CornerRadius = UDim.new(1, 0)
         tc.Parent = track
 
-        -- knob
+        
         local knob = Instance.new("Frame")
         knob.Name = "ToggleKnob"
         knob.Size = UDim2.new(0, 18, 0, 18)
@@ -1398,7 +1397,7 @@ local function startFreezeBody()
             part.Anchored = true
         end
     end
-    -- giữ freeze khi character respawn
+    
     S.freezeBodyConnection = RunService.Heartbeat:Connect(function()
         if not S.freezeBodyEnabled then return end
         local c = LocalPlayer.Character
@@ -1745,7 +1744,6 @@ local function showCustomNotif(text, duration, useCheck)
     notifFrame.BackgroundTransparency = 0.35
     notifFrame.BorderSizePixel = 0
     notifFrame.ClipsDescendants = true
-    -- start off-screen to the right for slide-in
     notifFrame.Position = UDim2.new(2, 0, 0, 0)
     notifFrame.Parent = container
     
@@ -1810,7 +1808,7 @@ end)
     icon.Parent = notifFrame
 
 if useCheck == true or useCheck == "fail" then
-        -- Title label: "StarCrow Says:" — sát bên icon, nổi bật
+       
         local titleLabel = Instance.new("TextLabel")
         titleLabel.Size = UDim2.new(1, -44, 0, 24)
         titleLabel.Position = UDim2.new(0, 40, 0, 7)
@@ -1824,7 +1822,7 @@ if useCheck == true or useCheck == "fail" then
         titleLabel.ZIndex = 2
         titleLabel.Parent = notifFrame
 
-        -- Body label: message bên dưới
+        
         local rawParts = string.split(text, "\n")
         local bodyText = ""
         for i = 2, #rawParts do
@@ -2126,7 +2124,7 @@ titleBar.Active = true
 titleBar.Parent = mainFrame
 _mkCorner(8, titleBar)
 
--- Custom drag: only titleBar moves the menu (sliders won't bleed through)
+-- Custom drag
 do
     local _mfDragging = false
     local _mfDragStart = nil
@@ -2420,7 +2418,7 @@ do
     sidePad.Parent = sideBar
 end
 
--- Gun Tycoon game detection
+-- Gun Tycoon 
 local isGunTycoon = game.PlaceId == 18286009370 or game.PlaceId == 108368760436337
 local panel11 = nil
 
@@ -2453,7 +2451,7 @@ do
     if isGunTycoon then
         table.insert(tabNames, "Gun Tycoon")
         table.insert(tabColors, Color3.fromRGB(25,25,25))
-        table.insert(tabIcons, "rbxassetid://16029076040") -- gun icon
+        table.insert(tabIcons, "rbxassetid://16029076040") 
     end
 
     for i = 1, #tabNames do
@@ -2470,7 +2468,7 @@ do
         bc.CornerRadius = UDim.new(0,6)
         bc.Parent = btn
 
-        -- gradient nền tím→navy cho mỗi tab
+        
         local tabGrad = Instance.new("UIGradient")
         tabGrad.Color = ColorSequence.new({
             ColorSequenceKeypoint.new(0,   Color3.fromRGB(55, 15, 100)),
@@ -2479,7 +2477,7 @@ do
         tabGrad.Rotation = 135
         tabGrad.Parent = btn
 
-        -- icon
+        
         local icon = Instance.new("ImageLabel")
 icon.Name = "TabIcon"
 icon.Size = UDim2.new(0, 18, 0, 18)
@@ -2827,7 +2825,7 @@ S.startVehicleFly = function()
         local moveVec = Vector3.zero
         local uis = game:GetService("UserInputService")
         
-        -- Đọc trục Joystick của Mobile cho Xe
+        
         pcall(function()
             moveVec = require(LocalPlayer.PlayerScripts.PlayerModule):GetControls():GetMoveVector()
         end)
@@ -2940,7 +2938,7 @@ tpToolBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
 local ctrlClickTPBtn = createTransparentButton("Ctrl Click TP: OFF", Color3.fromRGB(38, 38, 38), panel4)
 setToggleState(ctrlClickTPBtn, false)
 S.btnRefs.ctrlClickTPBtn = ctrlClickTPBtn
---  PANEL 5: TROLL (FLING) 
+--  PANEL 5: TROLL 
 
 do
     local _lbl = createTransparentLabel("Troll", panel5)
@@ -4346,7 +4344,7 @@ do
         local ITEM_H    = 28
         local LIST_W    = 180
 
-        -- Header (selected display + arrow)
+        -- Header 
         local headerFrame = Instance.new("Frame")
         headerFrame.Size                = UDim2.new(1, 0, 0, 30)
         headerFrame.BackgroundColor3    = LIST_BG
@@ -4376,7 +4374,7 @@ do
         arrowLbl.Text                   = "▼"
         arrowLbl.Parent                 = headerFrame
 
-        -- Dropdown container (hidden by default, parented to panel9 so it flows in list)
+        -- Dropdown container
         local dropContainer = Instance.new("Frame")
         dropContainer.Size              = UDim2.new(1, 0, 0, #AIM_PARTS * ITEM_H + 4)
         dropContainer.BackgroundColor3  = Color3.fromRGB(35, 35, 35)
@@ -4487,12 +4485,12 @@ do
         fovValLbl.TextXAlignment         = Enum.TextXAlignment.Right
         fovValLbl.Parent                 = fovLabelRow
 
-        -- Outer wrapper (captures input to block menu drag)
+        -- Outer wrapper 
         local sliderWrapper = Instance.new("Frame")
         sliderWrapper.Size                   = UDim2.new(1, 0, 0, 20)
         sliderWrapper.BackgroundTransparency = 1
         sliderWrapper.BorderSizePixel        = 0
-        sliderWrapper.Active                 = true   -- blocks input sinking to mainFrame
+        sliderWrapper.Active                 = true   
         sliderWrapper.Parent                 = panel9
 
         -- Track background
@@ -4557,13 +4555,13 @@ do
             _setFOV(FOV_MIN + (relX / absSize) * (FOV_MAX - FOV_MIN))
         end
 
-        -- Use sliderWrapper.InputBegan so it intercepts before mainFrame.Draggable
+        
         sliderWrapper.InputBegan:Connect(function(input)
             if input.UserInputType == Enum.UserInputType.MouseButton1
             or input.UserInputType == Enum.UserInputType.Touch then
                 fovDragging = true
                 _calcFOVFromX(input.Position.X)
-                -- Scale knob up slightly for feedback
+                
                 TS2:Create(knob, TweenInfo.new(0.08), { Size = UDim2.new(0, 17, 0, 17) }):Play()
             end
         end)
@@ -4771,28 +4769,27 @@ RunService.RenderStepped:Connect(function()
     if tick() - lastAimScan >= AIM_SCAN_INTERVAL then
         lastAimScan = tick()
 
-        -- Nếu đang lock target còn valid thì giữ nguyên,
-        -- chỉ chuyển khi target mất hiệu lực HOẶC có target khác gần tâm hơn >= SWITCH_THRESHOLD
+        
         if currentAimTarget and _isTargetValid(currentAimTarget) then
             local sp_cur = Camera:WorldToViewportPoint(currentAimTarget.Position)
             local cx = Camera.ViewportSize.X / 2 + AimSettings.FOVOffsetX
             local cy = Camera.ViewportSize.Y / 2 + AimSettings.FOVOffsetY
             local curDist = (Vector2.new(sp_cur.X, sp_cur.Y) - Vector2.new(cx, cy)).Magnitude
 
-            -- Tìm target gần nhất
+            
             local newTarget, newDist = _getClosest(), math.huge
             if newTarget then
                 local sp_new = Camera:WorldToViewportPoint(newTarget.Position)
                 newDist = (Vector2.new(sp_new.X, sp_new.Y) - Vector2.new(cx, cy)).Magnitude
             end
 
-            -- Chỉ chuyển target nếu target mới gần hơn đủ ngưỡng SWITCH_THRESHOLD
+            
             if newTarget and newTarget ~= currentAimTarget and (curDist - newDist) >= SWITCH_THRESHOLD then
                 currentAimTarget = newTarget
             end
-            -- else: giữ nguyên currentAimTarget
+           
         else
-            -- Target cũ mất hiệu lực, scan mới
+            
             currentAimTarget = _getClosest()
         end
     end
@@ -4817,7 +4814,7 @@ local function switchTab(idx)
         btn.BackgroundTransparency = isActive and 0.0 or 0.35
         btn.BackgroundColor3 = isActive and Color3.fromRGB(90, 20, 160) or Color3.fromRGB(35, 15, 65)
 
-        -- update gradient bên trong
+        
         local tabGrad = btn:FindFirstChildOfClass("UIGradient")
         if tabGrad then
             if isActive then
@@ -4833,7 +4830,7 @@ local function switchTab(idx)
             end
         end
 
-        -- accent bar bên trái gradient
+        
         local bar = btn:FindFirstChild("AccentBar")
         if not bar then
             bar = Instance.new("Frame")
@@ -4856,7 +4853,7 @@ local function switchTab(idx)
         bar.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
         bar.Visible = isActive
 
-        -- icon sáng hơn khi active
+        
         local icon = btn:FindFirstChild("TabIcon")
         if icon then
             icon.ImageColor3 = isActive and Color3.fromRGB(220, 160, 255) or Color3.fromRGB(170, 140, 210)
@@ -4879,7 +4876,7 @@ for i, btn in ipairs(tabBtns) do
         s:Play()
         game:GetService("Debris"):AddItem(s, 2)
 
-        -- 1) bounce nhấn xuống → nảy lên
+        
         TS:Create(btn, TweenInfo.new(0.07, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
             Size = UDim2.new(1, -8, 0, 26),
         }):Play()
@@ -4889,7 +4886,7 @@ for i, btn in ipairs(tabBtns) do
             }):Play()
         end)
 
-        -- 2) ripple circle lan ra từ tâm nút
+        
         local ripple = Instance.new("Frame")
         ripple.Name = "Ripple"
         ripple.Size = UDim2.new(0, 0, 0, 0)
@@ -4908,7 +4905,7 @@ for i, btn in ipairs(tabBtns) do
         }):Play()
         game:GetService("Debris"):AddItem(ripple, 0.5)
 
-        -- 3) shimmer sweep ngang qua nút
+        
         local shine = Instance.new("Frame")
         shine.Size = UDim2.new(0, 16, 1, 0)
         shine.Position = UDim2.new(-0.2, 0, 0, 0)
@@ -6742,7 +6739,7 @@ local function openMenu()
     mainFrame.BackgroundTransparency = 1
     mainFrame.Visible            = true
     toggleBtn.Visible            = false
-    -- Zoom in với elastic
+    
     TS:Create(mainFrame, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
         Size     = UDim2.new(0, 320, 0, 380),
         Position = UDim2.new(0.5, -160, 0.5, -190),
@@ -6785,7 +6782,7 @@ toggleBtn.MouseButton1Click:Connect(function()
     if _tbMoved then _tbMoved = false; return end
     local TS = game:GetService("TweenService")
 
-    -- === PARTICLE BURST: các mảnh tỏa ra từ nút ===
+    
     local particleColors = {
         Color3.fromRGB(160, 60, 255),
         Color3.fromRGB(0, 180, 255),
@@ -6816,7 +6813,7 @@ toggleBtn.MouseButton1Click:Connect(function()
         game:GetService("Debris"):AddItem(p, 0.5)
     end
 
-    -- === GLOW RING tỏa ra ===
+    
     local ring = Instance.new("Frame")
     ring.Size             = UDim2.new(0, 10, 0, 10)
     ring.AnchorPoint      = Vector2.new(0.5, 0.5)
@@ -6839,7 +6836,7 @@ toggleBtn.MouseButton1Click:Connect(function()
     }):Play()
     game:GetService("Debris"):AddItem(ring, 0.45)
 
-    -- === NÚT SQUISH: nén ngang rồi bật ra ===
+    
     TS:Create(toggleBtn, TweenInfo.new(0.08, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
         Size = UDim2.new(0, 210, 0, 32),
     }):Play()
@@ -7235,7 +7232,7 @@ serverHopBtn.MouseButton1Click:Connect(function()
     queue_on_teleport('loadstring(game:HttpGet("https://raw.githubusercontent.com/Hisanoki/Nooo/refs/heads/main/StarCrow"))()')
 
     task.spawn(function()
-        -- Bước 1: Lấy danh sách server (server không full ưu tiên trước)
+        
         local servers = {}
         local cursor = nil
 
@@ -7251,9 +7248,9 @@ serverHopBtn.MouseButton1Click:Connect(function()
             for _, server in pairs(data.data) do
                 if server.id ~= JobID then
                     if server.playing < server.maxPlayers then
-                        table.insert(servers, 1, server.id) -- không full → lên đầu
+                        table.insert(servers, 1, server.id) 
                     else
-                        table.insert(servers, server.id)    -- full → xuống cuối
+                        table.insert(servers, server.id)    
                     end
                 end
                 if #servers >= 5 then break end
@@ -7267,13 +7264,13 @@ serverHopBtn.MouseButton1Click:Connect(function()
             return
         end
 
-        -- Bước 2: Thử hop lần lượt, tối đa 5 server
+        
         for attempt = 1, math.min(#servers, 5) do
             local serverID = servers[attempt]
 
             showCustomNotif("StarCrow Says:\n\n   Trying server " .. attempt .. "/5...", 2, true)
 
-            -- Dùng flag để biết teleport có thất bại không
+            
             local failed = false
             local conn = TeleportService.TeleportInitFailed:Connect(function(player)
                 if player == Players.LocalPlayer then
@@ -7281,19 +7278,19 @@ serverHopBtn.MouseButton1Click:Connect(function()
                 end
             end)
 
-            -- Gọi teleport
+            
             local ok = pcall(TeleportService.TeleportToPlaceInstance, TeleportService, PlaceID, serverID, Players.LocalPlayer)
 
             if ok then
-                task.wait(4) -- chờ xem teleport có thực sự xảy ra không
+                task.wait(4) 
             end
 
             conn:Disconnect()
 
-            -- Nếu teleport thành công → dừng hẳn
+            
             if ok and not failed then return end
 
-            -- Nếu thất bại → thông báo rồi thử server tiếp theo
+            
             showCustomNotif("StarCrow Says:\n\n   Server " .. attempt .. " failed, trying next...", 1.5, "fail")
             task.wait(0.5)
         end
@@ -7514,7 +7511,7 @@ tpToolBtn.MouseButton1Click:Connect(function()
     
     
     if backpack:FindFirstChild("Tp tool") or (char and char:FindFirstChild("Tp tool")) then
-        return -- Có rồi thì không tạo thêm
+        return 
     end
 
     
@@ -7874,7 +7871,7 @@ task.spawn(function()
                     count = count + 1
                 end
             end
-            -- cleanup: reset hitbox trên những character đã chết hoặc bị xóa
+            
             for char, _ in pairs(S.bodyHitboxChars) do
                 local humanoid = char:FindFirstChildOfClass("Humanoid")
                 if not char.Parent or not humanoid or humanoid.Health <= 0 then
