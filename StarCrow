@@ -61,21 +61,6 @@ btnRefs={},
 }
 S.speaker = LocalPlayer
 
--- Chờ map + character load xong mới chạy tiếp
-local function waitUntilReady()
-    if not game:IsLoaded() then
-        game.Loaded:Wait()
-    end
-    local char = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
-    local humanoid = char:WaitForChild("Humanoid", 15)
-    if not humanoid or humanoid.Health <= 0 then
-        char = LocalPlayer.CharacterAdded:Wait()
-        char:WaitForChild("Humanoid", 15)
-    end
-    task.wait(1.5)
-end
-waitUntilReady()
-
 --  SPECTATE
 function SpectatePlayer(player)
     S.SpectatingPlayer = player
