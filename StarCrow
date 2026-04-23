@@ -2406,6 +2406,10 @@ do
     sidePad.Parent = sideBar
 end
 
+-- Gun Tycoon game detection
+local isGunTycoon = game.PlaceId == 18286009370 or game.PlaceId == 108368760436337
+local panel11 = nil
+
 -- Tab button factory 
 local tabBtns = {}
 do
@@ -2432,7 +2436,13 @@ do
     "rbxassetid://7059346373"  -- Setting
 }
 
-    for i = 1, 9 do
+    if isGunTycoon then
+        table.insert(tabNames, "Gun Tycoon")
+        table.insert(tabColors, Color3.fromRGB(25,25,25))
+        table.insert(tabIcons, "rbxassetid://16029076040") -- gun icon
+    end
+
+    for i = 1, #tabNames do
         local btn = Instance.new("TextButton")
         btn.Size = UDim2.new(1, 0, 0, 30)
         btn.BackgroundColor3 = Color3.fromRGB(35, 15, 65)
@@ -2475,6 +2485,11 @@ icon.Parent = btn
         label.TextColor3 = Color3.fromRGB(255, 255, 255)
         label.Font = Enum.Font.GothamBold
         label.TextSize = 11
+        label.TextScaled = true
+        local tc = Instance.new("UITextSizeConstraint")
+        tc.MaxTextSize = 11
+        tc.MinTextSize = 7
+        tc.Parent = label
         label.TextXAlignment = Enum.TextXAlignment.Left
         label.TextYAlignment = Enum.TextYAlignment.Center
         label.ClipsDescendants = true
@@ -2525,6 +2540,9 @@ panel7 = makeScrollPanel() -- Server
 panel8 = makeScrollPanel() -- Tools
 panel9 = makeScrollPanel() -- Aimbot
 panel10 = makeScrollPanel() -- SaveSettings
+if isGunTycoon then
+    panel11 = makeScrollPanel() -- Gun Tycoon
+end
 --  PANEL 2: Player
 
 do
@@ -4772,6 +4790,9 @@ end -- END AIMBOT SCOPE
 --  TAB SWITCH 
 
 local panels = {panel2, panel3, panel4, panel5, panel6, panel7, panel8, panel9, panel10}
+if isGunTycoon and panel11 then
+    table.insert(panels, panel11)
+end
 
 local function switchTab(idx)
     for i, p in ipairs(panels) do
@@ -4901,6 +4922,83 @@ for i, btn in ipairs(tabBtns) do
 end
 switchTab(1)
 
+--  PANEL 11: GUN TYCOON 
+if isGunTycoon and panel11 then
+    do
+        local _lbl = createTransparentLabel("Gun Tycoon", panel11)
+        _lbl.TextColor3 = Color3.fromRGB(255, 255, 255)
+        _lbl.Font = Enum.Font.GothamBold
+        _lbl.TextSize = 14
+    end
+
+    local gunModBtn = createTransparentButton("Gun Mod: OFF", Color3.fromRGB(38, 38, 38), panel11)
+    setToggleState(gunModBtn, false)
+    S.btnRefs.gunModBtn = gunModBtn
+
+    local gunModEnabled = false
+    local gunModConnection = nil
+
+    local function startGunMod()
+        if gunModConnection then return end
+        gunModConnection = task.spawn(function()
+            while gunModEnabled do
+                task.wait(1)
+                for _, v in pairs(getgc(true)) do
+                    if type(v) == "table" and rawget(v, "FireRate") and rawget(v, "Recoil") then
+                        if setreadonly then setreadonly(v, false) end
+
+                        v.ShotgunEnabled       = true
+                        v.BulletPerShot        = 20
+                        v.ShotgunPattern       = false
+
+                        v.LimitedAmmoEnabled   = false
+                        v.AmmoCost             = 0
+                        v.Ammo                 = 999999
+                        v.ReloadTime           = 0
+                        v.TacticalReloadTime   = 0
+
+                        v.FireRate             = 0.01
+                        v.Auto                 = true
+                        v.Recoil               = 0
+                        v.Spread               = 0
+                        v.CameraRecoilingEnabled = false
+
+                        if setreadonly then setreadonly(v, true) end
+                    end
+                end
+            end
+        end)
+    end
+
+    local function stopGunMod()
+        gunModEnabled = false
+        if gunModConnection then
+            task.cancel(gunModConnection)
+            gunModConnection = nil
+        end
+    end
+
+    S.startGunMod = function()
+        gunModEnabled = true
+        gunModBtn.Text = "Gun Mod: ON"
+        setToggleState(gunModBtn, true)
+        startGunMod()
+    end
+
+    gunModBtn.MouseButton1Click:Connect(function()
+        gunModEnabled = not gunModEnabled
+        if gunModEnabled then
+            gunModBtn.Text = "Gun Mod: ON"
+            setToggleState(gunModBtn, true)
+            startGunMod()
+        else
+            gunModBtn.Text = "Gun Mod: OFF"
+            setToggleState(gunModBtn, false)
+            stopGunMod()
+        end
+    end)
+end
+
 --  PANEL 10: SAVE SETTINGS 
 do
     local SAVE_FOLDER = "StarCrow"
@@ -4950,6 +5048,7 @@ do
             antiVoidEnabled     = S.btnRefs.antiVoidBtn and S.btnRefs.antiVoidBtn.Text:find("ON") ~= nil,
             ctrlClickTPEnabled  = S.ctrlClickTPEnabled,
             freezeBodyEnabled   = S.freezeBodyEnabled,
+            gunModEnabled       = S.btnRefs.gunModBtn and S.btnRefs.gunModBtn.Text:find("ON") ~= nil or false,
             -- FeTool tab
             auraFloatEnabled    = S.auraFloatEnabled,
 dropFloatEnabled    = S.dropFloatEnabled,
@@ -5085,6 +5184,12 @@ end
                 S.freezeBodyEnabled = true
                 startFreezeBody()
                 syncBtn(S.btnRefs.freezeBodyBtn, true, "Freeze Body: ON", "Freeze Body: OFF")
+            end
+        end)
+
+        pcall(function()
+            if cfg.gunModEnabled and isGunTycoon and S.startGunMod then
+                S.startGunMod()
             end
         end)
 
@@ -7111,25 +7216,81 @@ serverHopBtn.MouseButton1Click:Connect(function()
     local TeleportService = game:GetService("TeleportService")
     local HttpService = game:GetService("HttpService")
     local Players = game:GetService("Players")
-    local StarterGui = game:GetService("StarterGui")
 
-    showCustomNotif("StarCrow Says:\n\n   Searching new server...", 2, true)
+    showCustomNotif("StarCrow Says:\n\n   Searching for server...", 2, true)
 
     queue_on_teleport('loadstring(game:HttpGet("https://raw.githubusercontent.com/Hisanoki/Nooo/refs/heads/main/StarCrow"))()')
 
     local PlaceID = game.PlaceId
     local JobID = game.JobId
 
-    local servers = HttpService:JSONDecode(game:HttpGet(
-        "https://games.roblox.com/v1/games/"..PlaceID.."/servers/Public?sortOrder=Asc&limit=100"
-    ))
+    task.spawn(function()
+        local candidates = {}
+        local cursor = nil
 
-    for _,v in pairs(servers.data) do
-        if v.playing < v.maxPlayers and v.id ~= JobID then
-            TeleportService:TeleportToPlaceInstance(PlaceID, v.id, Players.LocalPlayer)
-            break
+        -- thu thập server candidates (ưu tiên không full, fallback full)
+        repeat
+            local url = "https://games.roblox.com/v1/games/"..PlaceID.."/servers/Public?sortOrder=Asc&limit=100"
+            if cursor then url = url.."&cursor="..cursor end
+
+            local ok, result = pcall(function()
+                return HttpService:JSONDecode(game:HttpGet(url))
+            end)
+            if not ok or not result or not result.data then break end
+
+            for _, v in pairs(result.data) do
+                if v.id ~= JobID then
+                    if v.playing < v.maxPlayers then
+                        table.insert(candidates, 1, v.id) -- không full → ưu tiên đầu
+                    else
+                        table.insert(candidates, v.id)    -- full → để cuối
+                    end
+                end
+                if #candidates >= 5 then break end
+            end
+
+            cursor = result.nextPageCursor
+        until #candidates >= 5 or not cursor
+
+        if #candidates == 0 then
+            showCustomNotif("StarCrow Says:\n\n   No server found!", 3, "fail")
+            return
         end
-    end
+
+        -- thử lần lượt tối đa 5 server
+        local tried = 0
+        for _, id in ipairs(candidates) do
+            if tried >= 5 then break end
+            tried = tried + 1
+
+            showCustomNotif("StarCrow Says:\n\n   Trying server "..tried.."/5...", 2, true)
+
+            local failConn
+            local hopped = false
+
+            failConn = TeleportService.TeleportInitFailed:Connect(function(player, result, errMsg)
+                if player == Players.LocalPlayer then
+                    failConn:Disconnect()
+                    hopped = false
+                end
+            end)
+
+            local ok = pcall(function()
+                TeleportService:TeleportToPlaceInstance(PlaceID, id, Players.LocalPlayer)
+            end)
+
+            if ok then
+                task.wait(4) -- chờ teleport xảy ra
+                if failConn then pcall(function() failConn:Disconnect() end) end
+                return -- teleport thành công → dừng
+            end
+
+            if failConn then pcall(function() failConn:Disconnect() end) end
+            task.wait(0.5)
+        end
+
+        showCustomNotif("StarCrow Says:\n\n   All 5 servers failed!", 3, "fail")
+    end)
 
 end)
 joinJobBtn.MouseButton1Click:Connect(function()
