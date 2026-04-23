@@ -7212,86 +7212,80 @@ rejoinBtn.MouseButton1Click:Connect(function()
 
 end)
 serverHopBtn.MouseButton1Click:Connect(function()
-
     local TeleportService = game:GetService("TeleportService")
     local HttpService = game:GetService("HttpService")
-    local Players = game:GetService("Players")
-
-    showCustomNotif("StarCrow Says:\n\n   Searching for server...", 2, true)
-
-    queue_on_teleport('loadstring(game:HttpGet("https://raw.githubusercontent.com/Hisanoki/Nooo/refs/heads/main/StarCrow"))()')
-
     local PlaceID = game.PlaceId
     local JobID = game.JobId
 
+    showCustomNotif("StarCrow Says:\n\n   Searching for server...", 2, true)
+    queue_on_teleport('loadstring(game:HttpGet("https://raw.githubusercontent.com/Hisanoki/Nooo/refs/heads/main/StarCrow"))()')
+
     task.spawn(function()
-        local candidates = {}
+        -- Bước 1: Lấy danh sách server (server không full ưu tiên trước)
+        local servers = {}
         local cursor = nil
 
-        -- thu thập server candidates (ưu tiên không full, fallback full)
         repeat
-            local url = "https://games.roblox.com/v1/games/"..PlaceID.."/servers/Public?sortOrder=Asc&limit=100"
-            if cursor then url = url.."&cursor="..cursor end
+            local url = "https://games.roblox.com/v1/games/" .. PlaceID .. "/servers/Public?sortOrder=Asc&limit=100"
+            if cursor then url = url .. "&cursor=" .. cursor end
 
-            local ok, result = pcall(function()
+            local ok, data = pcall(function()
                 return HttpService:JSONDecode(game:HttpGet(url))
             end)
-            if not ok or not result or not result.data then break end
+            if not ok or not data or not data.data then break end
 
-            for _, v in pairs(result.data) do
-                if v.id ~= JobID then
-                    if v.playing < v.maxPlayers then
-                        table.insert(candidates, 1, v.id) -- không full → ưu tiên đầu
+            for _, server in pairs(data.data) do
+                if server.id ~= JobID then
+                    if server.playing < server.maxPlayers then
+                        table.insert(servers, 1, server.id) -- không full → lên đầu
                     else
-                        table.insert(candidates, v.id)    -- full → để cuối
+                        table.insert(servers, server.id)    -- full → xuống cuối
                     end
                 end
-                if #candidates >= 5 then break end
+                if #servers >= 5 then break end
             end
 
-            cursor = result.nextPageCursor
-        until #candidates >= 5 or not cursor
+            cursor = data.nextPageCursor
+        until #servers >= 5 or not cursor
 
-        if #candidates == 0 then
+        if #servers == 0 then
             showCustomNotif("StarCrow Says:\n\n   No server found!", 3, "fail")
             return
         end
 
-        -- thử lần lượt tối đa 5 server
-        local tried = 0
-        for _, id in ipairs(candidates) do
-            if tried >= 5 then break end
-            tried = tried + 1
+        -- Bước 2: Thử hop lần lượt, tối đa 5 server
+        for attempt = 1, math.min(#servers, 5) do
+            local serverID = servers[attempt]
 
-            showCustomNotif("StarCrow Says:\n\n   Trying server "..tried.."/5...", 2, true)
+            showCustomNotif("StarCrow Says:\n\n   Trying server " .. attempt .. "/5...", 2, true)
 
-            local failConn
-            local hopped = false
-
-            failConn = TeleportService.TeleportInitFailed:Connect(function(player, result, errMsg)
+            -- Dùng flag để biết teleport có thất bại không
+            local failed = false
+            local conn = TeleportService.TeleportInitFailed:Connect(function(player)
                 if player == Players.LocalPlayer then
-                    failConn:Disconnect()
-                    hopped = false
+                    failed = true
                 end
             end)
 
-            local ok = pcall(function()
-                TeleportService:TeleportToPlaceInstance(PlaceID, id, Players.LocalPlayer)
-            end)
+            -- Gọi teleport
+            local ok = pcall(TeleportService.TeleportToPlaceInstance, TeleportService, PlaceID, serverID, Players.LocalPlayer)
 
             if ok then
-                task.wait(4) -- chờ teleport xảy ra
-                if failConn then pcall(function() failConn:Disconnect() end) end
-                return -- teleport thành công → dừng
+                task.wait(4) -- chờ xem teleport có thực sự xảy ra không
             end
 
-            if failConn then pcall(function() failConn:Disconnect() end) end
+            conn:Disconnect()
+
+            -- Nếu teleport thành công → dừng hẳn
+            if ok and not failed then return end
+
+            -- Nếu thất bại → thông báo rồi thử server tiếp theo
+            showCustomNotif("StarCrow Says:\n\n   Server " .. attempt .. " failed, trying next...", 1.5, "fail")
             task.wait(0.5)
         end
 
         showCustomNotif("StarCrow Says:\n\n   All 5 servers failed!", 3, "fail")
     end)
-
 end)
 joinJobBtn.MouseButton1Click:Connect(function()
 
