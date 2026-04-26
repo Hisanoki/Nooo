@@ -4942,72 +4942,355 @@ if isGunTycoon and panel11 then
         _lbl.TextSize = 14
     end
 
-    local gunModBtn = createTransparentButton("Gun Mod: OFF", Color3.fromRGB(38, 38, 38), panel11)
-    setToggleState(gunModBtn, false)
-    S.btnRefs.gunModBtn = gunModBtn
+    -- ══════════════════════════════════════════════════════════════════════
+    --  STATE
+    -- ══════════════════════════════════════════════════════════════════════
+    local gm = {
+        infAmmo     = false,
+        noRecoil    = false,
+        fullAuto    = false,
+        multiShot   = false,
+        bulletCount = 15,
+    }
+    local noRecoilOriginals    = {}
+    local noFireDelayOriginals = {}
 
-    local gunModEnabled = false
-    local gunModConnection = nil
+    -- ══════════════════════════════════════════════════════════════════════
+    --  GUN TABLE CACHE  — getgc(true) chỉ gọi 1 lần / 8 giây thay vì 4 lần/giây
+    -- ══════════════════════════════════════════════════════════════════════
+    local cachedGunTables = {}
+    local lastScanTime    = 0
+    local SCAN_INTERVAL   = 8
 
-    local function startGunMod()
-        if gunModConnection then return end
-        gunModConnection = task.spawn(function()
-            while gunModEnabled do
-                task.wait(1)
-                for _, v in pairs(getgc(true)) do
-                    if type(v) == "table" and rawget(v, "FireRate") and rawget(v, "Recoil") then
-                        if setreadonly then setreadonly(v, false) end
+    local function scanGunTables()
+        lastScanTime = tick()
+        local found = {}
+        for _, v in pairs(getgc(true)) do
+            if type(v) == "table" and rawget(v, "FireRate") and rawget(v, "Recoil") then
+                found[#found + 1] = v
+            end
+        end
+        cachedGunTables = found
+    end
 
-                        v.ShotgunEnabled       = true
-                        v.BulletPerShot        = 20
-                        v.ShotgunPattern       = false
+    local function refreshIfNeeded()
+        if tick() - lastScanTime >= SCAN_INTERVAL or #cachedGunTables == 0 then
+            scanGunTables()
+        end
+    end
 
-                        v.LimitedAmmoEnabled   = false
-                        v.AmmoCost             = 0
-                        v.Ammo                 = 999999
-                        v.ReloadTime           = 0
-                        v.TacticalReloadTime   = 0
+    -- áp lên cached tables (dùng pcall đề phòng table bị GC)
+    local function forEachCached(fn)
+        for _, v in ipairs(cachedGunTables) do
+            pcall(function()
+                if setreadonly then setreadonly(v, false) end
+                fn(v)
+                if setreadonly then setreadonly(v, true) end
+            end)
+        end
+    end
 
-                        v.FireRate             = 0.01
-                        v.Auto                 = true
-                        v.Recoil               = 0
-                        v.Spread               = 0
-                        v.CameraRecoilingEnabled = false
+    -- reset dùng cached (không cần scan lại)
+    local function forEachCachedReset(fn)
+        for i = 1, 3 do
+            forEachCached(fn)
+            if i < 3 then task.wait(0.05) end
+        end
+    end
 
-                        if setreadonly then setreadonly(v, true) end
+    -- ══════════════════════════════════════════════════════════════════════
+    --  MASTER LOOP  — 1 loop duy nhất thay cho 4 loop riêng
+    -- ══════════════════════════════════════════════════════════════════════
+    local masterConn = nil
+
+    local function startMasterLoop()
+        if masterConn then return end
+        masterConn = task.spawn(function()
+            while true do
+                task.wait(3) -- nhẹ hơn nhiều so với task.wait(1) × 4 loop
+                local anyActive = gm.infAmmo or gm.noRecoil or gm.fullAuto or gm.multiShot
+                if not anyActive then masterConn = nil; break end
+
+                refreshIfNeeded()
+
+                forEachCached(function(v)
+                    -- Infinite Ammo
+                    if gm.infAmmo then
+                        v.LimitedAmmoEnabled = false
+                        v.AmmoCost           = 0
+                        v.Ammo               = 999999
+                        v.ReloadTime         = 0
+                        v.TacticalReloadTime = 0
                     end
-                end
+                    -- No Recoil
+                    if gm.noRecoil then
+                        if not noRecoilOriginals[v] then
+                            noRecoilOriginals[v] = {
+                                Recoil                 = v.Recoil,
+                                Spread                 = v.Spread,
+                                CameraRecoilingEnabled = v.CameraRecoilingEnabled,
+                            }
+                        end
+                        v.Recoil                 = 0
+                        v.Spread                 = 0
+                        v.CameraRecoilingEnabled = false
+                    end
+                    -- No Fire Delay
+                    if gm.fullAuto then
+                        if not noFireDelayOriginals[v] then
+                            noFireDelayOriginals[v] = {
+                                Auto     = v.Auto,
+                                FireRate = v.FireRate,
+                            }
+                        end
+                        v.Auto     = true
+                        v.FireRate = 0.01
+                    end
+                    -- Multi Shot
+                    if gm.multiShot then
+                        v.ShotgunEnabled = true
+                        v.BulletPerShot  = gm.bulletCount
+                        v.ShotgunPattern = false
+                    end
+                end)
             end
         end)
     end
 
-    local function stopGunMod()
-        gunModEnabled = false
-        if gunModConnection then
-            task.cancel(gunModConnection)
-            gunModConnection = nil
-        end
+    local function ensureMaster()
+        if not masterConn then startMasterLoop() end
     end
 
-    S.startGunMod = function()
-        gunModEnabled = true
-        gunModBtn.Text = "Gun Mod: ON"
-        setToggleState(gunModBtn, true)
-        startGunMod()
+    -- ══════════════════════════════════════════════════════════════════════
+    --  1. INFINITE AMMO
+    -- ══════════════════════════════════════════════════════════════════════
+    local infAmmoBtn = createTransparentButton("Infinite Ammo: OFF", Color3.fromRGB(38, 38, 38), panel11)
+    setToggleState(infAmmoBtn, false)
+    S.btnRefs.infAmmoBtn = infAmmoBtn
+
+    local function stopInfAmmo()
+        gm.infAmmo = false
+        task.spawn(function()
+            forEachCachedReset(function(v)
+                v.LimitedAmmoEnabled = true
+                v.AmmoCost           = 1
+                v.ReloadTime         = 2
+                v.TacticalReloadTime = 1.5
+            end)
+        end)
     end
 
-    gunModBtn.MouseButton1Click:Connect(function()
-        gunModEnabled = not gunModEnabled
-        if gunModEnabled then
-            gunModBtn.Text = "Gun Mod: ON"
-            setToggleState(gunModBtn, true)
-            startGunMod()
+    infAmmoBtn.MouseButton1Click:Connect(function()
+        gm.infAmmo = not gm.infAmmo
+        if gm.infAmmo then
+            infAmmoBtn.Text = "Infinite Ammo: ON"
+            setToggleState(infAmmoBtn, true)
+            ensureMaster()
         else
-            gunModBtn.Text = "Gun Mod: OFF"
-            setToggleState(gunModBtn, false)
-            stopGunMod()
+            infAmmoBtn.Text = "Infinite Ammo: OFF"
+            setToggleState(infAmmoBtn, false)
+            stopInfAmmo()
         end
     end)
+
+    -- ══════════════════════════════════════════════════════════════════════
+    --  2. NO RECOIL
+    -- ══════════════════════════════════════════════════════════════════════
+    local noRecoilBtn = createTransparentButton("No Recoil: OFF", Color3.fromRGB(38, 38, 38), panel11)
+    setToggleState(noRecoilBtn, false)
+    S.btnRefs.noRecoilBtn = noRecoilBtn
+
+    local function stopNoRecoil()
+        gm.noRecoil = false
+        task.spawn(function()
+            forEachCachedReset(function(v)
+                local orig = noRecoilOriginals[v]
+                if orig then
+                    v.Recoil                 = orig.Recoil
+                    v.Spread                 = orig.Spread
+                    v.CameraRecoilingEnabled = orig.CameraRecoilingEnabled
+                else
+                    v.Recoil                 = 1
+                    v.Spread                 = 3
+                    v.CameraRecoilingEnabled = true
+                end
+            end)
+            noRecoilOriginals = {}
+        end)
+    end
+
+    noRecoilBtn.MouseButton1Click:Connect(function()
+        gm.noRecoil = not gm.noRecoil
+        if gm.noRecoil then
+            noRecoilBtn.Text = "No Recoil: ON"
+            setToggleState(noRecoilBtn, true)
+            ensureMaster()
+        else
+            noRecoilBtn.Text = "No Recoil: OFF"
+            setToggleState(noRecoilBtn, false)
+            stopNoRecoil()
+        end
+    end)
+
+    -- ══════════════════════════════════════════════════════════════════════
+    --  3. NO FIRE DELAY
+    -- ══════════════════════════════════════════════════════════════════════
+    local noFireDelayBtn = createTransparentButton("No Fire Delay: OFF", Color3.fromRGB(38, 38, 38), panel11)
+    setToggleState(noFireDelayBtn, false)
+    S.btnRefs.fullAutoBtn = noFireDelayBtn
+
+    local function stopNoFireDelay()
+        gm.fullAuto = false
+        task.spawn(function()
+            forEachCachedReset(function(v)
+                local orig = noFireDelayOriginals[v]
+                if orig then
+                    v.Auto     = orig.Auto
+                    v.FireRate = orig.FireRate
+                else
+                    v.Auto     = false
+                    v.FireRate = 0.15
+                end
+            end)
+            noFireDelayOriginals = {}
+        end)
+    end
+
+    noFireDelayBtn.MouseButton1Click:Connect(function()
+        gm.fullAuto = not gm.fullAuto
+        if gm.fullAuto then
+            noFireDelayBtn.Text = "No Fire Delay: ON"
+            setToggleState(noFireDelayBtn, true)
+            ensureMaster()
+        else
+            noFireDelayBtn.Text = "No Fire Delay: OFF"
+            setToggleState(noFireDelayBtn, false)
+            stopNoFireDelay()
+        end
+    end)
+
+    -- ══════════════════════════════════════════════════════════════════════
+    --  4. MULTI SHOT  +  ô nhập số đạn với viền animation
+    -- ══════════════════════════════════════════════════════════════════════
+
+    -- Row: label + input
+    local bulletRow = Instance.new("Frame")
+    bulletRow.Size = UDim2.new(1, -8, 0, 34)
+    bulletRow.BackgroundTransparency = 1
+    bulletRow.BorderSizePixel = 0
+    bulletRow.Parent = panel11
+
+    local bulletLabel = Instance.new("TextLabel")
+    bulletLabel.Size = UDim2.new(0.55, 0, 1, 0)
+    bulletLabel.BackgroundTransparency = 1
+    bulletLabel.Text = "Bullets Per Shot:"
+    bulletLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
+    bulletLabel.Font = Enum.Font.Gotham
+    bulletLabel.TextSize = 13
+    bulletLabel.TextXAlignment = Enum.TextXAlignment.Left
+    bulletLabel.Parent = bulletRow
+
+    local bulletInputFrame = Instance.new("Frame")
+    bulletInputFrame.Size = UDim2.new(0.42, 0, 0, 28)
+    bulletInputFrame.Position = UDim2.new(0.57, 0, 0.5, -14)
+    bulletInputFrame.BackgroundTransparency = 1
+    bulletInputFrame.BorderSizePixel = 0
+    bulletInputFrame.Parent = bulletRow
+
+    local bCorner = Instance.new("UICorner")
+    bCorner.CornerRadius = UDim.new(0, 6)
+    bCorner.Parent = bulletInputFrame
+
+    -- UIStroke với UIGradient xanh-tím + TweenService xoay liên tục như UI
+    local bulletStroke = Instance.new("UIStroke")
+    bulletStroke.Thickness = 1.8
+    bulletStroke.Color = Color3.fromRGB(255, 255, 255)
+    bulletStroke.Transparency = 0
+    bulletStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+    bulletStroke.Parent = bulletInputFrame
+
+    local bulletStrokeGradient = Instance.new("UIGradient")
+    bulletStrokeGradient.Color = ColorSequence.new({
+        ColorSequenceKeypoint.new(0,   Color3.fromRGB(170, 70, 255)),
+        ColorSequenceKeypoint.new(0.5, Color3.fromRGB(0, 180, 255)),
+        ColorSequenceKeypoint.new(1,   Color3.fromRGB(170, 70, 255)),
+    })
+    bulletStrokeGradient.Rotation = 0
+    bulletStrokeGradient.Parent = bulletStroke
+
+    task.spawn(function()
+        local TweenService = game:GetService("TweenService")
+        local tweenInfo = TweenInfo.new(5, Enum.EasingStyle.Linear, Enum.EasingDirection.InOut, -1)
+        local tween = TweenService:Create(bulletStrokeGradient, tweenInfo, {Rotation = 360})
+        tween:Play()
+    end)
+
+    local bulletInput = Instance.new("TextBox")
+    bulletInput.Size = UDim2.new(1, -8, 1, 0)
+    bulletInput.Position = UDim2.new(0, 4, 0, 0)
+    bulletInput.BackgroundTransparency = 1
+    bulletInput.Text = tostring(gm.bulletCount)
+    bulletInput.TextColor3 = Color3.fromRGB(255, 255, 255)
+    bulletInput.PlaceholderText = "15"
+    bulletInput.PlaceholderColor3 = Color3.fromRGB(120, 120, 120)
+    bulletInput.Font = Enum.Font.GothamBold
+    bulletInput.TextSize = 14
+    bulletInput.ClearTextOnFocus = false
+    bulletInput.Parent = bulletInputFrame
+
+    -- khi focus: tăng thickness nhẹ
+    bulletInput.Focused:Connect(function()
+        bulletStroke.Thickness = 2.4
+    end)
+    bulletInput.FocusLost:Connect(function()
+        bulletStroke.Thickness = 1.8
+    end)
+    bulletInput.FocusLost:Connect(function()
+        local n = tonumber(bulletInput.Text)
+        if n and n >= 1 and n <= 500 then
+            gm.bulletCount = math.floor(n)
+        else
+            bulletInput.Text = tostring(gm.bulletCount)
+        end
+    end)
+    S.btnRefs.bulletInput = bulletInput
+
+    local multiShotBtn = createTransparentButton("Multi Shot: OFF", Color3.fromRGB(38, 38, 38), panel11)
+    setToggleState(multiShotBtn, false)
+    S.btnRefs.multiShotBtn = multiShotBtn
+
+    local function stopMultiShot()
+        gm.multiShot = false
+        task.spawn(function()
+            forEachCachedReset(function(v)
+                v.ShotgunEnabled = false
+                v.BulletPerShot  = 1
+            end)
+        end)
+    end
+
+    multiShotBtn.MouseButton1Click:Connect(function()
+        gm.multiShot = not gm.multiShot
+        if gm.multiShot then
+            multiShotBtn.Text = "Multi Shot: ON"
+            setToggleState(multiShotBtn, true)
+            ensureMaster()
+        else
+            multiShotBtn.Text = "Multi Shot: OFF"
+            setToggleState(multiShotBtn, false)
+            stopMultiShot()
+        end
+    end)
+
+    -- ── expose refs cho save/load ───────────────────────────────────────
+    S.gmState = gm
+    S.gmStart = {
+        infAmmo   = function() gm.infAmmo  = true; ensureMaster() end,
+        noRecoil  = function() gm.noRecoil = true; ensureMaster() end,
+        fullAuto  = function() gm.fullAuto = true; ensureMaster() end,
+        multiShot = function() gm.multiShot= true; ensureMaster() end,
+    }
+    S.btnRefs.gunModBtn = nil
 end
 
 --  PANEL 10: SAVE SETTINGS 
@@ -5059,7 +5342,12 @@ do
             antiVoidEnabled     = S.btnRefs.antiVoidBtn and S.btnRefs.antiVoidBtn.Text:find("ON") ~= nil,
             ctrlClickTPEnabled  = S.ctrlClickTPEnabled,
             freezeBodyEnabled   = S.freezeBodyEnabled,
-            gunModEnabled       = S.btnRefs.gunModBtn and S.btnRefs.gunModBtn.Text:find("ON") ~= nil or false,
+            -- Gun Tycoon tab
+            gtInfAmmo     = S.gmState and S.gmState.infAmmo   or false,
+            gtNoRecoil    = S.gmState and S.gmState.noRecoil  or false,
+            gtFullAuto    = S.gmState and S.gmState.fullAuto  or false,
+            gtMultiShot   = S.gmState and S.gmState.multiShot or false,
+            gtBulletCount = S.gmState and S.gmState.bulletCount or 15,
             -- FeTool tab
             auraFloatEnabled    = S.auraFloatEnabled,
 dropFloatEnabled    = S.dropFloatEnabled,
@@ -5198,9 +5486,32 @@ end
             end
         end)
 
+        -- Gun Tycoon tab
         pcall(function()
-            if cfg.gunModEnabled and isGunTycoon and S.startGunMod then
-                S.startGunMod()
+            if not isGunTycoon or not S.gmState or not S.gmStart then return end
+            if cfg.gtBulletCount and S.btnRefs.bulletInput then
+                S.gmState.bulletCount = tonumber(cfg.gtBulletCount) or 15
+                S.btnRefs.bulletInput.Text = tostring(S.gmState.bulletCount)
+            end
+            if cfg.gtInfAmmo and not S.gmState.infAmmo then
+                S.gmState.infAmmo = true
+                syncBtn(S.btnRefs.infAmmoBtn, true, "Infinite Ammo: ON", "Infinite Ammo: OFF")
+                S.gmStart.infAmmo()
+            end
+            if cfg.gtNoRecoil and not S.gmState.noRecoil then
+                S.gmState.noRecoil = true
+                syncBtn(S.btnRefs.noRecoilBtn, true, "No Recoil: ON", "No Recoil: OFF")
+                S.gmStart.noRecoil()
+            end
+            if cfg.gtFullAuto and not S.gmState.fullAuto then
+                S.gmState.fullAuto = true
+                syncBtn(S.btnRefs.fullAutoBtn, true, "No Fire Delay: ON", "No Fire Delay: OFF")
+                S.gmStart.fullAuto()
+            end
+            if cfg.gtMultiShot and not S.gmState.multiShot then
+                S.gmState.multiShot = true
+                syncBtn(S.btnRefs.multiShotBtn, true, "Multi Shot: ON", "Multi Shot: OFF")
+                S.gmStart.multiShot()
             end
         end)
 
